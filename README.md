@@ -16,7 +16,7 @@
 
 ---
 
-> ⚠️ **UNAUDITED / TESTNET ONLY**  
+> **TESTNET ONLY**  
 > Cadra is a hackathon project built for **Atrium Academy’s UHI11 Hookathon** (Theme: *Active Management and Curation*). The smart contracts and frontend are designed for testnet demonstration and experimentation. Do not deploy to mainnet without formal security audits and legal counsel regarding collective investment schemes.
 
 ---
