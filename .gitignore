@@ -1,0 +1,45 @@
+# Binaries and executables (prevent exceeding GitHub's 100MB limit)
+bin/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Foundry / Solidity compilation artifacts and cache
+cache/
+out/
+contracts/cache/
+contracts/out/
+broadcast/
+contracts/broadcast/
+
+# Node.js & Package managers
+node_modules
+**/node_modules
+.pnpm-store/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Next.js build output
+.next/
+web/.next/
+web/out/
+dist/
+build/
+
+# Environment and sensitive keys
+.env
+.env*.local
+*.env
+
+# OS and Editor metadata
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.swp
+*.swo
+*.tsbuildinfo
+next-env.d.ts

@@ -1,0 +1,6 @@
+@uniswap/v4-core/=contracts/lib/v4-core/
+@uniswap/v4-periphery/=contracts/lib/v4-periphery/
+@openzeppelin/contracts/=contracts/lib/openzeppelin-contracts/contracts/
+forge-std/=contracts/lib/forge-std/src/
+solmate/=contracts/lib/solmate/
+uniswap-hooks/=contracts/lib/uniswap-hooks/src/
