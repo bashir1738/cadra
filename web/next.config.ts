@@ -1,7 +1,9 @@
 import type { NextConfig } from "next";
+import path from "node:path";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Confine Next.js tracing and watching strictly to the web directory
+  outputFileTracingRoot: path.resolve(__dirname),
   cacheComponents: true,
   partialPrefetching: true,
   turbopack: {
