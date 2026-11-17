@@ -2,7 +2,7 @@
 
 import React from "react";
 import { VaultData } from "../types/cadra";
-import { LockIcon, AlertTriangleIcon } from "./Icons";
+import { LockIcon, AlertTriangleIcon, ChevronLeftIcon } from "./Icons";
 
 interface CuratorProfileProps {
   vault: VaultData;
@@ -26,9 +26,10 @@ export function CuratorProfile({ vault, onBack, onFollow }: CuratorProfileProps)
       <div className="flex items-center justify-between pb-2">
         <button
           onClick={onBack}
-          className="text-xs font-mono text-neutral-600 hover:text-neutral-950 flex items-center gap-2 px-4 py-2 rounded-full bg-neutral-100 hover:bg-neutral-200 transition-all cursor-pointer font-medium"
+          className="text-xs font-mono text-neutral-600 hover:text-neutral-950 flex items-center gap-1.5 px-4 py-2 rounded-full bg-neutral-100 hover:bg-neutral-200 transition-all cursor-pointer font-medium"
         >
-          ← Back
+          <ChevronLeftIcon className="w-3.5 h-3.5" />
+          <span>Back</span>
         </button>
         <button
           onClick={() => onFollow(vault.id)}

@@ -4,7 +4,6 @@ import React, { useState } from "react";
 import Link from "next/link";
 import {
   ShieldIcon,
-  UserIcon,
   ArrowRightIcon,
   ActivityIcon,
   CheckCircleIcon,
@@ -14,6 +13,12 @@ import {
   InstagramIcon,
   TwitterXIcon,
   DiscordIcon,
+  ChevronRightSmallIcon,
+  BitcoinIcon,
+  EthereumIcon,
+  UsdcIcon,
+  TetherIcon,
+  SolanaIcon,
 } from "./Icons";
 import { TabKey } from "./Navigation";
 import { CategoriesAndAdSlider } from "./CategoriesAndAdSlider";
@@ -38,30 +43,33 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
   };
 
   return (
-    <div className="font-sans text-neutral-900 bg-white space-y-24 sm:space-y-32 overflow-hidden">
+    <div className="font-sans text-neutral-900 bg-white space-y-24 sm:space-y-36 overflow-hidden">
       {/* =========================================================================
-          SECTION 1: HERO (Matching Screenshot 1)
+          SECTION 1: HERO (Matching Spenda Screenshot 1 - Ultra Clean & Minimalist)
           - Light blue pill badge
-          - Huge bold black heading
-          - Clean friendly subtitle
+          - Large bold black heading with tight tracking
+          - Clean, friendly subtitle
           - Google Play & App Store black buttons
           - Tilted 3D floating tile grid backdrop with sleek iPhone 16 mockup
          ========================================================================= */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 pt-6 sm:pt-14">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 items-center">
+      <section className="relative max-w-7xl mx-auto px-4 sm:px-6 pt-6 sm:pt-16">
+        {/* Soft Ambient Light Glow */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-gradient-to-b from-sky-50/70 via-blue-50/30 to-transparent blur-3xl pointer-events-none -z-10" />
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-10 items-center">
           {/* Left Column: Value Prop & App Store CTAs */}
           <div className="lg:col-span-6 space-y-6 sm:space-y-8 text-left">
             {/* Pill Badge matching Spenda "Spend your Crypto with Ease" */}
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-[#EEF4FF] border border-[#DBEAFE] text-[#1E3A8A] text-xs font-semibold shadow-xs">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-[#F0F5FF] border border-[#DBEAFE] text-[#1D4ED8] text-xs font-semibold shadow-xs">
               <span className="w-2 h-2 rounded-full bg-blue-600 animate-pulse" />
               <span>Spend &amp; Earn your Crypto with Ease</span>
             </div>
 
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.08] text-neutral-950">
+            <h1 className="text-4xl sm:text-6xl lg:text-[64px] font-extrabold tracking-[-0.035em] leading-[1.05] text-neutral-950">
               Crypto spending &amp; liquidity made easy for everyone
             </h1>
 
-            <p className="text-base sm:text-lg text-neutral-600 max-w-xl leading-relaxed font-normal">
+            <p className="text-base sm:text-lg text-neutral-500 max-w-lg leading-relaxed font-normal">
               Cadra aims to make crypto adoption and Uniswap v4 liquidity effortless by reducing the amount of steps required to earn, protect, and spend crypto in our day to day lives.
             </p>
 
@@ -72,8 +80,7 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
                 onClick={handleLaunchFollower}
                 className="px-5 py-3 rounded-2xl bg-neutral-950 text-white hover:bg-neutral-800 transition-all shadow-md hover:scale-[1.02] active:scale-95 flex items-center gap-3 cursor-pointer"
               >
-                {/* Google Play Icon */}
-                <svg className="w-6 h-6 fill-current text-white shrink-0" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 fill-current text-white shrink-0" viewBox="0 0 24 24">
                   <path d="M3.609 1.814L13.793 12 3.61 22.186a2.235 2.235 0 0 1-.22-.962V2.776c0-.361.08-.696.22-.962zm11.242 11.244L4.85 23.059c.307.086.64.072.969-.117l11.534-6.61-2.502-3.274zm0-2.116l2.502-3.274L5.819 1.058c-.329-.189-.662-.203-.969-.117l10 10.001zm1.488 1.058l3.655 2.095c1.066.611 1.066 1.603 0 2.214l-3.655 2.095-2.095-3.202 2.095-3.202z" />
                 </svg>
                 <div className="text-left leading-tight">
@@ -89,8 +96,7 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
                 onClick={handleLaunchCurator}
                 className="px-5 py-3 rounded-2xl bg-neutral-950 text-white hover:bg-neutral-800 transition-all shadow-md hover:scale-[1.02] active:scale-95 flex items-center gap-3 cursor-pointer"
               >
-                {/* Apple Icon */}
-                <svg className="w-6 h-6 fill-current text-white shrink-0" viewBox="0 0 24 24">
+                <svg className="w-5 h-5 fill-current text-white shrink-0" viewBox="0 0 24 24">
                   <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.37c.62-.75 1.04-1.8 0.92-2.85-.9.04-1.99.6-2.63 1.35-.57.65-1.07 1.72-.94 2.74 1 .08 2.03-.49 2.65-1.24z" />
                 </svg>
                 <div className="text-left leading-tight">
@@ -103,9 +109,10 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
 
               <button
                 onClick={() => onNavigate("simulator")}
-                className="px-4 py-3 text-neutral-600 hover:text-neutral-950 text-xs font-mono flex items-center gap-1.5 transition-colors cursor-pointer"
+                className="px-4 py-3 text-neutral-500 hover:text-neutral-950 text-xs font-mono flex items-center gap-1.5 transition-colors cursor-pointer group"
               >
-                <span>Try web simulator →</span>
+                <span>Try web simulator</span>
+                <ArrowRightIcon className="w-3.5 h-3.5 transition-transform group-hover:translate-x-0.5" />
               </button>
             </div>
           </div>
@@ -113,25 +120,25 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
           {/* Right Column: Tilted 3D Floating Grid + Sleek Phone Mockup (Matching Screenshot 1) */}
           <div className="lg:col-span-6 relative flex items-center justify-center min-h-[460px] sm:min-h-[520px]">
             {/* Tilted Isometric Floating Tiles in Background */}
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden opacity-60">
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none overflow-hidden opacity-50">
               <div
-                className="grid grid-cols-3 gap-4 transform -rotate-12 skew-y-6 scale-95"
+                className="grid grid-cols-3 gap-5 transform -rotate-12 skew-y-6 scale-95"
                 style={{ perspective: "1000px" }}
               >
                 {[...Array(9)].map((_, i) => (
                   <div
                     key={i}
-                    className="w-32 h-44 rounded-3xl bg-neutral-50/90 border border-neutral-200/80 shadow-md backdrop-blur-xs transition-transform hover:scale-105"
+                    className="w-32 h-44 rounded-[26px] bg-neutral-50/80 border border-neutral-200/60 shadow-[0_8px_30px_rgb(0,0,0,0.04)] backdrop-blur-xs transition-transform hover:scale-105"
                   />
                 ))}
               </div>
             </div>
 
             {/* Sleek iPhone 16 Pro Device Mockup in Foreground */}
-            <div className="relative z-10 w-[300px] sm:w-[320px] rounded-[44px] bg-neutral-900 border-[6px] border-neutral-300 shadow-2xl p-3 text-white transition-all transform hover:scale-[1.01]">
+            <div className="relative z-10 w-[300px] sm:w-[320px] rounded-[44px] bg-neutral-950 border-[6px] border-neutral-300 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.25)] p-3 text-white transition-all transform hover:scale-[1.01]">
               {/* Dynamic Island */}
               <div className="w-24 h-5 rounded-full bg-black mx-auto mb-3 flex items-center justify-end px-2">
-                <span className="w-2 h-2 rounded-full bg-neutral-800" />
+                <span className="w-1.5 h-1.5 rounded-full bg-neutral-800" />
               </div>
 
               {/* App Screen Inside Phone */}
@@ -140,11 +147,14 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-[11px] text-neutral-500 font-mono">
                     <span className="font-semibold text-neutral-900">Select Vault / Asset</span>
-                    <span className="text-emerald-600 font-bold">● Active v4</span>
+                    <span className="text-emerald-600 font-bold flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                      <span>Active v4</span>
+                    </span>
                   </div>
 
                   {/* Network Notice Card (Matching Spenda Screenshot 1) */}
-                  <div className="p-3 rounded-2xl bg-neutral-50 border border-neutral-200/90 space-y-1">
+                  <div className="p-3 rounded-2xl bg-neutral-50 border border-neutral-200/80 space-y-1">
                     <div className="flex items-center gap-1.5 text-xs font-bold text-neutral-900">
                       <span className="w-2 h-2 rounded-full bg-emerald-500" />
                       <span>Select Network</span>
@@ -159,58 +169,62 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
                 <div className="space-y-2 text-xs">
                   {/* BTC */}
                   <div className="p-2.5 rounded-xl border border-neutral-100 hover:border-neutral-200 hover:bg-neutral-50 flex items-center justify-between transition-colors">
-                    <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-full bg-amber-500/10 text-amber-600 font-bold flex items-center justify-center text-xs">
-                        ₿
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-7 h-7 rounded-full bg-amber-500/10 text-amber-500 flex items-center justify-center p-1">
+                        <BitcoinIcon className="w-4 h-4" />
                       </div>
                       <div>
                         <p className="font-semibold text-neutral-900">Bitcoin (BTC)</p>
                         <p className="text-[10px] text-neutral-500 font-mono">Pace Benchmark Vault</p>
                       </div>
                     </div>
-                    <span className="text-neutral-400 font-mono">›</span>
+                    <ChevronRightSmallIcon className="w-3.5 h-3.5 text-neutral-400" />
                   </div>
 
                   {/* ETH */}
-                  <div className="p-2.5 rounded-xl border border-emerald-200 bg-emerald-50/50 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-full bg-indigo-500/10 text-indigo-600 font-bold flex items-center justify-center text-xs">
-                        Ξ
+                  <div className="p-2.5 rounded-xl border border-emerald-200/90 bg-emerald-50/40 flex items-center justify-between">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-7 h-7 rounded-full bg-indigo-500/10 text-indigo-500 flex items-center justify-center p-1">
+                        <EthereumIcon className="w-4 h-4" />
                       </div>
                       <div>
                         <p className="font-semibold text-neutral-900">Ethereum (Uniswap v4)</p>
                         <p className="text-[10px] text-emerald-600 font-mono font-semibold">+14.8% APY Active</p>
                       </div>
                     </div>
-                    <span className="text-emerald-600 font-mono font-bold">›</span>
+                    <ChevronRightSmallIcon className="w-3.5 h-3.5 text-emerald-600" />
                   </div>
 
                   {/* USDC */}
                   <div className="p-2.5 rounded-xl border border-neutral-100 hover:border-neutral-200 hover:bg-neutral-50 flex items-center justify-between transition-colors">
-                    <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-full bg-sky-500/10 text-sky-600 font-bold flex items-center justify-center text-xs">
-                        $
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-7 h-7 rounded-full bg-sky-500/10 text-sky-500 flex items-center justify-center p-1">
+                        <UsdcIcon className="w-4 h-4" />
                       </div>
                       <div>
                         <p className="font-semibold text-neutral-900">USDC (Circle)</p>
                         <p className="text-[10px] text-neutral-500 font-mono">Virtual Dollar Card Rail</p>
                       </div>
                     </div>
-                    <span className="text-neutral-400 font-mono">›</span>
+                    <ChevronRightSmallIcon className="w-3.5 h-3.5 text-neutral-400" />
                   </div>
 
                   {/* CADRA */}
                   <div className="p-2.5 rounded-xl border border-neutral-100 hover:border-neutral-200 hover:bg-neutral-50 flex items-center justify-between transition-colors">
-                    <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-full bg-neutral-950 text-white font-bold flex items-center justify-center text-[10px]">
-                        C
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-7 h-7 rounded-full bg-neutral-950 flex items-center justify-center p-1.5 shadow-2xs">
+                        <img
+                          src="/cadra/logo/cadra-mark-white.svg"
+                          alt="Cadra"
+                          className="w-full h-full object-contain"
+                        />
                       </div>
                       <div>
                         <p className="font-semibold text-neutral-900">Cadra (CADRA)</p>
                         <p className="text-[10px] text-neutral-500 font-mono">Curator Bond Reserve</p>
                       </div>
                     </div>
-                    <span className="text-neutral-400 font-mono">›</span>
+                    <ChevronRightSmallIcon className="w-3.5 h-3.5 text-neutral-400" />
                   </div>
                 </div>
 
@@ -228,8 +242,7 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
       </section>
 
       {/* =========================================================================
-          SECTION 2: BENTO CARDS (Matching Screenshot 2)
-          "Built for daily use. Deposit and spend instantly"
+          SECTION 2: BENTO CARDS (Matching Spenda Screenshot 2 - Built for daily use)
           - Left Card: Clean white card with phone mockup showing live portfolio
           - Right Card: Warm peach/sand card with 3D gold & emerald crypto coins
          ========================================================================= */}
@@ -238,43 +251,44 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
           <span className="text-sm font-semibold text-neutral-500 tracking-normal">
             Built for daily use.
           </span>
-          <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-neutral-950">
+          <h2 className="text-3xl sm:text-5xl font-extrabold tracking-[-0.03em] text-neutral-950">
             Deposit and spend instantly
           </h2>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
           {/* Bento Card 1 (Left - Crisp White with App Phone Mockup) */}
-          <div className="bg-white border border-neutral-200/90 rounded-3xl p-8 sm:p-10 shadow-xs flex flex-col justify-between overflow-hidden relative group">
-            <div className="space-y-4 max-w-md z-10">
+          <div className="bg-white border border-neutral-200/80 rounded-3xl p-8 sm:p-10 shadow-[0_2px_12px_rgba(0,0,0,0.03)] flex flex-col justify-between overflow-hidden relative group">
+            <div className="space-y-3 max-w-md z-10">
               <span className="text-xs font-mono font-semibold uppercase text-neutral-400 tracking-wider">
                 PORTFOLIO TELEMETRY
               </span>
               <h3 className="text-2xl sm:text-3xl font-bold text-neutral-950 tracking-tight">
                 Live On-Chain Balances &amp; Yields
               </h3>
-              <p className="text-sm text-neutral-600 leading-relaxed font-normal">
+              <p className="text-sm text-neutral-500 leading-relaxed font-normal">
                 Follow top curators without custody risk. Monitor your positions in real time as Uniswap v4 Hook contracts track and benchmark every tick against The Pace.
               </p>
             </div>
 
             {/* Inner Phone Illustration on Card 1 */}
             <div className="pt-8 flex justify-center z-10">
-              <div className="w-64 rounded-t-3xl border-t-[5px] border-x-[5px] border-neutral-300 bg-neutral-950 p-2 shadow-xl">
+              <div className="w-64 rounded-t-3xl border-t-[5px] border-x-[5px] border-neutral-200 bg-neutral-950 p-2 shadow-xl">
                 <div className="w-16 h-3 rounded-full bg-black mx-auto mb-2" />
                 <div className="bg-white rounded-t-2xl p-4 text-center space-y-2 text-xs">
-                  <div className="w-10 h-10 rounded-full bg-neutral-950 text-white mx-auto flex items-center justify-center font-bold text-xs">
+                  <div className="w-9 h-9 rounded-full bg-neutral-950 text-white mx-auto flex items-center justify-center font-bold text-xs">
                     C
                   </div>
-                  <div className="font-bold text-lg text-neutral-950">$12,450.80</div>
-                  <div className="text-[11px] text-emerald-600 font-mono font-medium">
-                    +18.4% above The Pace
+                  <div className="font-bold text-xl text-neutral-950 font-mono">$12,450.80</div>
+                  <div className="text-[11px] text-emerald-600 font-mono font-semibold flex items-center justify-center gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                    <span>+18.4% above The Pace</span>
                   </div>
                   <div className="pt-2 flex gap-1.5 justify-center">
-                    <span className="px-2.5 py-1 rounded-full bg-neutral-100 text-[10px] font-semibold text-neutral-800">
+                    <span className="px-3 py-1 rounded-full bg-neutral-100 text-[10px] font-semibold text-neutral-800">
                       Deposit
                     </span>
-                    <span className="px-2.5 py-1 rounded-full bg-neutral-100 text-[10px] font-semibold text-neutral-800">
+                    <span className="px-3 py-1 rounded-full bg-neutral-100 text-[10px] font-semibold text-neutral-800">
                       Withdraw
                     </span>
                   </div>
@@ -284,20 +298,20 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
           </div>
 
           {/* Bento Card 2 (Right - Warm Peach/Sand Card with 3D Floating Coins - Matching Screenshot 2) */}
-          <div className="bg-[#FFF7F2] border border-[#FED7AA] rounded-3xl p-8 sm:p-10 shadow-xs flex flex-col justify-between overflow-hidden relative group">
+          <div className="bg-[#FFF8F3] border border-[#FED7AA]/60 rounded-3xl p-8 sm:p-10 shadow-[0_2px_12px_rgba(0,0,0,0.03)] flex flex-col justify-between overflow-hidden relative group">
             {/* Top 3D Floating Gold Bitcoin & Emerald Tether Coins */}
             <div className="relative h-44 sm:h-52 flex items-center justify-center">
               {/* Gold Bitcoin Coin 3D Vector */}
-              <div className="absolute left-6 sm:left-12 top-4 w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-gradient-to-tr from-amber-600 via-amber-400 to-yellow-200 p-1.5 shadow-2xl transform -rotate-12 transition-transform group-hover:scale-105">
-                <div className="w-full h-full rounded-full border-4 border-amber-300/80 bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white text-4xl sm:text-5xl font-extrabold shadow-inner">
-                  ₿
+              <div className="absolute left-6 sm:left-14 top-4 w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-gradient-to-tr from-amber-600 via-amber-400 to-yellow-200 p-1.5 shadow-2xl transform -rotate-12 transition-transform group-hover:scale-105">
+                <div className="w-full h-full rounded-full border-4 border-amber-300/80 bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white shadow-inner p-4">
+                  <BitcoinIcon className="w-full h-full drop-shadow-md" />
                 </div>
               </div>
 
               {/* Emerald Tether / Cadra Coin 3D Vector */}
-              <div className="absolute right-6 sm:right-12 top-10 w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-gradient-to-tr from-emerald-600 via-emerald-400 to-teal-200 p-1.5 shadow-2xl transform rotate-12 transition-transform group-hover:scale-105">
-                <div className="w-full h-full rounded-full border-4 border-emerald-300/80 bg-gradient-to-br from-emerald-400 to-teal-600 flex items-center justify-center text-white text-4xl sm:text-5xl font-extrabold shadow-inner">
-                  ₮
+              <div className="absolute right-6 sm:right-14 top-10 w-28 h-28 sm:w-32 sm:h-32 rounded-full bg-gradient-to-tr from-emerald-600 via-emerald-400 to-teal-200 p-1.5 shadow-2xl transform rotate-12 transition-transform group-hover:scale-105">
+                <div className="w-full h-full rounded-full border-4 border-emerald-300/80 bg-gradient-to-br from-emerald-400 to-teal-600 flex items-center justify-center text-white shadow-inner p-4">
+                  <TetherIcon className="w-full h-full drop-shadow-md" />
                 </div>
               </div>
             </div>
@@ -307,7 +321,7 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
               <h3 className="text-2xl sm:text-3xl font-extrabold text-neutral-950 tracking-tight">
                 Deposit crypto. Get local cash instantly
               </h3>
-              <p className="text-sm text-neutral-600 leading-relaxed font-normal">
+              <p className="text-sm text-neutral-500 leading-relaxed font-normal">
                 Fund your Cadra account directly from crypto wallets. Convert your yields into direct everyday spending or withdraw to bank accounts with 0% P2P friction.
               </p>
               <div className="pt-2">
@@ -330,27 +344,27 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
          ========================================================================= */}
       <section id="categories" className="max-w-7xl mx-auto px-4 sm:px-6 space-y-6">
         <CategoriesAndAdSlider
-          onExploreProducts={(cat) => {
+          onExploreProducts={() => {
             handleLaunchFollower();
           }}
         />
       </section>
 
       {/* =========================================================================
-          SECTION 4: PURE BLACK SECTION (Matching Screenshot 3)
+          SECTION 4: PURE BLACK SECTION (Matching Spenda Screenshot 3 - Ultra Clean)
           "Turn crypto into everyday spending"
           - Heading & Subtitle on black
           - Arc of glowing 3D crypto tokens with ground reflection
           - 3 Numbered step cards (1, 2, 3)
          ========================================================================= */}
-      <section className="bg-black text-white py-20 sm:py-28 relative overflow-hidden rounded-3xl sm:rounded-[48px] max-w-7xl mx-auto px-6 sm:px-12 shadow-2xl">
+      <section className="bg-black text-white py-20 sm:py-28 relative overflow-hidden rounded-3xl sm:rounded-[44px] max-w-7xl mx-auto px-6 sm:px-12 shadow-2xl">
         {/* Ambient Top Glow */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-48 bg-emerald-500/10 blur-3xl pointer-events-none" />
 
         <div className="relative z-10 space-y-16 text-center">
           {/* Section Header */}
           <div className="space-y-4 max-w-2xl mx-auto">
-            <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-white">
+            <h2 className="text-3xl sm:text-5xl font-extrabold tracking-[-0.03em] text-white">
               Turn crypto into everyday spending
             </h2>
             <p className="text-sm sm:text-base text-neutral-400 leading-relaxed font-normal">
@@ -364,43 +378,47 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
             <div className="flex items-center justify-center gap-3 sm:gap-5 flex-wrap">
               {/* Bitcoin */}
               <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-tr from-amber-600 via-amber-500 to-yellow-300 p-0.5 shadow-lg shadow-amber-500/20 transform hover:-translate-y-1 transition-transform">
-                <div className="w-full h-full rounded-full bg-amber-500 flex items-center justify-center text-white text-xl sm:text-2xl font-bold">
-                  ₿
+                <div className="w-full h-full rounded-full bg-amber-500 flex items-center justify-center text-white p-2.5">
+                  <BitcoinIcon className="w-full h-full" />
                 </div>
               </div>
 
               {/* USDC */}
               <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-tr from-blue-700 via-blue-500 to-sky-300 p-0.5 shadow-lg shadow-blue-500/20 transform hover:-translate-y-1 transition-transform">
-                <div className="w-full h-full rounded-full bg-blue-600 flex items-center justify-center text-white text-xl sm:text-2xl font-bold">
-                  $
+                <div className="w-full h-full rounded-full bg-blue-600 flex items-center justify-center text-white p-2.5">
+                  <UsdcIcon className="w-full h-full" />
                 </div>
               </div>
 
               {/* Ethereum */}
               <div className="w-14 h-14 sm:w-20 sm:h-20 rounded-full bg-gradient-to-tr from-indigo-700 via-slate-600 to-indigo-300 p-0.5 shadow-xl shadow-indigo-500/30 transform hover:-translate-y-2 transition-transform -mt-2">
-                <div className="w-full h-full rounded-full bg-slate-800 flex items-center justify-center text-white text-2xl sm:text-3xl font-bold">
-                  Ξ
+                <div className="w-full h-full rounded-full bg-slate-800 flex items-center justify-center text-white p-3">
+                  <EthereumIcon className="w-full h-full" />
                 </div>
               </div>
 
               {/* Cadra Hook Token */}
               <div className="w-14 h-14 sm:w-20 sm:h-20 rounded-full bg-gradient-to-tr from-emerald-600 via-teal-500 to-cyan-300 p-0.5 shadow-xl shadow-emerald-500/30 transform hover:-translate-y-2 transition-transform -mt-2">
-                <div className="w-full h-full rounded-full bg-emerald-950 flex items-center justify-center text-emerald-400 text-xl sm:text-2xl font-black">
-                  C
+                <div className="w-full h-full rounded-full bg-emerald-950 flex items-center justify-center p-3.5 shadow-inner">
+                  <img
+                    src="/cadra/logo/cadra-mark-white.svg"
+                    alt="Cadra"
+                    className="w-full h-full object-contain"
+                  />
                 </div>
               </div>
 
               {/* Solana */}
               <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-tr from-purple-700 via-purple-500 to-fuchsia-300 p-0.5 shadow-lg shadow-purple-500/20 transform hover:-translate-y-1 transition-transform">
-                <div className="w-full h-full rounded-full bg-purple-700 flex items-center justify-center text-white text-xl sm:text-2xl font-bold">
-                  ◎
+                <div className="w-full h-full rounded-full bg-purple-700 flex items-center justify-center text-white p-2.5">
+                  <SolanaIcon className="w-full h-full" />
                 </div>
               </div>
 
               {/* Tether */}
               <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-tr from-teal-700 via-teal-500 to-emerald-300 p-0.5 shadow-lg shadow-teal-500/20 transform hover:-translate-y-1 transition-transform">
-                <div className="w-full h-full rounded-full bg-teal-600 flex items-center justify-center text-white text-xl sm:text-2xl font-bold">
-                  ₮
+                <div className="w-full h-full rounded-full bg-teal-600 flex items-center justify-center text-white p-2.5">
+                  <TetherIcon className="w-full h-full" />
                 </div>
               </div>
             </div>
@@ -412,7 +430,7 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
           {/* 3 Numbered Step Cards (Matching Screenshot 3) */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left pt-6">
             {/* Step 1 */}
-            <div className="p-7 rounded-3xl bg-neutral-900/90 border border-neutral-800 space-y-4 shadow-xl hover:border-neutral-700 transition-colors">
+            <div className="p-7 rounded-3xl bg-neutral-900/80 border border-neutral-800 space-y-4 shadow-xl hover:border-neutral-700 transition-colors">
               <div className="w-10 h-10 rounded-xl bg-neutral-800 border border-neutral-700 text-white font-mono font-bold text-sm flex items-center justify-center">
                 1
               </div>
@@ -423,7 +441,7 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
             </div>
 
             {/* Step 2 */}
-            <div className="p-7 rounded-3xl bg-neutral-900/90 border border-neutral-800 space-y-4 shadow-xl hover:border-neutral-700 transition-colors">
+            <div className="p-7 rounded-3xl bg-neutral-900/80 border border-neutral-800 space-y-4 shadow-xl hover:border-neutral-700 transition-colors">
               <div className="w-10 h-10 rounded-xl bg-neutral-800 border border-neutral-700 text-white font-mono font-bold text-sm flex items-center justify-center">
                 2
               </div>
@@ -434,7 +452,7 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
             </div>
 
             {/* Step 3 */}
-            <div className="p-7 rounded-3xl bg-neutral-900/90 border border-neutral-800 space-y-4 shadow-xl hover:border-neutral-700 transition-colors">
+            <div className="p-7 rounded-3xl bg-neutral-900/80 border border-neutral-800 space-y-4 shadow-xl hover:border-neutral-700 transition-colors">
               <div className="w-10 h-10 rounded-xl bg-neutral-800 border border-neutral-700 text-white font-mono font-bold text-sm flex items-center justify-center">
                 3
               </div>
@@ -454,10 +472,10 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
          ========================================================================= */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 space-y-12">
         <div className="text-center space-y-2 max-w-2xl mx-auto">
-          <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-neutral-950">
+          <h2 className="text-3xl sm:text-5xl font-extrabold tracking-[-0.03em] text-neutral-950">
             Built for speed, clarity, and control
           </h2>
-          <p className="text-sm sm:text-base text-neutral-600 leading-relaxed font-normal">
+          <p className="text-sm sm:text-base text-neutral-500 leading-relaxed font-normal">
             Cadra helps you move from crypto to cash to everyday payments securely and without stress.
           </p>
         </div>
@@ -543,7 +561,7 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
 
               {activeFeatureTab === "security" && (
                 <div className="space-y-3 pt-3">
-                  <p className="text-sm text-neutral-600 leading-relaxed">
+                  <p className="text-sm text-neutral-500 leading-relaxed">
                     Spenda &amp; Cadra help you move from crypto to cash to everyday payments securely and without stress. Non-custodial contracts, personal curator cash bonds, and automated smart vault accounting ensure your capital is always safeguarded.
                   </p>
                   {/* Blue Active Indicator Bar */}
@@ -567,7 +585,7 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
 
               {activeFeatureTab === "support" && (
                 <div className="space-y-3 pt-3">
-                  <p className="text-sm text-neutral-600 leading-relaxed">
+                  <p className="text-sm text-neutral-500 leading-relaxed">
                     Continuous automated market maker liquidity depth. Automated TWAP safety brake parks your assets immediately if market conditions diverge unexpectedly, keeping your money accessible around the clock.
                   </p>
                   <div className="w-40 h-1 bg-blue-600 rounded-full" />
@@ -590,7 +608,7 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
 
               {activeFeatureTab === "interface" && (
                 <div className="space-y-3 pt-3">
-                  <p className="text-sm text-neutral-600 leading-relaxed">
+                  <p className="text-sm text-neutral-500 leading-relaxed">
                     Transparent telemetry cockpit, one-click rebalancing, and direct category spending. Designed to be as friendly and intuitive as everyday banking, with none of the typical DeFi confusion.
                   </p>
                   <div className="w-40 h-1 bg-blue-600 rounded-full" />
@@ -606,14 +624,14 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
           Preserving Cadra's original smart contract mechanism visualizer
          ========================================================================= */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6">
-        <div className="bg-neutral-50/80 border border-neutral-200/90 rounded-3xl p-6 sm:p-10 space-y-7 shadow-xs">
+        <div className="bg-neutral-50/80 border border-neutral-200/80 rounded-3xl p-6 sm:p-10 space-y-7 shadow-[0_2px_12px_rgba(0,0,0,0.03)]">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-neutral-200/80 pb-6">
             <div>
-              <div className="inline-flex items-center gap-1.5 text-xs font-mono tracking-widest text-neutral-500 uppercase font-semibold">
+              <div className="inline-flex items-center gap-1.5 text-xs font-mono tracking-widest text-neutral-400 uppercase font-semibold">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                 <span>INTERACTIVE MECHANISM DEMO</span>
               </div>
-              <h3 className="text-2xl font-bold text-neutral-900 tracking-tight mt-0.5">
+              <h3 className="text-2xl font-bold text-neutral-950 tracking-tight mt-0.5">
                 How The Pace Benchmark Protects Your Money
               </h3>
               <p className="text-xs text-neutral-500 mt-1">
@@ -622,12 +640,12 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
             </div>
 
             {/* Scenario Selector Pills */}
-            <div className="flex items-center gap-1.5 bg-neutral-200/70 p-1 rounded-full text-xs font-medium">
+            <div className="flex items-center gap-1.5 bg-neutral-200/60 p-1 rounded-full text-xs font-medium">
               <button
                 onClick={() => setActiveScenario("ahead")}
                 className={`px-3.5 py-1.5 rounded-full transition-all cursor-pointer flex items-center gap-1.5 ${
                   activeScenario === "ahead"
-                    ? "bg-neutral-900 text-white font-semibold shadow-xs"
+                    ? "bg-neutral-950 text-white font-semibold shadow-xs"
                     : "text-neutral-600 hover:text-neutral-900"
                 }`}
               >
@@ -638,7 +656,7 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
                 onClick={() => setActiveScenario("behind")}
                 className={`px-3.5 py-1.5 rounded-full transition-all cursor-pointer flex items-center gap-1.5 ${
                   activeScenario === "behind"
-                    ? "bg-neutral-900 text-white font-semibold shadow-xs"
+                    ? "bg-neutral-950 text-white font-semibold shadow-xs"
                     : "text-neutral-600 hover:text-neutral-900"
                 }`}
               >
@@ -649,7 +667,7 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
                 onClick={() => setActiveScenario("parked")}
                 className={`px-3.5 py-1.5 rounded-full transition-all cursor-pointer flex items-center gap-1.5 ${
                   activeScenario === "parked"
-                    ? "bg-neutral-900 text-white font-semibold shadow-xs"
+                    ? "bg-neutral-950 text-white font-semibold shadow-xs"
                     : "text-neutral-600 hover:text-neutral-900"
                 }`}
               >
@@ -797,7 +815,7 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
       </section>
 
       {/* =========================================================================
-          SECTION 7: SPEND YOUR CRYPTO YOUR WAY & FOOTER (Matching Screenshot 5)
+          SECTION 7: SPEND YOUR CRYPTO YOUR WAY & FOOTER (Matching Spenda Screenshot 5)
           - Title: Spend your Crypto your way
           - 5 Stars rating: 4.9/5 Download Cadra today
           - Play Store & App Store buttons
@@ -805,20 +823,20 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
           - 4 columns: Product, Company, Contact Us (with circular black social buttons)
           - Floating card shapes watermark in footer background
          ========================================================================= */}
-      <section className="border-t border-neutral-200 pt-16 sm:pt-24 relative overflow-hidden bg-white">
+      <section className="border-t border-neutral-200/80 pt-16 sm:pt-24 relative overflow-hidden bg-white">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 space-y-16 relative z-10">
           {/* Big Heading matching Screenshot 5 */}
           <div className="text-center">
-            <h2 className="text-3xl sm:text-5xl font-extrabold tracking-tight text-neutral-950">
+            <h2 className="text-3xl sm:text-5xl font-extrabold tracking-[-0.03em] text-neutral-950">
               Spend your Crypto your way
             </h2>
           </div>
 
           {/* 4 Columns Footer Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-8 pb-16 border-b border-neutral-200">
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-8 pb-16 border-b border-neutral-200/80">
             {/* Col 1: Stars, Download Buttons & Compliance (4 cols) */}
             <div className="md:col-span-4 space-y-4">
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 <div className="flex items-center gap-1 text-amber-400">
                   <StarIcon className="w-4 h-4 fill-amber-400" />
                   <StarIcon className="w-4 h-4 fill-amber-400" />
@@ -875,7 +893,7 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
             {/* Col 2: Product (3 cols) */}
             <div className="md:col-span-3 space-y-3">
               <h4 className="text-sm font-bold text-neutral-950">Product</h4>
-              <ul className="space-y-2 text-xs text-neutral-600">
+              <ul className="space-y-2.5 text-xs text-neutral-500">
                 <li>
                   <Link href="/follower/explore" className="hover:text-neutral-950 transition-colors">
                     Crypto deposit &amp; Vaults
@@ -907,7 +925,7 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
             {/* Col 3: Company (2 cols) */}
             <div className="md:col-span-2 space-y-3">
               <h4 className="text-sm font-bold text-neutral-950">Company</h4>
-              <ul className="space-y-2 text-xs text-neutral-600">
+              <ul className="space-y-2.5 text-xs text-neutral-500">
                 <li>
                   <Link href="/leaderboard" className="hover:text-neutral-950 transition-colors">
                     About Us
@@ -991,7 +1009,7 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
           </div>
 
           {/* Bottom Row: Address & Copyright matching Screenshot 5 */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-neutral-500 pb-12">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-neutral-400 pb-12 font-mono">
             <p className="font-sans">
               22 Glover Road, Ikoyi, Lagos, Nigeria
             </p>
@@ -1002,12 +1020,12 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
         </div>
 
         {/* Floating rounded square card shapes watermark in footer background (Matching Screenshot 5) */}
-        <div className="absolute bottom-0 inset-x-0 h-40 flex items-end justify-center gap-4 pointer-events-none opacity-30 overflow-hidden">
+        <div className="absolute bottom-0 inset-x-0 h-40 flex items-end justify-center gap-4 pointer-events-none opacity-25 overflow-hidden">
           {[...Array(12)].map((_, idx) => (
             <div
               key={idx}
-              className={`w-28 h-36 rounded-3xl bg-neutral-200/60 transform translate-y-12 ${
-                idx % 2 === 0 ? "border-2 border-dashed border-neutral-300 bg-transparent" : ""
+              className={`w-28 h-36 rounded-3xl bg-neutral-200/50 transform translate-y-12 ${
+                idx % 2 === 0 ? "border-2 border-dashed border-neutral-300/80 bg-transparent" : ""
               }`}
             />
           ))}

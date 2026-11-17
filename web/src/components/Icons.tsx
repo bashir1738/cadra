@@ -228,3 +228,67 @@ export function DiscordIcon({ className = "w-4 h-4" }: { className?: string }) {
     </svg>
   );
 }
+
+export function ChevronLeftIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+    </svg>
+  );
+}
+
+export function ChevronRightIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+    </svg>
+  );
+}
+
+export function ChevronRightSmallIcon({ className = "w-3 h-3" }: { className?: string }) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+    </svg>
+  );
+}
+
+export function BitcoinIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 32 32" fill="currentColor">
+      <path d="M16 32C7.163 32 0 24.837 0 16S7.163 0 16 0s16 7.163 16 16-7.163 16-16 16zm7.189-17.98c.314-2.096-1.283-3.223-3.465-3.975l.708-2.84-1.728-.431-.689 2.763c-.454-.113-.922-.22-1.385-.326l.695-2.784-1.727-.431-.708 2.839c-.376-.086-.745-.17-1.104-.258l.002-.007-2.384-.595-.46 1.846s1.283.294 1.256.312c.7.175.827.638.806 1.006l-.807 3.238c.048.012.111.03.18.058-.058-.014-.12-.03-.182-.045l-1.132 4.54c-.086.213-.304.533-.795.411.017.025-1.256-.314-1.256-.314l-.859 1.982 2.25.561c.418.105.828.214 1.231.319l-.715 2.872 1.727.43.708-2.84c.472.128.93.246 1.378.358l-.705 2.825 1.728.431.714-2.864c2.948.558 5.164.333 6.097-2.333.752-2.146-.037-3.385-1.588-4.192 1.13-.26 1.98-1.003 2.207-2.538zm-3.95 5.533c-.535 2.146-4.152.986-5.325.694l.95-3.81c1.173.293 4.929.873 4.375 3.116zm.536-5.568c-.488 1.954-3.504.962-4.48.718l.862-3.454c.976.244 4.124.699 3.618 2.736z" />
+    </svg>
+  );
+}
+
+export function EthereumIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 32 32" fill="currentColor">
+      <path d="M16 32C7.163 32 0 24.837 0 16S7.163 0 16 0s16 7.163 16 16-7.163 16-16 16zm-1.04-26.667v10.51l8.88 3.967-8.88-14.477zm0 11.758v6.862l8.885-5.185-8.885-1.677zm-1.92-1.248l-8.88-3.967 8.88 14.477V15.843zm0 8.11v-6.862l-8.88 1.677 8.88 5.185zm.96.643l8.88-5.185-8.88 12.256V24.596zm-1.92 0v7.071l-8.88-12.256 8.88 5.185z" />
+    </svg>
+  );
+}
+
+export function UsdcIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 32 32" fill="currentColor">
+      <path d="M16 32C7.163 32 0 24.837 0 16S7.163 0 16 0s16 7.163 16 16-7.163 16-16 16zm0-30C8.268 2 2 8.268 2 16s6.268 14 14 14 14-6.268 14-14S23.732 2 16 2zm1.096 17.556c-1.84.14-2.584-.6-2.584-1.616 0-1.048.784-1.576 2.376-1.744 1.952-.208 2.76-.752 2.76-2.096 0-1.544-1.336-2.456-3.328-2.544V9.5h-1.64v2.024c-1.848.16-3.088 1.056-3.2 2.592h2.008c.112-.768.792-1.184 1.968-1.224 1.176-.04 2.016.48 2.016 1.344 0 .912-.728 1.328-2.28 1.544-1.992.272-2.856.88-2.856 2.296 0 1.624 1.352 2.568 3.528 2.68v2.04h1.64v-2.04c2.096-.16 3.424-1.184 3.536-2.776h-2.04c-.12.872-.88 1.376-1.904 1.472z" />
+    </svg>
+  );
+}
+
+export function TetherIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 32 32" fill="currentColor">
+      <path d="M16 32C7.163 32 0 24.837 0 16S7.163 0 16 0s16 7.163 16 16-7.163 16-16 16zm2.464-18.064v-2.392h5.728V8.344H7.808v3.2h5.728v2.392c-5.016.248-8.8 1.368-8.8 2.72 0 1.352 3.784 2.472 8.8 2.72v7.28h4.928v-7.28c5.016-.248 8.8-1.368 8.8-2.72 0-1.352-3.784-2.472-8.8-2.72zm0 3.736v-1.312c3.784-.192 6.64-.84 6.64-1.624 0-.784-2.856-1.432-6.64-1.624v1.312c-1.616.072-3.312.072-4.928 0v-1.312c-3.784.192-6.64.84-6.64 1.624 0 .784 2.856 1.432 6.64 1.624v1.312c1.616-.072 3.312-.072 4.928 0z" />
+    </svg>
+  );
+}
+
+export function SolanaIcon({ className = "w-4 h-4" }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 397 311" fill="currentColor">
+      <path d="M64.6 237.9c2.4-2.4 5.7-3.8 9.2-3.8h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1l62.7-62.7zM64.6 3.8C67 1.4 70.3 0 73.8 0h317.4c5.8 0 8.7 7 4.6 11.1l-62.7 62.7c-2.4 2.4-5.7 3.8-9.2 3.8H6.5c-5.8 0-8.7-7-4.6-11.1L64.6 3.8zm267.8 115.1c-2.4-2.4-5.7-3.8-9.2-3.8H5.8c-5.8 0-8.7 7-4.6 11.1l62.7 62.7c2.4 2.4 5.7 3.8 9.2 3.8h317.4c5.8 0 8.7-7 4.6-11.1l-62.7-62.7z" />
+    </svg>
+  );
+}

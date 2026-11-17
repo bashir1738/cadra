@@ -9,6 +9,8 @@ import {
   SparkleIcon,
   CpuIcon,
   HomeIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
 } from "./Icons";
 
 export interface CategoryItem {
@@ -256,16 +258,16 @@ export function CategoriesAndAdSlider({
               <button
                 onClick={handlePrevSlide}
                 aria-label="Previous slide"
-                className="w-8 h-8 rounded-full bg-neutral-900/80 border border-neutral-700/80 hover:bg-neutral-800 text-neutral-300 hover:text-white flex items-center justify-center transition-all cursor-pointer text-xs"
+                className="w-8 h-8 rounded-full bg-neutral-900/80 border border-neutral-700/80 hover:bg-neutral-800 text-neutral-300 hover:text-white flex items-center justify-center transition-all cursor-pointer"
               >
-                ←
+                <ChevronLeftIcon className="w-3.5 h-3.5" />
               </button>
               <button
                 onClick={handleNextSlide}
                 aria-label="Next slide"
-                className="w-8 h-8 rounded-full bg-neutral-900/80 border border-neutral-700/80 hover:bg-neutral-800 text-neutral-300 hover:text-white flex items-center justify-center transition-all cursor-pointer text-xs"
+                className="w-8 h-8 rounded-full bg-neutral-900/80 border border-neutral-700/80 hover:bg-neutral-800 text-neutral-300 hover:text-white flex items-center justify-center transition-all cursor-pointer"
               >
-                →
+                <ChevronRightIcon className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>

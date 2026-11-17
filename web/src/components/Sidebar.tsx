@@ -12,6 +12,7 @@ import {
   XIcon,
   ZapIcon,
   RefreshCwIcon,
+  ChevronLeftIcon,
 } from "./Icons";
 import { useCadra } from "../context/CadraContext";
 
@@ -258,9 +259,10 @@ export function Sidebar({
             <Link
               href="/"
               onClick={onCloseMobile}
-              className="w-full text-left text-xs font-medium text-neutral-500 hover:text-neutral-900 flex items-center gap-2 py-2 transition-colors"
+              className="w-full text-left text-xs font-medium text-neutral-500 hover:text-neutral-900 flex items-center gap-1.5 py-2 transition-colors"
             >
-              <span>← Back to Website</span>
+              <ChevronLeftIcon className="w-3.5 h-3.5" />
+              <span>Back to Website</span>
             </Link>
           </div>
         </div>

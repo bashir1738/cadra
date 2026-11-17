@@ -79,7 +79,7 @@ export function CadraBlackSpotlightCard({
                 className="px-6 py-3 rounded-full bg-white hover:bg-neutral-100 text-neutral-950 font-semibold text-xs uppercase tracking-wider transition-all hover:scale-[1.02] active:scale-95 shadow-lg flex items-center gap-2 cursor-pointer"
               >
                 <span>Find a Curator</span>
-                <span className="text-sm">→</span>
+                <ArrowRightIcon className="w-3.5 h-3.5" />
               </button>
             )}
             {onCurateClick && (
