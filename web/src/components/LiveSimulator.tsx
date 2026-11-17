@@ -42,7 +42,7 @@ export function LiveSimulator({
               Ready to Simulate Cadra Hook Actions
             </h3>
             <p className="text-neutral-300 leading-relaxed text-xs">
-              No active vaults found yet. You can create a strategy in Curator Studio, or click &quot;⚡ Load Testnet Archetypes&quot; in the footer to test out-of-band price alerts, keeper parking, and settlement rewards!
+              No active vaults found yet. You can create a strategy in Curator Studio, or click &quot;Load Testnet Archetypes&quot; in the footer to test out-of-band price alerts, keeper parking, and settlement rewards!
             </p>
           </div>
         </div>
@@ -62,7 +62,7 @@ export function LiveSimulator({
     setExecutionLog((prev) => [
       `[Swap] Trader executed swap. Pool spot price moved to $${newPrice}. ${
         outside
-          ? `⚠️ afterSwap callback flagged BandLeft for Vault #${vault.id} (${vault.name})!`
+          ? `[ALERT] afterSwap callback flagged BandLeft for Vault #${vault.id} (${vault.name})!`
           : "Spot price remains safely inside mandate band."
       }`,
       ...prev,
@@ -75,7 +75,7 @@ export function LiveSimulator({
       `[Keeper enforce(vaultId=${vault.id})] Valued vault at TWAP. Shortfall is ${shortfallPct.toFixed(
         1
       )}% (Threshold: ${mandate.maxShortfallBps / 100}%).`,
-      `🚨 [VaultParked] Emergency brake engaged: Curator FROZEN! Active positions liquidated and 100% parked into safe Pace benchmark!`,
+      `[EMERGENCY BRAKE] Curator FROZEN! Active positions liquidated and 100% parked into safe Pace benchmark!`,
       ...prev,
     ]);
   };
@@ -87,7 +87,7 @@ export function LiveSimulator({
       const fee = gapUsdc * (vault.perfFeeBps / 10000);
       setExecutionLog((prev) => [
         `[Keeper settle(vaultId=${vault.id})] Vault finished AHEAD by +$${gapUsdc.toFixed(2)}.`,
-        `✓ Curator earned performance fee: $${fee.toFixed(2)}. Capacity multiplier raised to ${Math.min(
+        `[SUCCESS] Curator earned performance fee: $${fee.toFixed(2)}. Capacity multiplier raised to ${Math.min(
           20,
           vault.capacityMultiplier + 1
         )}×.`,
@@ -99,7 +99,7 @@ export function LiveSimulator({
         `[Keeper settle(vaultId=${vault.id})] Vault finished BEHIND Pace by -$${Math.abs(
           gapUsdc
         ).toFixed(2)}.`,
-        `🛡️ Curator bond paid followers: $${payout.toFixed(2)}. Capacity multiplier dropped to ${Math.max(
+        `[BOND PAYOUT] Curator bond paid followers: $${payout.toFixed(2)}. Capacity multiplier dropped to ${Math.max(
           2,
           vault.capacityMultiplier - 2
         )}×.`,
@@ -200,7 +200,7 @@ export function LiveSimulator({
               onClick={() => handleSimulateSwap(2200)}
               className="px-3 py-1.5 rounded-full bg-red-50 border border-red-200 text-red-700 hover:bg-red-100 text-xs cursor-pointer font-medium"
             >
-              🚨 Breach Band ($2,200)
+              Breach Band ($2,200)
             </button>
           </div>
 
@@ -214,8 +214,8 @@ export function LiveSimulator({
           >
             <span>
               {isOutOfBand
-                ? `⚠️ OUT OF BAND! (afterSwap flagged BandLeft)`
-                : `✓ Spot price within allowed corridor.`}
+                ? "OUT OF BAND! (afterSwap flagged BandLeft)"
+                : "Spot price within allowed corridor."}
             </span>
             <span className="text-xs uppercase font-bold">{isOutOfBand ? "BREACHED" : "HEALTHY"}</span>
           </div>
@@ -318,9 +318,9 @@ export function LiveSimulator({
             <div
               key={i}
               className={`p-2.5 rounded-xl border ${
-                log.includes("🚨") || log.includes("⚠️")
+                log.includes("[ALERT]") || log.includes("[EMERGENCY BRAKE]") || log.includes("BREACHED")
                   ? "bg-red-950/40 border-red-500/40 text-red-300"
-                  : log.includes("✓")
+                  : log.includes("[SUCCESS]")
                   ? "bg-emerald-950/40 border-emerald-500/40 text-emerald-300"
                   : "bg-neutral-900 border-neutral-800 text-neutral-300"
               }`}

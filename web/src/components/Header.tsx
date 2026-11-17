@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCadra } from "../context/CadraContext";
+import { ShieldIcon, ZapIcon, ShoppingBagIcon, XIcon } from "./Icons";
 
 interface HeaderProps {
   currentRole?: string;
@@ -100,8 +101,8 @@ export function Header({
                     onClick={() => setProductsOpen(false)}
                     className="flex items-start gap-2.5 p-2 rounded-xl hover:bg-neutral-100 transition-colors"
                   >
-                    <div className="w-7 h-7 rounded-lg bg-neutral-100 flex items-center justify-center text-base shrink-0">
-                      🛡️
+                    <div className="w-7 h-7 rounded-lg bg-neutral-100 flex items-center justify-center text-emerald-600 shrink-0">
+                      <ShieldIcon className="w-4 h-4" />
                     </div>
                     <div>
                       <p className="font-semibold text-neutral-900">Follower Vaults</p>
@@ -114,8 +115,8 @@ export function Header({
                     onClick={() => setProductsOpen(false)}
                     className="flex items-start gap-2.5 p-2 rounded-xl hover:bg-neutral-100 transition-colors"
                   >
-                    <div className="w-7 h-7 rounded-lg bg-neutral-100 flex items-center justify-center text-base shrink-0">
-                      ⚡
+                    <div className="w-7 h-7 rounded-lg bg-neutral-100 flex items-center justify-center text-amber-500 shrink-0">
+                      <ZapIcon className="w-4 h-4" />
                     </div>
                     <div>
                       <p className="font-semibold text-neutral-900">Curator Studio</p>
@@ -128,8 +129,8 @@ export function Header({
                     onClick={() => setProductsOpen(false)}
                     className="flex items-start gap-2.5 p-2 rounded-xl hover:bg-neutral-100 transition-colors"
                   >
-                    <div className="w-7 h-7 rounded-lg bg-neutral-100 flex items-center justify-center text-base shrink-0">
-                      🥑
+                    <div className="w-7 h-7 rounded-lg bg-neutral-100 flex items-center justify-center text-sky-600 shrink-0">
+                      <ShoppingBagIcon className="w-4 h-4" />
                     </div>
                     <div>
                       <p className="font-semibold text-neutral-900">Everyday Spending</p>
@@ -230,7 +231,7 @@ export function Header({
                 className="w-5 h-5 rounded-full hover:bg-neutral-200 flex items-center justify-center text-neutral-500 hover:text-neutral-900 transition-colors text-xs cursor-pointer"
                 title="Disconnect"
               >
-                ✕
+                <XIcon className="w-3 h-3" />
               </button>
             </div>
           ) : (

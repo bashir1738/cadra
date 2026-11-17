@@ -9,6 +9,9 @@ import {
   ScaleIcon,
   ActivityIcon,
   ClockIcon,
+  XIcon,
+  ZapIcon,
+  RefreshCwIcon,
 } from "./Icons";
 import { useCadra } from "../context/CadraContext";
 
@@ -168,7 +171,7 @@ export function Sidebar({
                 className="lg:hidden p-1.5 rounded-lg text-neutral-400 hover:text-neutral-900 hover:bg-neutral-100 cursor-pointer"
                 aria-label="Close sidebar"
               >
-                ✕
+                <XIcon className="w-4 h-4" />
               </button>
             )}
           </div>
@@ -304,16 +307,18 @@ export function Sidebar({
               <button
                 onClick={seedArchetypes}
                 title="Load testnet archetype vaults"
-                className="px-2 py-1 rounded-lg border border-neutral-200 bg-white text-neutral-700 hover:border-neutral-900 hover:text-neutral-950 transition-all cursor-pointer"
+                className="px-2 py-1 rounded-lg border border-neutral-200 bg-white text-neutral-700 hover:border-neutral-900 hover:text-neutral-950 transition-all cursor-pointer flex items-center gap-1"
               >
-                ⚡ Demo Data
+                <ZapIcon className="w-3 h-3 text-amber-500" />
+                <span>Demo Data</span>
               </button>
               <button
                 onClick={resetDemo}
                 title="Reset application state"
-                className="px-2 py-1 rounded-lg border border-neutral-200 bg-white text-neutral-500 hover:text-red-600 hover:border-red-300 transition-all cursor-pointer"
+                className="px-2 py-1 rounded-lg border border-neutral-200 bg-white text-neutral-500 hover:text-red-600 hover:border-red-300 transition-all cursor-pointer flex items-center gap-1"
               >
-                ↺ Reset
+                <RefreshCwIcon className="w-3 h-3" />
+                <span>Reset</span>
               </button>
             </div>
           </div>

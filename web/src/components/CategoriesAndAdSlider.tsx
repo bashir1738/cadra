@@ -1,24 +1,50 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { ArrowRightIcon } from "./Icons";
+import {
+  ArrowRightIcon,
+  SparklesIcon,
+  ShoppingBagIcon,
+  ShirtIcon,
+  SparkleIcon,
+  CpuIcon,
+  HomeIcon,
+} from "./Icons";
 
 export interface CategoryItem {
   id: string;
   name: string;
   count: string;
-  icon: string;
   tagline: string;
 }
 
 export const CATEGORIES: CategoryItem[] = [
-  { id: "all", name: "All categories", count: "1,420+ Items", icon: "✨", tagline: "Curated Web3 Commerce & Yields" },
-  { id: "food", name: "Food & groceries", count: "480+ Stores", icon: "🥑", tagline: "Fresh groceries & daily essentials with 0% swap fees" },
-  { id: "fashion", name: "Fashion", count: "320+ Brands", icon: "👕", tagline: "Luxury & street style settled with crypto virtual card" },
-  { id: "beauty", name: "Beauty", count: "190+ Outlets", icon: "💄", tagline: "Skincare, cosmetics & wellness checkout in seconds" },
-  { id: "electronics", name: "Electronics", count: "260+ Gadgets", icon: "⚡", tagline: "Smartphones, laptops & hardware with instant escrow" },
-  { id: "office", name: "Home & office", count: "170+ Spaces", icon: "🛋️", tagline: "Workstations, decor & home essentials paid via crypto" },
+  { id: "all", name: "All categories", count: "1,420+ Items", tagline: "Curated Web3 Commerce & Yields" },
+  { id: "food", name: "Food & groceries", count: "480+ Stores", tagline: "Fresh groceries & daily essentials with 0% swap fees" },
+  { id: "fashion", name: "Fashion", count: "320+ Brands", tagline: "Luxury & street style settled with crypto virtual card" },
+  { id: "beauty", name: "Beauty", count: "190+ Outlets", tagline: "Skincare, cosmetics & wellness checkout in seconds" },
+  { id: "electronics", name: "Electronics", count: "260+ Gadgets", tagline: "Smartphones, laptops & hardware with instant escrow" },
+  { id: "office", name: "Home & office", count: "170+ Spaces", tagline: "Workstations, decor & home essentials paid via crypto" },
 ];
+
+function renderCategoryIcon(id: string, className = "w-3.5 h-3.5") {
+  switch (id) {
+    case "all":
+      return <SparklesIcon className={className} />;
+    case "food":
+      return <ShoppingBagIcon className={className} />;
+    case "fashion":
+      return <ShirtIcon className={className} />;
+    case "beauty":
+      return <SparkleIcon className={className} />;
+    case "electronics":
+      return <CpuIcon className={className} />;
+    case "office":
+      return <HomeIcon className={className} />;
+    default:
+      return <SparklesIcon className={className} />;
+  }
+}
 
 export interface SlideItem {
   id: number;
@@ -30,7 +56,6 @@ export interface SlideItem {
   badgeColor: string;
   ctaText: string;
   categoryLink: string;
-  visualIcon: string;
 }
 
 export const AD_SLIDES: SlideItem[] = [
@@ -44,7 +69,6 @@ export const AD_SLIDES: SlideItem[] = [
     badgeColor: "bg-emerald-500/20 text-emerald-400 border-emerald-500/40",
     ctaText: "Shop Groceries Now",
     categoryLink: "food",
-    visualIcon: "🥑",
   },
   {
     id: 2,
@@ -56,7 +80,6 @@ export const AD_SLIDES: SlideItem[] = [
     badgeColor: "bg-sky-500/20 text-sky-400 border-sky-500/40",
     ctaText: "Explore Fashion Perks",
     categoryLink: "fashion",
-    visualIcon: "💎",
   },
   {
     id: 3,
@@ -68,7 +91,6 @@ export const AD_SLIDES: SlideItem[] = [
     badgeColor: "bg-amber-500/20 text-amber-400 border-amber-500/40",
     ctaText: "Discover Tech Gear",
     categoryLink: "electronics",
-    visualIcon: "⚡",
   },
 ];
 
@@ -99,7 +121,6 @@ export function CategoriesAndAdSlider({
     if (onSelectCategory) {
       onSelectCategory(catId);
     }
-    // Also jump to matching slide if applicable
     const slideIdx = AD_SLIDES.findIndex((s) => s.categoryLink === catId);
     if (slideIdx !== -1) {
       setCurrentSlide(slideIdx);
@@ -133,7 +154,9 @@ export function CategoriesAndAdSlider({
                     : "bg-neutral-100/90 hover:bg-neutral-200/80 text-neutral-700 border border-neutral-200/70"
                 }`}
               >
-                <span>{cat.icon}</span>
+                <span className={isActive ? "text-emerald-400" : "text-neutral-500"}>
+                  {renderCategoryIcon(cat.id, "w-3.5 h-3.5")}
+                </span>
                 <span>{cat.name}</span>
                 {isActive && (
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 ml-0.5 animate-pulse" />
@@ -143,7 +166,7 @@ export function CategoriesAndAdSlider({
           })}
         </div>
 
-        <div className="hidden sm:flex items-center gap-1 text-xs text-neutral-400 shrink-0 font-mono">
+        <div className="hidden sm:flex items-center gap-1.5 text-xs text-neutral-400 shrink-0 font-mono">
           <span className="w-2 h-2 rounded-full bg-emerald-500" />
           <span>Real-time Off-Ramp</span>
         </div>
@@ -181,13 +204,17 @@ export function CategoriesAndAdSlider({
                         : "hover:bg-neutral-100/80 text-neutral-700"
                     }`}
                   >
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <span className="text-base shrink-0">{cat.icon}</span>
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
+                        isActive ? "bg-neutral-800 text-emerald-400" : "bg-neutral-100 text-neutral-600"
+                      }`}>
+                        {renderCategoryIcon(cat.id, "w-4 h-4")}
+                      </div>
                       <div className="truncate">
                         <p className={`text-xs font-semibold truncate ${isActive ? "text-white" : "text-neutral-900"}`}>
                           {cat.name}
                         </p>
-                        <p className={`text-xs truncate ${isActive ? "text-neutral-300" : "text-neutral-500"}`}>
+                        <p className={`text-[11px] truncate ${isActive ? "text-neutral-400" : "text-neutral-500"}`}>
                           {cat.count}
                         </p>
                       </div>
@@ -229,14 +256,14 @@ export function CategoriesAndAdSlider({
               <button
                 onClick={handlePrevSlide}
                 aria-label="Previous slide"
-                className="w-8 h-8 rounded-full bg-neutral-900/80 border border-neutral-700/80 hover:bg-neutral-800 text-neutral-300 hover:text-white flex items-center justify-center transition-all cursor-pointer"
+                className="w-8 h-8 rounded-full bg-neutral-900/80 border border-neutral-700/80 hover:bg-neutral-800 text-neutral-300 hover:text-white flex items-center justify-center transition-all cursor-pointer text-xs"
               >
                 ←
               </button>
               <button
                 onClick={handleNextSlide}
                 aria-label="Next slide"
-                className="w-8 h-8 rounded-full bg-neutral-900/80 border border-neutral-700/80 hover:bg-neutral-800 text-neutral-300 hover:text-white flex items-center justify-center transition-all cursor-pointer"
+                className="w-8 h-8 rounded-full bg-neutral-900/80 border border-neutral-700/80 hover:bg-neutral-800 text-neutral-300 hover:text-white flex items-center justify-center transition-all cursor-pointer text-xs"
               >
                 →
               </button>
@@ -245,8 +272,8 @@ export function CategoriesAndAdSlider({
 
           {/* Slide Content Body */}
           <div className="relative z-10 space-y-4 my-auto py-6">
-            <div className="w-14 h-14 rounded-2xl bg-neutral-900/90 border border-neutral-700 flex items-center justify-center text-3xl shadow-lg">
-              {activeSlide.visualIcon}
+            <div className="w-14 h-14 rounded-2xl bg-neutral-900/90 border border-neutral-700 flex items-center justify-center text-emerald-400 shadow-lg">
+              {renderCategoryIcon(activeSlide.categoryLink, "w-7 h-7")}
             </div>
 
             <div className="space-y-2 max-w-xl">

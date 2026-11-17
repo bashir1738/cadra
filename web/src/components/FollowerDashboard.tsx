@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { VaultData, UserPosition } from "../types/cadra";
-import { ShieldIcon, TrendUpIcon, ClockIcon, ArrowRightIcon, AlertTriangleIcon, CheckCircleIcon, ActivityIcon } from "./Icons";
+import { ShieldIcon, TrendUpIcon, ClockIcon, ArrowRightIcon, AlertTriangleIcon, CheckCircleIcon, ActivityIcon, XIcon } from "./Icons";
 
 interface FollowerDashboardProps {
   vaults: VaultData[];
@@ -488,7 +488,7 @@ export function FollowerDashboard({
                 onClick={() => setActiveModal(null)}
                 className="p-1 rounded-lg text-neutral-400 hover:text-neutral-900 cursor-pointer"
               >
-                ✕
+                <XIcon className="w-4 h-4" />
               </button>
             </div>
 

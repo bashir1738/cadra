@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { ShieldIcon, ActivityIcon, TrendUpIcon } from "./Icons";
+import { ShieldIcon, ActivityIcon, TrendUpIcon, ArrowRightIcon } from "./Icons";
 
 /**
  * Cadra High-Contrast Black Spotlight Showcase Card
@@ -88,7 +88,7 @@ export function CadraBlackSpotlightCard({
                 className="px-6 py-3 rounded-full bg-neutral-900 hover:bg-neutral-800 text-white border border-neutral-700 font-semibold text-xs uppercase tracking-wider transition-all hover:scale-[1.02] active:scale-95 flex items-center gap-2 cursor-pointer"
               >
                 <span>Become a Curator</span>
-                <span className="text-sm">⚡</span>
+                <ArrowRightIcon className="w-3.5 h-3.5 text-emerald-400" />
               </button>
             )}
           </div>

@@ -609,8 +609,9 @@ export function CuratorStudio({
             </div>
 
             {mandateSuccessNotice && (
-              <p className="text-xs font-mono text-emerald-700 font-semibold">
-                ✓ Mandate proposed! Takes effect at next epoch settlement.
+              <p className="text-xs font-mono text-emerald-700 font-semibold flex items-center gap-1.5">
+                <CheckCircleIcon className="w-3.5 h-3.5 shrink-0" />
+                <span>Mandate proposed! Takes effect at next epoch settlement.</span>
               </p>
             )}
 

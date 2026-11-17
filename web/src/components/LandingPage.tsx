@@ -2,7 +2,19 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { ShieldIcon, UserIcon, ArrowRightIcon, ActivityIcon, CheckCircleIcon, TrendUpIcon } from "./Icons";
+import {
+  ShieldIcon,
+  UserIcon,
+  ArrowRightIcon,
+  ActivityIcon,
+  CheckCircleIcon,
+  TrendUpIcon,
+  StarIcon,
+  YouTubeIcon,
+  InstagramIcon,
+  TwitterXIcon,
+  DiscordIcon,
+} from "./Icons";
 import { TabKey } from "./Navigation";
 import { CategoriesAndAdSlider } from "./CategoriesAndAdSlider";
 
@@ -613,33 +625,36 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
             <div className="flex items-center gap-1.5 bg-neutral-200/70 p-1 rounded-full text-xs font-medium">
               <button
                 onClick={() => setActiveScenario("ahead")}
-                className={`px-3.5 py-1.5 rounded-full transition-all cursor-pointer ${
+                className={`px-3.5 py-1.5 rounded-full transition-all cursor-pointer flex items-center gap-1.5 ${
                   activeScenario === "ahead"
                     ? "bg-neutral-900 text-white font-semibold shadow-xs"
                     : "text-neutral-600 hover:text-neutral-900"
                 }`}
               >
-                ✨ Curator Wins (+Alpha)
+                <TrendUpIcon className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Curator Wins (+Alpha)</span>
               </button>
               <button
                 onClick={() => setActiveScenario("behind")}
-                className={`px-3.5 py-1.5 rounded-full transition-all cursor-pointer ${
+                className={`px-3.5 py-1.5 rounded-full transition-all cursor-pointer flex items-center gap-1.5 ${
                   activeScenario === "behind"
                     ? "bg-neutral-900 text-white font-semibold shadow-xs"
                     : "text-neutral-600 hover:text-neutral-900"
                 }`}
               >
-                🛡️ Curator Lags (Bond Protects)
+                <ShieldIcon className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Curator Lags (Bond Protects)</span>
               </button>
               <button
                 onClick={() => setActiveScenario("parked")}
-                className={`px-3.5 py-1.5 rounded-full transition-all cursor-pointer ${
+                className={`px-3.5 py-1.5 rounded-full transition-all cursor-pointer flex items-center gap-1.5 ${
                   activeScenario === "parked"
                     ? "bg-neutral-900 text-white font-semibold shadow-xs"
                     : "text-neutral-600 hover:text-neutral-900"
                 }`}
               >
-                🪂 Emergency Safety Brake
+                <ActivityIcon className="w-3.5 h-3.5 text-sky-400" />
+                <span>Emergency Safety Brake</span>
               </button>
             </div>
           </div>
@@ -682,7 +697,7 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
                       <path d="M 0 140 Q 200 110, 400 80 T 800 48" fill="none" stroke="#34d399" strokeWidth="3.5" />
                       <circle cx="800" cy="48" r="6" fill="#34d399" className="animate-pulse" />
                       <text x="630" y="38" fill="#34d399" fontSize="12" fontFamily="sans-serif" fontWeight="bold">
-                        ✨ +$20 Above The Pace!
+                        +$20 Above The Pace!
                       </text>
                     </>
                   )}
@@ -693,7 +708,7 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
                       <path d="M 800 135 L 800 100" stroke="#34d399" strokeWidth="3" strokeDasharray="3 3" />
                       <circle cx="800" cy="100" r="6" fill="#10b981" />
                       <text x="540" y="90" fill="#34d399" fontSize="12" fontFamily="sans-serif" fontWeight="bold">
-                        🛡️ Curator cash bond covers shortfall!
+                        Curator cash bond covers shortfall!
                       </text>
                     </>
                   )}
@@ -704,7 +719,7 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
                       <path d="M 0 140 Q 200 145, 380 180 L 800 180" fill="none" stroke="#f87171" strokeWidth="3" />
                       <circle cx="380" cy="180" r="7" fill="#ef4444" />
                       <text x="400" y="172" fill="#38bdf8" fontSize="11" fontFamily="sans-serif" fontWeight="bold">
-                        🪂 Emergency brake: capital safely parked into The Pace
+                        Emergency brake: capital safely parked into The Pace
                       </text>
                     </>
                   )}
@@ -784,7 +799,7 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
       {/* =========================================================================
           SECTION 7: SPEND YOUR CRYPTO YOUR WAY & FOOTER (Matching Screenshot 5)
           - Title: Spend your Crypto your way
-          - 5 Stars rating: ★★★★★ Download Cadra today
+          - 5 Stars rating: 4.9/5 Download Cadra today
           - Play Store & App Store buttons
           - NDPC & Uniswap v4 Audited badge
           - 4 columns: Product, Company, Contact Us (with circular black social buttons)
@@ -804,8 +819,12 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
             {/* Col 1: Stars, Download Buttons & Compliance (4 cols) */}
             <div className="md:col-span-4 space-y-4">
               <div className="space-y-1">
-                <div className="text-amber-500 text-base font-bold tracking-widest">
-                  ★★★★★
+                <div className="flex items-center gap-1 text-amber-400">
+                  <StarIcon className="w-4 h-4 fill-amber-400" />
+                  <StarIcon className="w-4 h-4 fill-amber-400" />
+                  <StarIcon className="w-4 h-4 fill-amber-400" />
+                  <StarIcon className="w-4 h-4 fill-amber-400" />
+                  <StarIcon className="w-4 h-4 fill-amber-400" />
                 </div>
                 <p className="text-xs font-semibold text-neutral-800">
                   Download Cadra today · 4.9/5 Rating
@@ -933,9 +952,9 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
                   target="_blank"
                   rel="noreferrer"
                   aria-label="YouTube"
-                  className="w-8 h-8 rounded-full bg-neutral-950 text-white flex items-center justify-center hover:bg-neutral-800 transition-colors text-xs"
+                  className="w-8 h-8 rounded-full bg-neutral-950 text-white flex items-center justify-center hover:bg-neutral-800 transition-colors"
                 >
-                  ▶
+                  <YouTubeIcon className="w-3.5 h-3.5" />
                 </a>
                 {/* Instagram */}
                 <a
@@ -943,9 +962,9 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
                   target="_blank"
                   rel="noreferrer"
                   aria-label="Instagram"
-                  className="w-8 h-8 rounded-full bg-neutral-950 text-white flex items-center justify-center hover:bg-neutral-800 transition-colors text-xs"
+                  className="w-8 h-8 rounded-full bg-neutral-950 text-white flex items-center justify-center hover:bg-neutral-800 transition-colors"
                 >
-                  📷
+                  <InstagramIcon className="w-3.5 h-3.5" />
                 </a>
                 {/* X / Twitter */}
                 <a
@@ -953,19 +972,19 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
                   target="_blank"
                   rel="noreferrer"
                   aria-label="X / Twitter"
-                  className="w-8 h-8 rounded-full bg-neutral-950 text-white flex items-center justify-center hover:bg-neutral-800 transition-colors text-xs font-bold"
+                  className="w-8 h-8 rounded-full bg-neutral-950 text-white flex items-center justify-center hover:bg-neutral-800 transition-colors"
                 >
-                  𝕏
+                  <TwitterXIcon className="w-3.5 h-3.5" />
                 </a>
-                {/* TikTok / Discord */}
+                {/* Discord */}
                 <a
                   href="https://discord.com"
                   target="_blank"
                   rel="noreferrer"
                   aria-label="Discord"
-                  className="w-8 h-8 rounded-full bg-neutral-950 text-white flex items-center justify-center hover:bg-neutral-800 transition-colors text-xs"
+                  className="w-8 h-8 rounded-full bg-neutral-950 text-white flex items-center justify-center hover:bg-neutral-800 transition-colors"
                 >
-                  💬
+                  <DiscordIcon className="w-3.5 h-3.5" />
                 </a>
               </div>
             </div>
