@@ -4,11 +4,11 @@ import React, { useState, useEffect } from "react";
 import {
   ArrowRightIcon,
   SparklesIcon,
-  ShoppingBagIcon,
-  ShirtIcon,
-  SparkleIcon,
-  CpuIcon,
-  HomeIcon,
+  ShieldIcon,
+  ZapIcon,
+  ScaleIcon,
+  ActivityIcon,
+  LockIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
 } from "./Icons";
@@ -21,28 +21,58 @@ export interface CategoryItem {
 }
 
 export const CATEGORIES: CategoryItem[] = [
-  { id: "all", name: "All categories", count: "1,420+ merchants", tagline: "Everyday commerce powered by your vault yield" },
-  { id: "food", name: "Food & groceries", count: "480+ stores", tagline: "Fresh groceries and daily essentials with instant settlement" },
-  { id: "fashion", name: "Fashion", count: "320+ brands", tagline: "Global apparel and footwear with virtual dollar cards" },
-  { id: "beauty", name: "Beauty", count: "190+ outlets", tagline: "Skincare, wellness, and cosmetics checkout in seconds" },
-  { id: "electronics", name: "Electronics", count: "260+ retailers", tagline: "Laptops, audio, and smart gear with on-chain escrow" },
-  { id: "office", name: "Home & office", count: "170+ spaces", tagline: "Workstations and home upgrades funded directly from crypto" },
+  {
+    id: "all",
+    name: "All strategies",
+    count: "4 active vaults",
+    tagline: "Verified Uniswap v4 curated vaults benchmarked on-chain against The Pace",
+  },
+  {
+    id: "tight",
+    name: "Tight-range alpha",
+    count: "High fee capture",
+    tagline: "Narrow concentrated tick bands actively rebalanced around spot price",
+  },
+  {
+    id: "wide",
+    name: "Wide-range steady",
+    count: "Lower rebalance drag",
+    tagline: "Broad liquidity corridors designed to minimize out-of-range impermanent loss",
+  },
+  {
+    id: "bonded",
+    name: "Bond-protected",
+    count: "USDC collateralized",
+    tagline: "Curators posting deep USDC bonds to reimburse follower shortfalls automatically",
+  },
+  {
+    id: "capacity",
+    name: "High-capacity",
+    count: "Up to 20x multiplier",
+    tagline: "Top curators whose capacity scales automatically as they beat The Pace",
+  },
+  {
+    id: "parking",
+    name: "TWAP-guarded",
+    count: "Automated parking",
+    tagline: "Vaults guarded by O(1) swap checks and automated full-range Pace parking",
+  },
 ];
 
 function renderCategoryIcon(id: string, className = "w-4 h-4") {
   switch (id) {
     case "all":
       return <SparklesIcon className={className} />;
-    case "food":
-      return <ShoppingBagIcon className={className} />;
-    case "fashion":
-      return <ShirtIcon className={className} />;
-    case "beauty":
-      return <SparkleIcon className={className} />;
-    case "electronics":
-      return <CpuIcon className={className} />;
-    case "office":
-      return <HomeIcon className={className} />;
+    case "tight":
+      return <ZapIcon className={className} />;
+    case "wide":
+      return <ScaleIcon className={className} />;
+    case "bonded":
+      return <ShieldIcon className={className} />;
+    case "capacity":
+      return <ActivityIcon className={className} />;
+    case "parking":
+      return <LockIcon className={className} />;
     default:
       return <SparklesIcon className={className} />;
   }
@@ -62,33 +92,36 @@ export interface SlideItem {
 export const AD_SLIDES: SlideItem[] = [
   {
     id: 1,
-    eyebrow: "Food & Groceries",
-    title: "Spend your yield on everyday meals and groceries",
-    subtitle: "Convert Uniswap v4 liquidity fees directly at checkout with zero P2P delays.",
+    eyebrow: "The Pace Benchmark",
+    title: "Pay performance fees only on true outperformance",
+    subtitle:
+      "The Pace measures what your capital would have earned in a passive full-range position, fees included. Curators earn $0 unless they beat it.",
     surface: "from-[#0A1F18] via-[#0B0F0E] to-[#09090B]",
     glow: "bg-emerald-500/15",
-    ctaText: "Explore Groceries",
-    categoryLink: "food",
+    ctaText: "Discover Curators",
+    categoryLink: "tight",
   },
   {
     id: 2,
-    eyebrow: "Virtual Card",
-    title: "Global fashion and lifestyle, paid straight from your vault",
-    subtitle: "Fund an instant virtual dollar card directly from your protected Cadra balance.",
+    eyebrow: "Curator USDC Bonds",
+    title: "Real skin in the game covering follower shortfalls",
+    subtitle:
+      "Every curator posts a USDC bond before managing funds. If an epoch finishes behind The Pace, the hook pays followers directly from the bond.",
     surface: "from-[#0C1829] via-[#0B0E14] to-[#09090B]",
     glow: "bg-blue-500/15",
-    ctaText: "Explore Fashion",
-    categoryLink: "fashion",
+    ctaText: "Inspect Vault Bonds",
+    categoryLink: "bonded",
   },
   {
     id: 3,
-    eyebrow: "Electronics & Tech",
-    title: "Upgrade your setup with instant crypto settlement",
-    subtitle: "Shop hardware, laptops, and smart office essentials without leaving your wallet.",
-    surface: "from-[#1F170B] via-[#120F0B] to-[#09090B]",
-    glow: "bg-amber-500/15",
-    ctaText: "Explore Electronics",
-    categoryLink: "electronics",
+    eyebrow: "Automated Parking",
+    title: "On-chain mandates and TWAP parking cap relative loss",
+    subtitle:
+      "CadraHook reverts invalid rebalances inline and freezes lagging curators—redeploying 100% of vault capital safely into The Pace.",
+    surface: "from-[#1A1424] via-[#100D16] to-[#09090B]",
+    glow: "bg-indigo-500/15",
+    ctaText: "Launch Live Simulator",
+    categoryLink: "parking",
   },
 ];
 
@@ -135,7 +168,7 @@ export function CategoriesAndAdSlider({
 
   return (
     <div className="w-full space-y-6">
-      {/* Top Horizontal Category Pill Strip */}
+      {/* Top Horizontal Strategy Pill Strip */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
         {CATEGORIES.map((cat) => {
           const isActive = selectedCategory === cat.id;
@@ -158,9 +191,9 @@ export function CategoriesAndAdSlider({
         })}
       </div>
 
-      {/* Side-by-Side: Minimal Category Panel (Left) + 3-Slide Showcase (Right) */}
+      {/* Side-by-Side: Strategy Panel (Left) + 3-Slide Cadra Showcase (Right) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
-        {/* Left: Clean Category Navigation List (4 cols) */}
+        {/* Left: Clean Strategy List (4 cols) */}
         <div className="lg:col-span-4 bg-[#FAFAFA] border border-neutral-200/70 rounded-[28px] p-5 flex flex-col justify-between">
           <div className="space-y-1">
             {CATEGORIES.map((cat) => {
@@ -209,13 +242,12 @@ export function CategoriesAndAdSlider({
           </div>
         </div>
 
-        {/* Right: Editorial 3-Slide Auto Carousel (8 cols) */}
+        {/* Right: Editorial 3-Slide Cadra Showcase (8 cols) */}
         <div
           className="lg:col-span-8 relative rounded-[28px] overflow-hidden bg-[#09090B] text-white flex flex-col justify-between p-8 sm:p-12 min-h-[380px]"
           onMouseEnter={() => setIsPaused(true)}
           onMouseLeave={() => setIsPaused(false)}
         >
-          {/* Subtle Gradient Surface */}
           <div
             className={`absolute inset-0 bg-gradient-to-br ${activeSlide.surface} transition-all duration-700`}
           />
@@ -223,7 +255,7 @@ export function CategoriesAndAdSlider({
             className={`absolute -top-24 -right-24 w-96 h-96 rounded-full ${activeSlide.glow} blur-3xl pointer-events-none transition-colors duration-700`}
           />
 
-          {/* Top Bar: Minimal Eyebrow + Arrow Controls */}
+          {/* Top Bar */}
           <div className="relative z-10 flex items-center justify-between gap-4">
             <span className="inline-flex items-center gap-2 text-[12px] font-medium text-neutral-300 bg-white/[0.06] border border-white/[0.08] px-3.5 py-1.5 rounded-full">
               {renderCategoryIcon(activeSlide.categoryLink, "w-3.5 h-3.5 text-white")}

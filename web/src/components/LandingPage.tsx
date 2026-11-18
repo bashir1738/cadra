@@ -30,28 +30,28 @@ interface LandingPageProps {
 
 const FEATURE_TABS = [
   {
-    id: "security" as const,
-    title: "Security",
+    id: "mandate" as const,
+    title: "On-chain mandate enforcement",
     description:
-      "Non-custodial Uniswap v4 hooks backed by real curator cash bonds. If a curator lags The Pace benchmark, their posted collateral automatically covers your shortfall.",
+      "Curators publish strict price corridors, minimum range widths, and concentration limits. CadraHook validates every rebalance inline and reverts any transaction that breaches the mandate.",
   },
   {
-    id: "support" as const,
-    title: "24/7 Safety Brake",
+    id: "parking" as const,
+    title: "Automated TWAP parking",
     description:
-      "Continuous on-chain TWAP monitoring protects your liquidity around the clock. If market conditions breach mandate bounds, capital parks automatically into the passive pool.",
+      "On every swap, the hook checks vault bounds in O(1). If a vault lags The Pace beyond its allowed shortfall, keepers freeze the curator and park 100% of liquidity into the passive full-range Pace.",
   },
   {
-    id: "interface" as const,
-    title: "User-friendly interface",
+    id: "capacity" as const,
+    title: "Dynamic capacity & deficit carry",
     description:
-      "One clean cockpit for following curators, tracking live performance against The Pace, and spending crypto yields across everyday merchants without DeFi friction.",
+      "Curators start at 2x bond capacity and scale up to 20x by beating The Pace. Any shortfall exceeding the bond becomes a carried deficit that must be recovered before earning fees again.",
   },
 ];
 
 export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
   const [activeScenario, setActiveScenario] = useState<"ahead" | "behind" | "parked">("ahead");
-  const [activeFeatureTab, setActiveFeatureTab] = useState<"security" | "support" | "interface">("security");
+  const [activeFeatureTab, setActiveFeatureTab] = useState<"mandate" | "parking" | "capacity">("mandate");
 
   const handleLaunchFollower = () => {
     onSelectRole("follower");
@@ -66,22 +66,22 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
   return (
     <div className="font-sans text-neutral-950 bg-white overflow-x-hidden">
       {/* =========================================================================
-          SECTION 1: HERO (Spenda-inspired Minimalist Layout)
+          SECTION 1: HERO
          ========================================================================= */}
       <section className="max-w-7xl mx-auto px-5 sm:px-8 pt-12 sm:pt-20 pb-20 sm:pb-28">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-14 lg:gap-10 items-center">
           {/* Left Column */}
           <div className="lg:col-span-6 space-y-7 text-left">
             <div className="inline-flex items-center px-4 py-1.5 rounded-full bg-[#EEF4FF] text-[#1D4ED8] text-[13px] font-medium">
-              Spend &amp; Earn your Crypto with Ease
+              Uniswap v4 Curated Liquidity Hook
             </div>
 
-            <h1 className="text-[40px] sm:text-[56px] lg:text-[64px] font-bold tracking-[-0.04em] leading-[1.06] text-neutral-950">
-              Crypto spending &amp; liquidity made easy
+            <h1 className="text-[40px] sm:text-[54px] lg:text-[62px] font-bold tracking-[-0.04em] leading-[1.06] text-neutral-950">
+              Follow a curator. Pay only when they beat the Pace.
             </h1>
 
-            <p className="text-[16px] sm:text-[17px] text-neutral-500 max-w-[480px] leading-[1.65] font-normal">
-              Cadra reduces the steps required to earn curated Uniswap v4 yields, protect capital with real bonds, and spend crypto in your day-to-day life.
+            <p className="text-[16px] sm:text-[17px] text-neutral-500 max-w-[490px] leading-[1.65] font-normal">
+              Cadra benchmarks active Uniswap v4 liquidity vaults against a passive full-range position—combining on-chain mandates, USDC curator bonds, and automated parking.
             </p>
 
             {/* Primary Web App Launch Actions */}
@@ -113,7 +113,7 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
             </div>
           </div>
 
-          {/* Right Column: Soft Isometric Backdrop + Titanium Phone Mockup */}
+          {/* Right Column: Soft Isometric Backdrop + Titanium Vault Preview */}
           <div className="lg:col-span-6 relative flex items-center justify-center min-h-[480px] sm:min-h-[540px]">
             {/* Tilted Isometric White Tile Grid fading softly into white */}
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none hero-grid-mask">
@@ -127,7 +127,7 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
               </div>
             </div>
 
-            {/* Sleek Titanium iPhone Mockup */}
+            {/* Sleek Titanium Vault Device Preview */}
             <div className="relative z-10 w-[290px] sm:w-[310px] rounded-[46px] bg-gradient-to-b from-neutral-200 via-neutral-300 to-neutral-200 p-[5px] shadow-[0_32px_70px_-20px_rgba(0,0,0,0.22)]">
               <div className="rounded-[41px] bg-neutral-950 p-[8px]">
                 <div className="bg-white rounded-[34px] px-4 pt-3 pb-5 space-y-4">
@@ -136,61 +136,66 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
 
                   {/* Screen Header */}
                   <div className="flex items-center justify-between pt-1">
-                    <span className="text-[13px] font-semibold text-neutral-950">Select crypto</span>
+                    <span className="text-[13px] font-semibold text-neutral-950">Active Vaults</span>
                     <span className="text-[11px] font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
-                      Uniswap v4
+                      WETH / USDC
                     </span>
                   </div>
 
-                  {/* Quick Asset Pills */}
+                  {/* Active Pool Vault Rows */}
                   <div className="space-y-1.5">
                     <div className="px-3 py-2.5 rounded-xl bg-neutral-50 flex items-center justify-between">
                       <div className="flex items-center gap-2.5">
-                        <div className="w-6 h-6 rounded-full bg-amber-500/15 text-amber-500 flex items-center justify-center p-1">
-                          <BitcoinIcon className="w-full h-full" />
+                        <div className="w-6 h-6 rounded-full bg-indigo-500/15 text-indigo-600 flex items-center justify-center p-1">
+                          <EthereumIcon className="w-full h-full" />
                         </div>
-                        <span className="text-[12px] font-semibold text-neutral-900">BTC</span>
+                        <div>
+                          <p className="text-[12px] font-semibold text-neutral-900 leading-tight">Tight-Range Alpha</p>
+                          <p className="text-[10px] text-emerald-600 font-medium">+14.8% vs Pace</p>
+                        </div>
                       </div>
                       <ChevronRightSmallIcon className="w-3 h-3 text-neutral-400" />
                     </div>
                     <div className="px-3 py-2.5 rounded-xl bg-neutral-50 flex items-center justify-between">
                       <div className="flex items-center gap-2.5">
-                        <div className="w-6 h-6 rounded-full bg-teal-500/15 text-teal-600 flex items-center justify-center p-1">
-                          <TetherIcon className="w-full h-full" />
+                        <div className="w-6 h-6 rounded-full bg-blue-500/15 text-blue-600 flex items-center justify-center p-1">
+                          <UsdcIcon className="w-full h-full" />
                         </div>
-                        <span className="text-[12px] font-semibold text-neutral-900">USDT</span>
+                        <div>
+                          <p className="text-[12px] font-semibold text-neutral-900 leading-tight">Wide-Range Steady</p>
+                          <p className="text-[10px] text-neutral-500 font-medium">8x Bond Capacity</p>
+                        </div>
                       </div>
                       <ChevronRightSmallIcon className="w-3 h-3 text-neutral-400" />
                     </div>
                   </div>
 
-                  {/* Network Selector Sheet */}
+                  {/* Mandate & Guardrails Sheet */}
                   <div className="pt-2 border-t border-neutral-100 space-y-2.5">
-                    <p className="text-[12px] font-semibold text-neutral-950">Select Network</p>
+                    <p className="text-[12px] font-semibold text-neutral-950">On-Chain Guardrails</p>
                     <div className="p-2.5 rounded-xl bg-[#F4F7FF] text-[10px] text-neutral-600 leading-relaxed">
-                      Choose a verified liquidity rail to deposit, follow curators, or spend instantly.
+                      Every rebalance is validated by CadraHook against published tick bounds and TWAP shortfall limits.
                     </div>
 
                     <div className="divide-y divide-neutral-100 text-[12px]">
                       {[
-                        { name: "Ethereum (Uniswap v4)", badge: "+14.8% APY", highlight: true },
-                        { name: "Bitcoin (BTC)", badge: null, highlight: false },
-                        { name: "Base (BASE)", badge: null, highlight: false },
-                        { name: "Solana (SOL)", badge: null, highlight: false },
-                      ].map((net) => (
+                        { label: "Benchmark", value: "The Pace", accent: false },
+                        { label: "Fee on Surplus", value: "20% max", accent: true },
+                        { label: "Curator Bond", value: "USDC backed", accent: false },
+                        { label: "Circuit Breaker", value: "TWAP Parking", accent: false },
+                      ].map((row) => (
                         <div
-                          key={net.name}
+                          key={row.label}
                           className="py-2.5 flex items-center justify-between"
                         >
-                          <span className="font-medium text-neutral-800">{net.name}</span>
-                          <div className="flex items-center gap-1.5">
-                            {net.badge && (
-                              <span className="text-[10px] font-semibold text-emerald-600">
-                                {net.badge}
-                              </span>
-                            )}
-                            <ChevronRightSmallIcon className="w-3 h-3 text-neutral-400" />
-                          </div>
+                          <span className="font-medium text-neutral-600">{row.label}</span>
+                          <span
+                            className={`text-[11px] font-semibold ${
+                              row.accent ? "text-emerald-600" : "text-neutral-950"
+                            }`}
+                          >
+                            {row.value}
+                          </span>
                         </div>
                       ))}
                     </div>
@@ -203,31 +208,31 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
       </section>
 
       {/* =========================================================================
-          SECTION 2: BENTO CARDS — "Built for daily use." (Spenda Screenshot 2)
+          SECTION 2: BENTO CARDS — "Built for honest curation."
          ========================================================================= */}
       <section className="max-w-7xl mx-auto px-5 sm:px-8 py-16 sm:py-24 space-y-12">
         <div className="text-center space-y-1.5 max-w-2xl mx-auto">
           <p className="text-xl sm:text-2xl font-semibold text-neutral-400 tracking-[-0.02em]">
-            Built for daily use.
+            Built for honest curation.
           </p>
           <h2 className="text-3xl sm:text-[44px] font-bold tracking-[-0.035em] leading-[1.1] text-neutral-950">
-            Deposit and spend instantly
+            Benchmark every tick on-chain
           </h2>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
-          {/* Left Bento Card: Clean White Canvas + Minimal Phone Protruding */}
+          {/* Left Bento Card: Hook-Owned Vault Telemetry */}
           <div className="bg-[#FAFAFA] border border-neutral-200/75 rounded-[32px] pt-10 px-8 sm:px-12 pb-0 flex flex-col justify-between overflow-hidden min-h-[480px]">
             <div className="space-y-2.5 max-w-sm">
               <h3 className="text-2xl sm:text-[28px] font-bold text-neutral-950 tracking-[-0.03em] leading-tight">
-                Live vault telemetry, zero custody risk
+                Hook-owned liquidity, zero custody risk
               </h3>
               <p className="text-[14px] text-neutral-500 leading-relaxed">
-                Track your curated liquidity positions in real time as every epoch is benchmarked against The Pace.
+                Curators rebalance positions atomically inside Uniswap v4 but can never withdraw follower funds. Every epoch is measured live against The Pace.
               </p>
             </div>
 
-            {/* Minimalist iPhone Frame Protruding from Bottom */}
+            {/* Minimalist Vault Telemetry Frame Protruding from Bottom */}
             <div className="pt-10 flex justify-center">
               <div className="w-[260px] sm:w-[280px] rounded-t-[40px] border-t-[6px] border-x-[6px] border-neutral-950 bg-white pt-4 px-6 pb-8 shadow-[0_-10px_40px_rgba(0,0,0,0.06)]">
                 <div className="w-20 h-4 rounded-full bg-neutral-950 mx-auto mb-7" />
@@ -252,21 +257,21 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
             </div>
           </div>
 
-          {/* Right Bento Card: Warm Peach Gradient + Sculpted 3D Coins */}
+          {/* Right Bento Card: Warm Peach Gradient + Sculpted 3D ETH & USDC Coins */}
           <div className="bg-gradient-to-b from-[#FFF4EB] via-[#FFEFE2] to-[#FFE6D3] border border-[#FED7AA]/40 rounded-[32px] p-8 sm:p-12 flex flex-col justify-between overflow-hidden min-h-[480px] group">
-            {/* Sculpted 3D Floating Gold BTC & Emerald USDT Coins */}
+            {/* Sculpted 3D Floating ETH & USDC Pool Coins */}
             <div className="relative h-56 sm:h-60 flex items-center justify-center">
-              {/* Gold Bitcoin Coin */}
-              <div className="absolute left-4 sm:left-10 top-2 w-32 h-32 sm:w-36 sm:h-36 rounded-full bg-gradient-to-tr from-[#B45309] via-[#F59E0B] to-[#FEF08A] p-1.5 shadow-[0_24px_48px_-12px_rgba(180,83,9,0.45)] transform -rotate-12 transition-transform duration-500 group-hover:-rotate-6 group-hover:scale-105">
-                <div className="w-full h-full rounded-full border-[3px] border-yellow-200/70 bg-gradient-to-br from-[#FBBF24] via-[#D97706] to-[#92400E] flex items-center justify-center text-white p-5">
-                  <BitcoinIcon className="w-full h-full drop-shadow-md" />
+              {/* Sculpted WETH Coin */}
+              <div className="absolute left-4 sm:left-10 top-2 w-32 h-32 sm:w-36 sm:h-36 rounded-full bg-gradient-to-tr from-[#312E81] via-[#6366F1] to-[#C7D2FE] p-1.5 shadow-[0_24px_48px_-12px_rgba(67,56,202,0.4)] transform -rotate-12 transition-transform duration-500 group-hover:-rotate-6 group-hover:scale-105">
+                <div className="w-full h-full rounded-full border-[3px] border-indigo-200/70 bg-gradient-to-br from-[#818CF8] via-[#4F46E5] to-[#1E1B4B] flex items-center justify-center text-white p-5">
+                  <EthereumIcon className="w-full h-full drop-shadow-md" />
                 </div>
               </div>
 
-              {/* Emerald Tether Coin */}
-              <div className="absolute right-4 sm:right-10 top-12 w-32 h-32 sm:w-36 sm:h-36 rounded-full bg-gradient-to-tr from-[#0F766E] via-[#14B8A6] to-[#99F6E4] p-1.5 shadow-[0_24px_48px_-12px_rgba(15,118,110,0.45)] transform rotate-12 transition-transform duration-500 group-hover:rotate-6 group-hover:scale-105">
-                <div className="w-full h-full rounded-full border-[3px] border-teal-200/70 bg-gradient-to-br from-[#2DD4BF] via-[#0D9488] to-[#115E59] flex items-center justify-center text-white p-5">
-                  <TetherIcon className="w-full h-full drop-shadow-md" />
+              {/* Sculpted USDC Bond Coin */}
+              <div className="absolute right-4 sm:right-10 top-12 w-32 h-32 sm:w-36 sm:h-36 rounded-full bg-gradient-to-tr from-[#1D4ED8] via-[#3B82F6] to-[#BFDBFE] p-1.5 shadow-[0_24px_48px_-12px_rgba(29,78,216,0.4)] transform rotate-12 transition-transform duration-500 group-hover:rotate-6 group-hover:scale-105">
+                <div className="w-full h-full rounded-full border-[3px] border-blue-200/70 bg-gradient-to-br from-[#60A5FA] via-[#2563EB] to-[#1E3A8A] flex items-center justify-center text-white p-5">
+                  <UsdcIcon className="w-full h-full drop-shadow-md" />
                 </div>
               </div>
             </div>
@@ -275,10 +280,10 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
             <div className="space-y-4 pt-6">
               <div className="space-y-2">
                 <h3 className="text-2xl sm:text-[30px] font-bold text-neutral-950 tracking-[-0.03em] leading-[1.15]">
-                  Deposit crypto. Get local cash instantly
+                  Real USDC bonds. Automatic shortfall cover
                 </h3>
                 <p className="text-[14px] text-neutral-600 leading-relaxed max-w-md">
-                  Fund your Cadra account directly from any crypto wallet or vault and spend instantly with zero P2P friction.
+                  Curators post USDC collateral before managing a single dollar. If an epoch finishes behind The Pace, the bond reimburses followers directly.
                 </p>
               </div>
               <div className="pt-1">
@@ -286,7 +291,7 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
                   onClick={handleLaunchFollower}
                   className="w-full sm:w-auto px-6 py-3.5 rounded-full bg-neutral-950 text-white font-semibold text-[13px] hover:bg-neutral-800 transition-all active:scale-[0.98] inline-flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  <span>Start Depositing</span>
+                  <span>Explore Protected Vaults</span>
                   <ArrowRightIcon className="w-3.5 h-3.5" />
                 </button>
               </div>
@@ -296,46 +301,54 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
       </section>
 
       {/* =========================================================================
-          SECTION 3: EVERYDAY SPENDING CATEGORIES & 3-SLIDE CAROUSEL
+          SECTION 3: CADRA STRATEGY CATEGORIES & 3-SLIDE MECHANISM CAROUSEL
          ========================================================================= */}
-      <section id="categories" className="max-w-7xl mx-auto px-5 sm:px-8 py-16 sm:py-24 space-y-10">
+      <section id="strategies" className="max-w-7xl mx-auto px-5 sm:px-8 py-16 sm:py-24 space-y-10">
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
           <div className="space-y-1.5">
-            <p className="text-[13px] font-semibold text-neutral-400">Everyday Commerce</p>
+            <p className="text-[13px] font-semibold text-neutral-400">Vault Strategies</p>
             <h2 className="text-3xl sm:text-[40px] font-bold tracking-[-0.035em] leading-[1.1] text-neutral-950">
-              Spend your yields anywhere
+              Curated liquidity for every risk profile
             </h2>
           </div>
           <p className="text-[14px] text-neutral-500 max-w-sm">
-            Filter merchants across six everyday categories and settle straight from your Cadra balance.
+            Filter Uniswap v4 curator vaults by mandate width, bond protection, and dynamic capacity multiplier.
           </p>
         </div>
 
-        <CategoriesAndAdSlider onExploreProducts={() => handleLaunchFollower()} />
+        <CategoriesAndAdSlider
+          onExploreProducts={(catId) => {
+            if (catId === "parking") {
+              onNavigate("simulator");
+            } else if (catId === "bonded") {
+              onNavigate("leaderboard");
+            } else {
+              handleLaunchFollower();
+            }
+          }}
+        />
       </section>
 
       {/* =========================================================================
-          SECTION 4: FULL-BLEED PURE BLACK SECTION (Spenda Screenshot 3)
-          "Turn crypto into everyday spending"
+          SECTION 4: FULL-BLEED PURE BLACK SECTION
+          "Active Uniswap v4 liquidity, simplified"
          ========================================================================= */}
       <section className="w-full bg-black text-white py-24 sm:py-32 mt-8">
         <div className="max-w-7xl mx-auto px-5 sm:px-8 space-y-16">
           {/* Header */}
           <div className="text-center space-y-4 max-w-xl mx-auto">
             <h2 className="text-3xl sm:text-[48px] font-bold tracking-[-0.035em] leading-[1.08] text-white">
-              Turn crypto into everyday spending
+              Active Uniswap v4 liquidity, simplified
             </h2>
             <p className="text-[15px] text-neutral-400 leading-relaxed">
-              Cadra simplifies curated liquidity and crypto spending, making it effortless for both beginners and experienced users to transact seamlessly.
+              Cadra replaces opaque management fees and blind trust with transparent on-chain math—settling every epoch cleanly against The Pace.
             </p>
           </div>
 
-          {/* 3D Token Showcase + Mirror Floor Reflection */}
+          {/* 3D Pool Asset Arc + Mirror Floor Reflection */}
           <div className="relative py-6 max-w-2xl mx-auto">
-            {/* Soft Ambient Depth Halo */}
             <div className="absolute inset-x-10 top-1/2 -translate-y-1/2 h-24 bg-blue-500/10 blur-3xl rounded-full pointer-events-none" />
 
-            {/* Subtle Blurred Receding Background Tokens */}
             <div className="flex items-center justify-center gap-6 sm:gap-10 opacity-30 blur-[1px] -mb-4 scale-90 pointer-events-none">
               <div className="w-10 h-10 rounded-full bg-blue-600/60" />
               <div className="w-9 h-9 rounded-full bg-emerald-500/50" />
@@ -343,10 +356,9 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
               <div className="w-9 h-9 rounded-full bg-amber-500/50" />
             </div>
 
-            {/* Primary Crisp Foreground Token Arc */}
             <div className="relative z-10 flex items-center justify-center gap-3.5 sm:gap-6">
               {[
-                { key: "btc", bg: "from-amber-500 to-amber-700", ring: "ring-amber-400/30", size: "w-12 h-12 sm:w-16 sm:h-16", icon: <BitcoinIcon className="w-6 h-6 sm:w-8 sm:h-8 text-white" /> },
+                { key: "wbtc", bg: "from-amber-500 to-amber-700", ring: "ring-amber-400/30", size: "w-12 h-12 sm:w-16 sm:h-16", icon: <BitcoinIcon className="w-6 h-6 sm:w-8 sm:h-8 text-white" /> },
                 { key: "usdc", bg: "from-blue-500 to-blue-700", ring: "ring-blue-400/30", size: "w-13 h-13 sm:w-[68px] sm:h-[68px]", icon: <UsdcIcon className="w-6 h-6 sm:w-8 sm:h-8 text-white" /> },
                 { key: "eth", bg: "from-slate-500 to-slate-800", ring: "ring-slate-300/30", size: "w-14 h-14 sm:w-[74px] sm:h-[74px]", icon: <EthereumIcon className="w-7 h-7 sm:w-9 sm:h-9 text-white" /> },
                 { key: "cadra", bg: "from-sky-400 to-blue-600", ring: "ring-sky-300/40", size: "w-14 h-14 sm:w-[74px] sm:h-[74px]", icon: <img src="/cadra/logo/cadra-mark-white.svg" alt="Cadra" className="w-7 h-7 sm:w-8 sm:h-8 object-contain" /> },
@@ -368,7 +380,7 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
               className="flex items-center justify-center gap-3.5 sm:gap-6 mt-2 transform -scale-y-100 blur-[2px] opacity-40 reflection-mask pointer-events-none select-none"
             >
               {[
-                { key: "btc-r", bg: "from-amber-500 to-amber-700", size: "w-12 h-12 sm:w-16 sm:h-16" },
+                { key: "wbtc-r", bg: "from-amber-500 to-amber-700", size: "w-12 h-12 sm:w-16 sm:h-16" },
                 { key: "usdc-r", bg: "from-blue-500 to-blue-700", size: "w-13 h-13 sm:w-[68px] sm:h-[68px]" },
                 { key: "eth-r", bg: "from-slate-500 to-slate-800", size: "w-14 h-14 sm:w-[74px] sm:h-[74px]" },
                 { key: "cadra-r", bg: "from-sky-400 to-blue-600", size: "w-14 h-14 sm:w-[74px] sm:h-[74px]" },
@@ -380,7 +392,7 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
             </div>
           </div>
 
-          {/* 3 Numbered Obsidian Step Cards */}
+          {/* 3 Numbered Cadra Lifecycle Step Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Step 1 */}
             <div className="rounded-[28px] bg-[#0B0B0D] border border-white/[0.08] p-7 flex flex-col justify-between space-y-8 hover:border-white/[0.15] transition-colors">
@@ -388,18 +400,17 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
                 1
               </div>
 
-              {/* Clean Mini Visual */}
               <div className="py-5 px-4 rounded-2xl bg-white/[0.02] border border-white/[0.06] flex flex-col items-center gap-3">
                 <div className="w-11 h-11 rounded-2xl bg-white text-neutral-950 flex items-center justify-center">
                   <ShieldIcon className="w-5 h-5" />
                 </div>
-                <span className="text-[12px] font-medium text-neutral-300">Non-custodial wallet ready</span>
+                <span className="text-[12px] font-medium text-neutral-300">Epoch queue · Hook-owned custody</span>
               </div>
 
               <div className="space-y-1.5">
-                <h3 className="text-[18px] font-semibold text-white tracking-tight">Deposit or Connect</h3>
+                <h3 className="text-[18px] font-semibold text-white tracking-tight">Deposit into a Vault</h3>
                 <p className="text-[13px] text-neutral-400 leading-relaxed">
-                  Connect your wallet or fund your Cadra vault with USDC, ETH, or BTC in seconds.
+                  Supply WETH/USDC into a curator&apos;s pool. Deposits queue cleanly to settle at epoch boundaries.
                 </p>
               </div>
             </div>
@@ -410,25 +421,24 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
                 2
               </div>
 
-              {/* Clean Mini Visual matching Spenda "Choose Your Token" */}
               <div className="py-4 px-4 rounded-2xl bg-white/[0.02] border border-white/[0.06] space-y-2.5">
-                <p className="text-[11px] font-medium text-neutral-400 text-center">Choose Your Token</p>
+                <p className="text-[11px] font-medium text-neutral-400 text-center">Mandate-Checked Ranges</p>
                 <div className="space-y-1.5 text-[12px]">
                   <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-white/[0.05] text-white">
-                    <span className="font-medium">WETH / USDC v4</span>
-                    <span className="text-emerald-400 text-[11px]">Active</span>
+                    <span className="font-medium">WETH / USDC 0.05%</span>
+                    <span className="text-emerald-400 text-[11px]">In Band</span>
                   </div>
                   <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-white/[0.02] text-neutral-400">
-                    <span>USDC Virtual Card</span>
-                    <span className="text-[11px]">Instant</span>
+                    <span>Max Shortfall</span>
+                    <span className="text-[11px]">5.0% TWAP</span>
                   </div>
                 </div>
               </div>
 
               <div className="space-y-1.5">
-                <h3 className="text-[18px] font-semibold text-white tracking-tight">Choose Your Vault</h3>
+                <h3 className="text-[18px] font-semibold text-white tracking-tight">Curator Rebalances</h3>
                 <p className="text-[13px] text-neutral-400 leading-relaxed">
-                  Follow an audited curator strategy or allocate directly to your spending card.
+                  The curator manages concentrated Uniswap v4 ticks within immutable on-chain mandate limits.
                 </p>
               </div>
             </div>
@@ -439,19 +449,18 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
                 3
               </div>
 
-              {/* Clean Mini Visual */}
               <div className="py-5 px-4 rounded-2xl bg-white/[0.02] border border-white/[0.06] flex flex-col items-center gap-3">
                 <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/15 text-emerald-400 text-[12px] font-medium">
                   <CheckCircleIcon className="w-4 h-4" />
-                  <span>Bond Protected</span>
+                  <span>Asymmetric Settlement</span>
                 </div>
-                <span className="text-[12px] text-neutral-400">Pay only when curator beats The Pace</span>
+                <span className="text-[12px] text-neutral-400">Fees only above The Pace</span>
               </div>
 
               <div className="space-y-1.5">
-                <h3 className="text-[18px] font-semibold text-white tracking-tight">Earn &amp; Spend Instantly</h3>
+                <h3 className="text-[18px] font-semibold text-white tracking-tight">Settle Against The Pace</h3>
                 <p className="text-[13px] text-neutral-400 leading-relaxed">
-                  Keep upside alpha, stay protected by curator cash bonds, and spend anywhere.
+                  Beat The Pace and share surplus alpha; lag behind and the curator&apos;s USDC bond pays followers.
                 </p>
               </div>
             </div>
@@ -460,15 +469,15 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
       </section>
 
       {/* =========================================================================
-          SECTION 5: BUILT FOR SPEED, CLARITY, AND CONTROL (Spenda Screenshot 4)
+          SECTION 5: BUILT FOR ALIGNMENT, SAFETY, AND CLARITY
          ========================================================================= */}
       <section className="max-w-7xl mx-auto px-5 sm:px-8 py-24 sm:py-32 space-y-16">
         <div className="text-center space-y-3 max-w-xl mx-auto">
           <h2 className="text-3xl sm:text-[46px] font-bold tracking-[-0.035em] leading-[1.1] text-neutral-950">
-            Built for speed, clarity, and control
+            Built for alignment, safety, and clarity
           </h2>
           <p className="text-[15px] text-neutral-500 leading-relaxed">
-            Cadra helps you move from curated crypto liquidity to everyday payments securely and without stress.
+            Cadra aligns liquidity curators and followers through enforceable Uniswap v4 hook rules—not off-chain trust.
           </p>
         </div>
 
@@ -520,7 +529,7 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
             </div>
           </div>
 
-          {/* Right: Clean Interactive Accordion List */}
+          {/* Right: Clean Interactive Cadra Mechanism List */}
           <div className="lg:col-span-7 divide-y divide-neutral-200">
             {FEATURE_TABS.map((tab) => {
               const isActive = activeFeatureTab === tab.id;
@@ -555,7 +564,7 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
       </section>
 
       {/* =========================================================================
-          SECTION 6: THE PACE BENCHMARK (Cadra Core Mechanism Visualizer)
+          SECTION 6: THE PACE BENCHMARK (Interactive Cadra Settlement Demo)
          ========================================================================= */}
       <section className="max-w-7xl mx-auto px-5 sm:px-8 pb-24 sm:pb-32">
         <div className="bg-[#09090B] text-white rounded-[32px] p-7 sm:p-12 space-y-10">
@@ -567,7 +576,7 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
                 Pay only when your curator beats the market
               </h2>
               <p className="text-[14px] text-neutral-400 leading-relaxed">
-                Preview how Cadra&apos;s Uniswap v4 hook settles performance fees, enforces bond protection, and triggers the safety brake.
+                Preview how Cadra&apos;s Uniswap v4 hook settles performance fees, enforces USDC bond protection, and triggers automated TWAP parking.
               </p>
             </div>
 
@@ -622,7 +631,7 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
                   strokeDasharray="6 4"
                 />
                 <text x="16" y="124" fill="#a1a1aa" fontSize="11" fontFamily="sans-serif" fontWeight="500">
-                  The Pace (Passive Pool Benchmark)
+                  The Pace (Passive Full-Range Benchmark)
                 </text>
 
                 {activeScenario === "ahead" && (
@@ -641,8 +650,8 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
                     <path d="M 0 140 Q 200 135, 400 146 T 800 136" fill="none" stroke="#52525b" strokeWidth="2.5" />
                     <path d="M 792 136 L 792 100" stroke="#34d399" strokeWidth="2.5" strokeDasharray="3 3" />
                     <circle cx="792" cy="100" r="5" fill="#10b981" />
-                    <text x="570" y="88" fill="#34d399" fontSize="12" fontFamily="sans-serif" fontWeight="600">
-                      Curator cash bond covers shortfall
+                    <text x="560" y="88" fill="#34d399" fontSize="12" fontFamily="sans-serif" fontWeight="600">
+                      Curator USDC bond covers shortfall
                     </text>
                   </>
                 )}
@@ -698,20 +707,20 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
       </section>
 
       {/* =========================================================================
-          SECTION 7: SPEND YOUR CRYPTO YOUR WAY & FOOTER (Spenda Screenshot 5)
+          SECTION 7: CADRA FOOTER
          ========================================================================= */}
       <footer className="border-t border-neutral-100 pt-20 sm:pt-28 relative overflow-hidden bg-white">
         <div className="max-w-7xl mx-auto px-5 sm:px-8 space-y-16 relative z-10">
           {/* Large Centered Display Headline */}
           <div className="text-center">
             <h2 className="text-3xl sm:text-[52px] font-bold tracking-[-0.035em] leading-[1.08] text-neutral-950">
-              Spend your Crypto your way
+              Follow a curator. Beat the Pace.
             </h2>
           </div>
 
           {/* 4-Column Footer Grid */}
           <div className="grid grid-cols-1 md:grid-cols-12 gap-10 pb-16 border-b border-neutral-100">
-            {/* Col 1: Brand Trust, Web App CTAs & Compliance (4 cols) */}
+            {/* Col 1: Brand Trust, Web App CTAs & Protocol Badges (4 cols) */}
             <div className="md:col-span-4 md:border-r md:border-neutral-100 md:pr-8 space-y-5">
               <div className="space-y-1.5">
                 <div className="flex items-center gap-1 text-amber-400">
@@ -720,7 +729,7 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
                   ))}
                 </div>
                 <p className="text-[13px] font-medium text-neutral-700">
-                  Start with Cadra today
+                  Start with Cadra on Uniswap v4
                 </p>
               </div>
 
@@ -742,30 +751,35 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
                 </button>
               </div>
 
-              {/* Clean Compliance Row */}
+              {/* Clean Protocol Verification Row */}
               <div className="flex items-center gap-2 pt-1">
                 <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-50 text-emerald-800 text-[11px] font-semibold">
                   <ShieldIcon className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>NDPC Compliant</span>
+                  <span>Uniswap v4 Hook</span>
                 </div>
                 <span className="text-[11px] font-medium text-neutral-400">
-                  Uniswap v4 Hook
+                  Solidity 0.8.26 · Testnet
                 </span>
               </div>
             </div>
 
-            {/* Col 2: Product (3 cols) */}
+            {/* Col 2: Protocol (3 cols) */}
             <div className="md:col-span-3 space-y-3.5">
-              <h4 className="text-[14px] font-semibold text-neutral-950">Product</h4>
+              <h4 className="text-[14px] font-semibold text-neutral-950">Protocol</h4>
               <ul className="space-y-2.5 text-[13px] text-neutral-500">
                 <li>
-                  <Link href="/follower/explore" className="hover:text-neutral-950 transition-colors">
-                    Crypto deposit &amp; Vaults
+                  <Link href="/follower/portfolio" className="hover:text-neutral-950 transition-colors">
+                    Follower Portfolio
                   </Link>
                 </li>
                 <li>
-                  <Link href="/follower/portfolio" className="hover:text-neutral-950 transition-colors">
-                    Fiat &amp; Local deposit
+                  <Link href="/follower/explore" className="hover:text-neutral-950 transition-colors">
+                    Discover Curators
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/follower/queue" className="hover:text-neutral-950 transition-colors">
+                    Queue &amp; Epochs
                   </Link>
                 </li>
                 <li>
@@ -774,21 +788,16 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
                   </Link>
                 </li>
                 <li>
-                  <Link href="/follower/queue" className="hover:text-neutral-950 transition-colors">
-                    Instant transfers
-                  </Link>
-                </li>
-                <li>
-                  <Link href="/#categories" className="hover:text-neutral-950 transition-colors">
-                    Virtual cards
+                  <Link href="/curator/mandate" className="hover:text-neutral-950 transition-colors">
+                    Mandate &amp; Rules
                   </Link>
                 </li>
               </ul>
             </div>
 
-            {/* Col 3: Company (2 cols) */}
+            {/* Col 3: Tools (2 cols) */}
             <div className="md:col-span-2 space-y-3.5">
-              <h4 className="text-[14px] font-semibold text-neutral-950">Company</h4>
+              <h4 className="text-[14px] font-semibold text-neutral-950">Tools</h4>
               <ul className="space-y-2.5 text-[13px] text-neutral-500">
                 <li>
                   <Link href="/leaderboard" className="hover:text-neutral-950 transition-colors">
@@ -797,47 +806,33 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
                 </li>
                 <li>
                   <Link href="/simulator" className="hover:text-neutral-950 transition-colors">
-                    Simulator
+                    Live Simulator
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/curator/rebalance" className="hover:text-neutral-950 transition-colors">
+                    Range Rebalancer
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/curator/settlements" className="hover:text-neutral-950 transition-colors">
+                    Settlements &amp; Fees
                   </Link>
                 </li>
                 <li>
                   <a href="https://github.com" target="_blank" rel="noreferrer" className="hover:text-neutral-950 transition-colors">
-                    Docs
+                    Smart Contracts
                   </a>
-                </li>
-                <li>
-                  <span className="text-neutral-400">Privacy policy</span>
-                </li>
-                <li>
-                  <span className="text-neutral-400">Terms of use</span>
                 </li>
               </ul>
             </div>
 
-            {/* Col 4: Contact Us (3 cols) */}
+            {/* Col 4: Community (3 cols) */}
             <div className="md:col-span-3 space-y-3.5">
-              <h4 className="text-[14px] font-semibold text-neutral-950">Contact Us</h4>
-              <p className="text-[13px] text-neutral-500">support@cadra.fi</p>
+              <h4 className="text-[14px] font-semibold text-neutral-950">Community</h4>
+              <p className="text-[13px] text-neutral-500">hello@cadra.finance</p>
 
               <div className="flex items-center gap-2.5 pt-1">
-                <a
-                  href="https://youtube.com"
-                  target="_blank"
-                  rel="noreferrer"
-                  aria-label="YouTube"
-                  className="w-9 h-9 rounded-full bg-neutral-950 text-white flex items-center justify-center hover:bg-neutral-800 transition-colors"
-                >
-                  <YouTubeIcon className="w-4 h-4" />
-                </a>
-                <a
-                  href="https://instagram.com"
-                  target="_blank"
-                  rel="noreferrer"
-                  aria-label="Instagram"
-                  className="w-9 h-9 rounded-full bg-neutral-950 text-white flex items-center justify-center hover:bg-neutral-800 transition-colors"
-                >
-                  <InstagramIcon className="w-4 h-4" />
-                </a>
                 <a
                   href="https://x.com"
                   target="_blank"
@@ -856,18 +851,36 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
                 >
                   <DiscordIcon className="w-4 h-4" />
                 </a>
+                <a
+                  href="https://youtube.com"
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label="YouTube"
+                  className="w-9 h-9 rounded-full bg-neutral-950 text-white flex items-center justify-center hover:bg-neutral-800 transition-colors"
+                >
+                  <YouTubeIcon className="w-4 h-4" />
+                </a>
+                <a
+                  href="https://instagram.com"
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label="Instagram"
+                  className="w-9 h-9 rounded-full bg-neutral-950 text-white flex items-center justify-center hover:bg-neutral-800 transition-colors"
+                >
+                  <InstagramIcon className="w-4 h-4" />
+                </a>
               </div>
             </div>
           </div>
 
-          {/* Bottom Legal Row */}
+          {/* Bottom Protocol Info Row */}
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-[12px] text-neutral-500 pb-28">
-            <p>22 Glover Road, Ikoyi, Lagos, Nigeria</p>
-            <p>All rights reserved, 2026 Cadra</p>
+            <p>Built for Atrium Academy UHI11 Hookathon · Testnet Demo</p>
+            <p>© 2026 Cadra Protocol · MIT License</p>
           </div>
         </div>
 
-        {/* Signature Tilted Rounded-Squircle Watermark Pattern (Spenda Screenshot 5) */}
+        {/* Subtle Tilted Geometric Watermark Pattern */}
         <div
           aria-hidden="true"
           className="absolute bottom-0 inset-x-0 h-32 flex items-end justify-center gap-6 pointer-events-none select-none overflow-hidden"

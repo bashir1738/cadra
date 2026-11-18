@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useCadra } from "../context/CadraContext";
-import { ShieldIcon, ZapIcon, ShoppingBagIcon, XIcon, ArrowRightIcon } from "./Icons";
+import { ShieldIcon, ZapIcon, ActivityIcon, XIcon, ArrowRightIcon } from "./Icons";
 
 interface HeaderProps {
   currentRole?: string;
@@ -25,7 +25,6 @@ export function Header({
 }: HeaderProps = {}) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [productsOpen, setProductsOpen] = useState(false);
-  const [qrOpen, setQrOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
   const cadra = useCadra();
@@ -57,9 +56,9 @@ export function Header({
           </span>
         </Link>
 
-        {/* Center: Minimalist Navigation */}
+        {/* Center: Minimalist Cadra Protocol Navigation */}
         <nav className="hidden md:flex items-center gap-8 text-[14px] font-medium text-neutral-600">
-          {/* Our Products Dropdown */}
+          {/* Protocol Dropdown */}
           <div
             className="relative"
             onMouseEnter={() => setProductsOpen(true)}
@@ -69,7 +68,7 @@ export function Header({
               onClick={() => setProductsOpen(!productsOpen)}
               className="flex items-center gap-1.5 hover:text-neutral-950 transition-colors py-2 cursor-pointer"
             >
-              <span>Our products</span>
+              <span>Protocol</span>
               <svg
                 className={`w-3.5 h-3.5 text-neutral-400 transition-transform duration-200 ${
                   productsOpen ? "rotate-180 text-neutral-900" : ""
@@ -96,7 +95,7 @@ export function Header({
                     </div>
                     <div>
                       <p className="text-[13px] font-semibold text-neutral-950">Follower Vaults</p>
-                      <p className="text-[12px] text-neutral-500">Copy curators with bond protection</p>
+                      <p className="text-[12px] text-neutral-500">Follow curators with USDC bond cover</p>
                     </div>
                   </Link>
 
@@ -115,16 +114,16 @@ export function Header({
                   </Link>
 
                   <Link
-                    href="/#categories"
+                    href="/#strategies"
                     onClick={() => setProductsOpen(false)}
                     className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-neutral-50 transition-colors group"
                   >
                     <div className="w-9 h-9 rounded-xl bg-neutral-100 group-hover:bg-white border border-transparent group-hover:border-neutral-200 flex items-center justify-center text-neutral-900 shrink-0 transition-colors">
-                      <ShoppingBagIcon className="w-4 h-4" />
+                      <ActivityIcon className="w-4 h-4" />
                     </div>
                     <div>
-                      <p className="text-[13px] font-semibold text-neutral-950">Everyday Spending</p>
-                      <p className="text-[12px] text-neutral-500">Groceries, fashion, tech &amp; cards</p>
+                      <p className="text-[13px] font-semibold text-neutral-950">Vault Strategies</p>
+                      <p className="text-[12px] text-neutral-500">Tight range, wide range &amp; Pace math</p>
                     </div>
                   </Link>
                 </div>
@@ -151,45 +150,13 @@ export function Header({
           </Link>
         </nav>
 
-        {/* Right: Download QR + Clean Primary CTA */}
-        <div className="flex items-center gap-4 shrink-0">
-          {/* Spenda-inspired Download QR trigger */}
-          <div
-            className="relative hidden lg:flex items-center"
-            onMouseEnter={() => setQrOpen(true)}
-            onMouseLeave={() => setQrOpen(false)}
-          >
-            <button
-              type="button"
-              onClick={() => setQrOpen(!qrOpen)}
-              className="flex items-center gap-2 text-[13px] font-medium text-neutral-600 hover:text-neutral-950 transition-colors cursor-pointer"
-            >
-              <span>Download :</span>
-              <span className="w-8 h-8 rounded-lg border border-neutral-200 bg-white flex items-center justify-center shadow-[0_1px_2px_rgba(0,0,0,0.03)]">
-                <svg className="w-4 h-4 text-neutral-950" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M3 3h7v7H3V3zm2 2v3h3V5H5zm8-2h7v7h-7V3zm2 2v3h3V5h-3zM3 13h7v7H3v-7zm2 2v3h3v-3H5zm11 1h2v2h-2v-2zm-3-3h2v2h-2v-2zm2 5h2v2h-2v-2zm3-2h2v4h-2v-4zm-5 2h2v2h-2v-2zm5-4h2v2h-2v-2zm0-3h2v2h-2v-2z" />
-                </svg>
-              </span>
-            </button>
-
-            {qrOpen && (
-              <div className="absolute top-full right-0 pt-3 z-50 w-56">
-                <div className="bg-white border border-neutral-200/80 rounded-2xl p-5 shadow-[0_16px_48px_-12px_rgba(0,0,0,0.12)] text-center space-y-2.5">
-                  <div className="w-32 h-32 mx-auto bg-neutral-950 rounded-xl p-3 flex items-center justify-center">
-                    <img
-                      src="/cadra/logo/cadra-mark-white.svg"
-                      alt="Cadra Mobile"
-                      className="w-16 h-16 object-contain"
-                    />
-                  </div>
-                  <p className="text-[12px] font-semibold text-neutral-950">Scan to open Cadra</p>
-                  <p className="text-[11px] text-neutral-500">iOS &amp; Android Web App</p>
-                </div>
-              </div>
-            )}
+        {/* Right: Pool Network Status + Clean Primary CTA */}
+        <div className="flex items-center gap-3 shrink-0">
+          <div className="hidden lg:inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-neutral-100/80 text-[12px] font-medium text-neutral-600">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+            <span>Uniswap v4 · Testnet</span>
           </div>
 
-          {/* Primary Action / Connected State */}
           {connectedAddress ? (
             <div className="flex items-center gap-2 pl-3 pr-1.5 py-1.5 rounded-full bg-neutral-100 border border-neutral-200/80 text-xs text-neutral-900">
               <span className="w-2 h-2 rounded-full bg-emerald-500" />
