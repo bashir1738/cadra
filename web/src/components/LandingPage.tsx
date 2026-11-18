@@ -12,7 +12,7 @@ import {
   InstagramIcon,
   TwitterXIcon,
   DiscordIcon,
-  ChevronRightSmallIcon,
+  LockIcon,
   BitcoinIcon,
   EthereumIcon,
   UsdcIcon,
@@ -66,26 +66,22 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
   return (
     <div className="font-sans text-neutral-950 bg-white overflow-x-hidden">
       {/* =========================================================================
-          SECTION 1: HERO
+          SECTION 1: HERO (Centered Top Copy + 3D Rotating Cadra Cube)
          ========================================================================= */}
-      <section className="max-w-7xl mx-auto px-5 sm:px-8 pt-12 sm:pt-20 pb-20 sm:pb-28">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-14 lg:gap-10 items-center">
-          {/* Left Column */}
-          <div className="lg:col-span-6 space-y-7 text-left">
-            <div className="inline-flex items-center px-4 py-1.5 rounded-full bg-[#EEF4FF] text-[#1D4ED8] text-[13px] font-medium">
-              Uniswap v4 Curated Liquidity Hook
-            </div>
-
-            <h1 className="text-[40px] sm:text-[54px] lg:text-[62px] font-bold tracking-[-0.04em] leading-[1.06] text-neutral-950">
+      <section className="max-w-7xl mx-auto px-5 sm:px-8 pt-14 sm:pt-24 pb-20 sm:pb-28">
+        <div className="flex flex-col items-center text-center">
+          {/* Top Centered Hero Copy */}
+          <div className="max-w-3xl mx-auto space-y-6 flex flex-col items-center">
+            <h1 className="text-[40px] sm:text-[58px] lg:text-[68px] font-bold tracking-[-0.04em] leading-[1.05] text-neutral-950">
               Follow a curator. Pay only when they beat the Pace.
             </h1>
 
-            <p className="text-[16px] sm:text-[17px] text-neutral-500 max-w-[490px] leading-[1.65] font-normal">
+            <p className="text-[16px] sm:text-[18px] text-neutral-500 max-w-2xl leading-[1.65] font-normal">
               Cadra benchmarks active Uniswap v4 liquidity vaults against a passive full-range position—combining on-chain mandates, USDC curator bonds, and automated parking.
             </p>
 
             {/* Primary Web App Launch Actions */}
-            <div className="flex flex-wrap items-center gap-3 pt-1">
+            <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
               <button
                 onClick={handleLaunchFollower}
                 className="h-[50px] px-6 rounded-full bg-neutral-950 text-white hover:bg-neutral-800 transition-all active:scale-[0.98] inline-flex items-center gap-2 text-[14px] font-semibold cursor-pointer"
@@ -113,95 +109,98 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
             </div>
           </div>
 
-          {/* Right Column: Soft Isometric Backdrop + Titanium Vault Preview */}
-          <div className="lg:col-span-6 relative flex items-center justify-center min-h-[480px] sm:min-h-[540px]">
-            {/* Tilted Isometric White Tile Grid fading softly into white */}
+          {/* 3D Rotating Cadra Cube Showcase */}
+          <div className="relative w-full max-w-2xl mt-14 sm:mt-20 flex flex-col items-center justify-center min-h-[320px] sm:min-h-[380px]">
+            {/* Soft Isometric Backdrop dissolving cleanly into white */}
             <div className="absolute inset-0 flex items-center justify-center pointer-events-none hero-grid-mask">
-              <div className="grid grid-cols-3 gap-4 transform -rotate-12 skew-y-6 scale-105">
+              <div className="grid grid-cols-3 gap-4 transform -rotate-12 skew-y-6 scale-95">
                 {[...Array(9)].map((_, i) => (
                   <div
                     key={i}
-                    className="w-36 h-48 rounded-[24px] bg-gradient-to-br from-neutral-50 to-neutral-100/70 border border-neutral-200/70 shadow-[0_12px_30px_rgba(0,0,0,0.03)]"
+                    className="w-32 h-40 rounded-[24px] bg-gradient-to-br from-neutral-50 to-neutral-100/80 border border-neutral-200/70 shadow-[0_12px_30px_rgba(0,0,0,0.03)]"
                   />
                 ))}
               </div>
             </div>
 
-            {/* Sleek Titanium Vault Device Preview */}
-            <div className="relative z-10 w-[290px] sm:w-[310px] rounded-[46px] bg-gradient-to-b from-neutral-200 via-neutral-300 to-neutral-200 p-[5px] shadow-[0_32px_70px_-20px_rgba(0,0,0,0.22)]">
-              <div className="rounded-[41px] bg-neutral-950 p-[8px]">
-                <div className="bg-white rounded-[34px] px-4 pt-3 pb-5 space-y-4">
-                  {/* Dynamic Island */}
-                  <div className="w-20 h-[18px] rounded-full bg-neutral-950 mx-auto" />
-
-                  {/* Screen Header */}
-                  <div className="flex items-center justify-between pt-1">
-                    <span className="text-[13px] font-semibold text-neutral-950">Active Vaults</span>
-                    <span className="text-[11px] font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
-                      WETH / USDC
-                    </span>
-                  </div>
-
-                  {/* Active Pool Vault Rows */}
-                  <div className="space-y-1.5">
-                    <div className="px-3 py-2.5 rounded-xl bg-neutral-50 flex items-center justify-between">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-6 h-6 rounded-full bg-indigo-500/15 text-indigo-600 flex items-center justify-center p-1">
-                          <EthereumIcon className="w-full h-full" />
-                        </div>
-                        <div>
-                          <p className="text-[12px] font-semibold text-neutral-900 leading-tight">Tight-Range Alpha</p>
-                          <p className="text-[10px] text-emerald-600 font-medium">+14.8% vs Pace</p>
-                        </div>
-                      </div>
-                      <ChevronRightSmallIcon className="w-3 h-3 text-neutral-400" />
+            {/* Floating 3D Rotating Cube */}
+            <div className="relative z-10 animate-float-gentle flex flex-col items-center">
+              <div className="cadra-cube-scene cursor-grab" title="Hover to pause rotation">
+                <div className="cadra-cube">
+                  {/* Face 1: Front — Cadra Mark */}
+                  <div className="cadra-cube-face cadra-cube-front space-y-3">
+                    <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-white/[0.06] border border-white/[0.12] flex items-center justify-center p-3">
+                      <img
+                        src="/cadra/logo/cadra-mark-white.svg"
+                        alt="Cadra"
+                        className="w-full h-full object-contain"
+                      />
                     </div>
-                    <div className="px-3 py-2.5 rounded-xl bg-neutral-50 flex items-center justify-between">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-6 h-6 rounded-full bg-blue-500/15 text-blue-600 flex items-center justify-center p-1">
-                          <UsdcIcon className="w-full h-full" />
-                        </div>
-                        <div>
-                          <p className="text-[12px] font-semibold text-neutral-900 leading-tight">Wide-Range Steady</p>
-                          <p className="text-[10px] text-neutral-500 font-medium">8x Bond Capacity</p>
-                        </div>
-                      </div>
-                      <ChevronRightSmallIcon className="w-3 h-3 text-neutral-400" />
+                    <div>
+                      <p className="text-[18px] font-bold tracking-[-0.03em] lowercase text-white">cadra</p>
+                      <p className="text-[11px] text-neutral-400 mt-0.5">Curated Liquidity</p>
                     </div>
                   </div>
 
-                  {/* Mandate & Guardrails Sheet */}
-                  <div className="pt-2 border-t border-neutral-100 space-y-2.5">
-                    <p className="text-[12px] font-semibold text-neutral-950">On-Chain Guardrails</p>
-                    <div className="p-2.5 rounded-xl bg-[#F4F7FF] text-[10px] text-neutral-600 leading-relaxed">
-                      Every rebalance is validated by CadraHook against published tick bounds and TWAP shortfall limits.
+                  {/* Face 2: Right — The Pace Benchmark */}
+                  <div className="cadra-cube-face cadra-cube-right space-y-3">
+                    <div className="w-12 h-12 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                      <TrendUpIcon className="w-6 h-6" />
                     </div>
+                    <div>
+                      <p className="text-[16px] font-semibold text-white">The Pace</p>
+                      <p className="text-[11px] text-neutral-400 mt-0.5">Full-Range Benchmark</p>
+                    </div>
+                  </div>
 
-                    <div className="divide-y divide-neutral-100 text-[12px]">
-                      {[
-                        { label: "Benchmark", value: "The Pace", accent: false },
-                        { label: "Fee on Surplus", value: "20% max", accent: true },
-                        { label: "Curator Bond", value: "USDC backed", accent: false },
-                        { label: "Circuit Breaker", value: "TWAP Parking", accent: false },
-                      ].map((row) => (
-                        <div
-                          key={row.label}
-                          className="py-2.5 flex items-center justify-between"
-                        >
-                          <span className="font-medium text-neutral-600">{row.label}</span>
-                          <span
-                            className={`text-[11px] font-semibold ${
-                              row.accent ? "text-emerald-600" : "text-neutral-950"
-                            }`}
-                          >
-                            {row.value}
-                          </span>
-                        </div>
-                      ))}
+                  {/* Face 3: Back — USDC Curator Bond */}
+                  <div className="cadra-cube-face cadra-cube-back space-y-3">
+                    <div className="w-12 h-12 rounded-2xl bg-blue-500/15 border border-blue-500/30 flex items-center justify-center text-blue-400">
+                      <ShieldIcon className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <p className="text-[16px] font-semibold text-white">USDC Bond</p>
+                      <p className="text-[11px] text-neutral-400 mt-0.5">Shortfall Coverage</p>
+                    </div>
+                  </div>
+
+                  {/* Face 4: Left — On-Chain Mandates */}
+                  <div className="cadra-cube-face cadra-cube-left space-y-3">
+                    <div className="w-12 h-12 rounded-2xl bg-white/[0.08] border border-white/[0.14] flex items-center justify-center text-white">
+                      <LockIcon className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <p className="text-[16px] font-semibold text-white">Mandates</p>
+                      <p className="text-[11px] text-neutral-400 mt-0.5">Inline Hook Checks</p>
+                    </div>
+                  </div>
+
+                  {/* Face 5: Top — WETH / USDC Pool */}
+                  <div className="cadra-cube-face cadra-cube-top space-y-3">
+                    <div className="w-12 h-12 rounded-2xl bg-indigo-500/15 border border-indigo-500/30 flex items-center justify-center text-indigo-300">
+                      <EthereumIcon className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <p className="text-[16px] font-semibold text-white">WETH / USDC</p>
+                      <p className="text-[11px] text-neutral-400 mt-0.5">0.05% Hook Pool</p>
+                    </div>
+                  </div>
+
+                  {/* Face 6: Bottom — TWAP Parking Brake */}
+                  <div className="cadra-cube-face cadra-cube-bottom space-y-3">
+                    <div className="w-12 h-12 rounded-2xl bg-sky-500/15 border border-sky-500/30 flex items-center justify-center text-sky-400">
+                      <ActivityIcon className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <p className="text-[16px] font-semibold text-white">TWAP Brake</p>
+                      <p className="text-[11px] text-neutral-400 mt-0.5">Automated Parking</p>
                     </div>
                   </div>
                 </div>
               </div>
+
+              {/* Soft Ground Ambient Shadow */}
+              <div className="w-40 sm:w-48 h-6 rounded-full bg-neutral-950/15 blur-xl mt-12 pointer-events-none" />
             </div>
           </div>
         </div>
