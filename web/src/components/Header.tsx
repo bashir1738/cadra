@@ -3,8 +3,9 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useCadra } from "../context/CadraContext";
+
 import { ShieldIcon, ZapIcon, ActivityIcon, XIcon, ArrowRightIcon } from "./Icons";
+import { CadraRainbowButton } from "./CadraRainbowButton";
 
 interface HeaderProps {
   currentRole?: string;
@@ -23,37 +24,31 @@ export function Header({
   onConnectWallet,
   onDisconnectWallet,
 }: HeaderProps = {}) {
+  const [mounted, setMounted] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [productsOpen, setProductsOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
-  const cadra = useCadra();
-
-  const connectedAddress = propAddress !== undefined ? propAddress : cadra.connectedAddress;
-  const handleConnectWallet = onConnectWallet || cadra.connectWallet;
-  const handleDisconnectWallet = onDisconnectWallet || cadra.disconnectWallet;
 
   return (
     <header className="sticky top-0 z-50 w-full bg-white/90 backdrop-blur-xl border-b border-neutral-100 transition-colors">
       <div className="max-w-7xl mx-auto px-5 sm:px-8 h-16 sm:h-[72px] flex items-center justify-between gap-6">
-        {/* Left: Brand Mark & Wordmark */}
+        {/* Left: Brand Mark (Icon Only) */}
         <Link
           href="/"
-          className="flex items-center gap-2.5 cursor-pointer select-none shrink-0 group"
+          aria-label="Cadra Home"
+          className="flex items-center cursor-pointer select-none shrink-0 group"
           onClick={() => {
             if (onSelectTab) onSelectTab("landing");
           }}
         >
-          <div className="w-8 h-8 rounded-xl bg-neutral-950 flex items-center justify-center p-1.5 transition-transform duration-200 group-hover:scale-105">
+          <div className="w-8 h-8 rounded-xl bg-neutral-950 flex items-center justify-center p-1.5 transition-transform duration-200 group-hover:scale-105 shadow-sm">
             <img
               src="/cadra/logo/cadra-mark-white.svg"
               alt="Cadra"
               className="w-full h-full object-contain"
             />
           </div>
-          <span className="font-bold text-[21px] tracking-[-0.03em] text-neutral-950 lowercase">
-            cadra
-          </span>
         </Link>
 
         {/* Center: Minimalist Cadra Protocol Navigation */}
@@ -150,44 +145,10 @@ export function Header({
           </Link>
         </nav>
 
-        {/* Right: Pool Network Status + Clean Primary CTA */}
+        {/* Right: RainbowKit Wallet Action */}
         <div className="flex items-center gap-3 shrink-0">
-          <div className="hidden lg:inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-neutral-100/80 text-[12px] font-medium text-neutral-600">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-            <span>Uniswap v4 · Testnet</span>
-          </div>
-
-          {connectedAddress ? (
-            <div className="flex items-center gap-2 pl-3 pr-1.5 py-1.5 rounded-full bg-neutral-100 border border-neutral-200/80 text-xs text-neutral-900">
-              <span className="w-2 h-2 rounded-full bg-emerald-500" />
-              <span className="font-mono text-[12px] font-medium">
-                {connectedAddress.slice(0, 5)}...{connectedAddress.slice(-4)}
-              </span>
-              <button
-                onClick={handleDisconnectWallet}
-                className="w-5 h-5 rounded-full hover:bg-neutral-200 flex items-center justify-center text-neutral-500 hover:text-neutral-950 transition-colors cursor-pointer"
-                title="Disconnect wallet"
-              >
-                <XIcon className="w-3 h-3" />
-              </button>
-            </div>
-          ) : (
-            <div className="hidden sm:flex items-center gap-2">
-              <button
-                onClick={handleConnectWallet}
-                className="px-4 py-2 rounded-full text-[13px] font-medium text-neutral-600 hover:text-neutral-950 transition-colors cursor-pointer"
-              >
-                Connect
-              </button>
-              <button
-                onClick={() => router.push("/follower/portfolio")}
-                className="px-4 py-2 rounded-full bg-neutral-950 text-white font-medium text-[13px] hover:bg-neutral-800 transition-all active:scale-[0.98] inline-flex items-center gap-1.5 cursor-pointer"
-              >
-                <span>Launch App</span>
-                <ArrowRightIcon className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          )}
+          {/* RainbowKit Wallet Connect */}
+          <CadraRainbowButton variant="header" />
 
           {/* Mobile Menu Toggle */}
           <button
@@ -237,27 +198,17 @@ export function Header({
           >
             Simulator
           </Link>
-          <div className="pt-3 mt-2 border-t border-neutral-100 flex items-center gap-2">
+          <div className="pt-3 mt-2 border-t border-neutral-100 flex flex-col gap-2">
             <button
               onClick={() => {
                 setMobileMenuOpen(false);
                 router.push("/follower/portfolio");
               }}
-              className="flex-1 py-2.5 rounded-full bg-neutral-950 text-white text-sm font-medium text-center cursor-pointer"
+              className="w-full py-2.5 rounded-full bg-neutral-950 text-white text-sm font-medium text-center cursor-pointer"
             >
               Launch App
             </button>
-            {!connectedAddress && (
-              <button
-                onClick={() => {
-                  handleConnectWallet();
-                  setMobileMenuOpen(false);
-                }}
-                className="flex-1 py-2.5 rounded-full bg-neutral-100 text-neutral-900 text-sm font-medium text-center cursor-pointer"
-              >
-                Connect Wallet
-              </button>
-            )}
+            <CadraRainbowButton variant="mobile" className="w-full" />
           </div>
         </div>
       )}

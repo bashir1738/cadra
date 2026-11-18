@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { VaultData, RangePosition } from "../types/cadra";
 import { ShieldIcon, CheckCircleIcon, AlertTriangleIcon, PlusIcon, TrashIcon } from "./Icons";
+import { useCadra } from "../context/CadraContext";
 
 interface CuratorStudioProps {
   vault?: VaultData;
@@ -23,6 +24,7 @@ export function CuratorStudio({
   onPostBond,
   onProposeMandate,
 }: CuratorStudioProps) {
+  const { openConnectModal } = useCadra();
   // Vault creation form state
   const [createName, setCreateName] = useState("Alpha Dynamic Corridor");
   const [createTag, setCreateTag] = useState("Tight Range Active");
@@ -50,6 +52,10 @@ export function CuratorStudio({
   // 1. Vault Deployment Interface (When no vault exists)
   if (!vault) {
     const handleDeploy = () => {
+      if (!connectedAddress) {
+        if (openConnectModal) openConnectModal();
+        return;
+      }
       const minP = parseFloat(createMinPrice) || 2000;
       const maxP = parseFloat(createMaxPrice) || 5000;
       const feeBps = (parseFloat(createFee) || 20) * 100;
@@ -99,30 +105,30 @@ export function CuratorStudio({
     return (
       <div className="space-y-6 font-sans max-w-2xl mx-auto">
         {/* Curator Bond Spotlight Card */}
-        <div className="relative overflow-hidden rounded-3xl bg-neutral-900 border border-neutral-800 p-6 sm:p-8 text-white shadow-xl flex flex-col sm:flex-row items-center gap-6">
-          <div className="w-14 h-14 rounded-2xl bg-neutral-800 border border-neutral-700 flex items-center justify-center text-emerald-400 shrink-0 shadow-sm">
-            <ShieldIcon className="w-7 h-7" />
+        <div className="rounded-[32px] bg-white border border-neutral-200/80 p-6 sm:p-8 shadow-[0_1px_3px_rgba(0,0,0,0.04)] flex flex-col sm:flex-row items-center gap-5">
+          <div className="w-12 h-12 rounded-2xl bg-neutral-950 text-white flex items-center justify-center p-2.5 shrink-0 shadow-sm">
+            <ShieldIcon className="w-full h-full text-white" />
           </div>
-          <div className="space-y-2 text-center sm:text-left">
-            <span className="text-xs font-mono px-3 py-1 rounded-full bg-neutral-800 text-emerald-400 font-semibold">
+          <div className="space-y-1.5 text-center sm:text-left">
+            <span className="text-[11px] font-mono px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200/70 text-emerald-800 font-semibold inline-block">
               Skin In The Game · 5× to 20× Capacity
             </span>
-            <h3 className="text-xl font-bold text-white tracking-tight">
+            <h3 className="text-xl sm:text-2xl font-bold text-neutral-950 tracking-tight">
               Deploy Your Curator Vault
             </h3>
-            <p className="text-xs text-neutral-300 leading-relaxed">
+            <p className="text-[13px] text-neutral-500 leading-relaxed font-normal">
               Curators stake a USDC bond to back their mandate. You earn 20% on all alpha above The Pace, with capacity multiplying as you win!
             </p>
           </div>
         </div>
 
         {/* Vault Configuration Form */}
-        <div className="bg-white border border-neutral-200 rounded-3xl p-8 space-y-6 shadow-xs">
+        <div className="bg-white border border-neutral-200/80 rounded-[32px] p-6 sm:p-8 space-y-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
           <div className="border-b border-neutral-100 pb-4">
             <h2 className="text-xl font-bold text-neutral-950 tracking-tight">
               Strategy & Mandate Parameters
             </h2>
-            <p className="text-xs text-neutral-500 mt-1">
+            <p className="text-[13px] text-neutral-500 mt-1">
               Parameters are enforced on-chain by the Cadra Uniswap v4 hook.
             </p>
           </div>
@@ -130,7 +136,7 @@ export function CuratorStudio({
           <div className="space-y-4 text-xs">
             {/* Quick Strategy Presets */}
             <div className="space-y-2">
-              <span className="text-xs uppercase font-mono text-neutral-500 block font-semibold">
+              <span className="text-[11px] uppercase font-mono text-neutral-400 block font-semibold">
                 Quick Presets:
               </span>
               <div className="flex flex-wrap gap-2">
@@ -179,7 +185,7 @@ export function CuratorStudio({
                 type="text"
                 value={createName}
                 onChange={(e) => setCreateName(e.target.value)}
-                className="w-full bg-neutral-50 border border-neutral-300 rounded-xl px-4 py-2.5 text-neutral-900 focus:outline-none focus:border-neutral-900"
+                className="w-full bg-white border border-neutral-200 rounded-xl px-4 py-2.5 text-neutral-950 focus:outline-none focus:border-neutral-950 focus:ring-1 focus:ring-neutral-950 transition-all"
               />
             </div>
 
@@ -190,7 +196,7 @@ export function CuratorStudio({
                   type="text"
                   value={createTag}
                   onChange={(e) => setCreateTag(e.target.value)}
-                  className="w-full bg-neutral-50 border border-neutral-300 rounded-xl px-4 py-2.5 text-neutral-900 focus:outline-none focus:border-neutral-900"
+                  className="w-full bg-white border border-neutral-200 rounded-xl px-4 py-2.5 text-neutral-950 focus:outline-none focus:border-neutral-950 focus:ring-1 focus:ring-neutral-950 transition-all"
                 />
               </div>
               <div className="space-y-1">
@@ -199,7 +205,7 @@ export function CuratorStudio({
                   type="number"
                   value={createFee}
                   onChange={(e) => setCreateFee(e.target.value)}
-                  className="w-full bg-neutral-50 border border-neutral-300 rounded-xl px-4 py-2.5 text-neutral-900 focus:outline-none focus:border-neutral-900 font-mono"
+                  className="w-full bg-white border border-neutral-200 rounded-xl px-4 py-2.5 text-neutral-950 focus:outline-none focus:border-neutral-950 focus:ring-1 focus:ring-neutral-950 font-mono transition-all"
                 />
               </div>
             </div>
@@ -211,7 +217,7 @@ export function CuratorStudio({
                   type="number"
                   value={createMinPrice}
                   onChange={(e) => setCreateMinPrice(e.target.value)}
-                  className="w-full bg-neutral-50 border border-neutral-300 rounded-xl px-4 py-2.5 text-neutral-900 font-mono focus:outline-none focus:border-neutral-900"
+                  className="w-full bg-white border border-neutral-200 rounded-xl px-4 py-2.5 text-neutral-950 font-mono focus:outline-none focus:border-neutral-950 focus:ring-1 focus:ring-neutral-950 transition-all"
                 />
               </div>
               <div className="space-y-1">
@@ -220,7 +226,7 @@ export function CuratorStudio({
                   type="number"
                   value={createMaxPrice}
                   onChange={(e) => setCreateMaxPrice(e.target.value)}
-                  className="w-full bg-neutral-50 border border-neutral-300 rounded-xl px-4 py-2.5 text-neutral-900 font-mono focus:outline-none focus:border-neutral-900"
+                  className="w-full bg-white border border-neutral-200 rounded-xl px-4 py-2.5 text-neutral-950 font-mono focus:outline-none focus:border-neutral-950 focus:ring-1 focus:ring-neutral-950 transition-all"
                 />
               </div>
             </div>
@@ -232,7 +238,7 @@ export function CuratorStudio({
                   type="number"
                   value={createMaxConc}
                   onChange={(e) => setCreateMaxConc(e.target.value)}
-                  className="w-full bg-neutral-50 border border-neutral-300 rounded-xl px-3 py-2.5 text-neutral-900 font-mono focus:outline-none focus:border-neutral-900"
+                  className="w-full bg-white border border-neutral-200 rounded-xl px-3 py-2.5 text-neutral-950 font-mono focus:outline-none focus:border-neutral-950 focus:ring-1 focus:ring-neutral-950 transition-all"
                 />
               </div>
               <div className="space-y-1">
@@ -241,7 +247,7 @@ export function CuratorStudio({
                   type="number"
                   value={createMinTicks}
                   onChange={(e) => setCreateMinTicks(e.target.value)}
-                  className="w-full bg-neutral-50 border border-neutral-300 rounded-xl px-3 py-2.5 text-neutral-900 font-mono focus:outline-none focus:border-neutral-900"
+                  className="w-full bg-white border border-neutral-200 rounded-xl px-3 py-2.5 text-neutral-950 font-mono focus:outline-none focus:border-neutral-950 focus:ring-1 focus:ring-neutral-950 transition-all"
                 />
               </div>
               <div className="space-y-1">
@@ -250,7 +256,7 @@ export function CuratorStudio({
                   type="number"
                   value={createShortfall}
                   onChange={(e) => setCreateShortfall(e.target.value)}
-                  className="w-full bg-neutral-50 border border-neutral-300 rounded-xl px-3 py-2.5 text-neutral-900 font-mono focus:outline-none focus:border-neutral-900"
+                  className="w-full bg-white border border-neutral-200 rounded-xl px-3 py-2.5 text-neutral-950 font-mono focus:outline-none focus:border-neutral-950 focus:ring-1 focus:ring-neutral-950 transition-all"
                 />
               </div>
             </div>
@@ -261,7 +267,7 @@ export function CuratorStudio({
                 type="number"
                 value={createBond}
                 onChange={(e) => setCreateBond(e.target.value)}
-                className="w-full bg-neutral-50 border border-neutral-300 rounded-xl px-4 py-2.5 text-neutral-900 font-mono focus:outline-none focus:border-neutral-900"
+                className="w-full bg-white border border-neutral-200 rounded-xl px-4 py-2.5 text-neutral-950 font-mono focus:outline-none focus:border-neutral-950 focus:ring-1 focus:ring-neutral-950 transition-all"
               />
               <span className="text-xs text-neutral-500 font-mono block mt-1">
                 Initial capacity: ${(parseFloat(createBond) || 0) * 5} USDC (5× multiplier).
@@ -270,9 +276,9 @@ export function CuratorStudio({
 
             <button
               onClick={handleDeploy}
-              className="w-full py-3.5 rounded-full bg-neutral-900 text-white font-semibold text-xs uppercase tracking-wider hover:bg-neutral-800 transition-all shadow-md mt-4 cursor-pointer"
+              className="w-full h-[46px] rounded-full bg-neutral-950 text-white font-semibold text-[13px] hover:bg-neutral-800 transition-all shadow-[0_1px_3px_rgba(0,0,0,0.06)] mt-4 cursor-pointer active:scale-[0.98]"
             >
-              Deploy Vault On-Chain
+              {!connectedAddress ? "Connect Wallet to Deploy" : "Deploy Vault On-Chain"}
             </button>
           </div>
         </div>
@@ -363,57 +369,57 @@ export function CuratorStudio({
 
   // Reusable Top HUD Component
   const TopHUD = (
-    <div className="relative overflow-hidden bg-neutral-900 border border-neutral-800 rounded-3xl p-6 sm:p-8 space-y-6 shadow-xl text-white">
-      <div className="relative z-10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-neutral-800 pb-5">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-neutral-800 border border-neutral-700 flex items-center justify-center text-emerald-400 shrink-0 hidden sm:flex shadow-sm">
-            <ShieldIcon className="w-5 h-5" />
+    <div className="bg-white border border-neutral-200/80 rounded-[32px] p-6 sm:p-8 space-y-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-neutral-100 pb-5">
+        <div className="flex items-center gap-3.5">
+          <div className="w-11 h-11 rounded-2xl bg-neutral-950 text-white flex items-center justify-center shrink-0 shadow-sm">
+            <ShieldIcon className="w-5 h-5 text-white" />
           </div>
           <div>
-            <span className="text-xs text-neutral-400 font-mono uppercase tracking-widest font-semibold block">
-              CURATOR CONTROL ROOM
+            <span className="text-[11px] text-neutral-400 uppercase tracking-[0.08em] font-semibold block">
+              Curator Studio
             </span>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight mt-0.5">
+            <h1 className="text-2xl sm:text-[28px] font-bold text-neutral-950 tracking-[-0.03em] mt-0.5">
               {vault.name}
             </h1>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-neutral-800 border border-neutral-700 font-mono text-xs">
-          <span className="text-neutral-400">Capacity Multiplier:</span>
-          <span className="font-bold text-emerald-400 px-2 py-0.5 rounded-full bg-emerald-950/60 border border-emerald-500/30">
+        <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50/80 border border-emerald-200/80 text-xs font-mono">
+          <span className="text-neutral-500 font-medium">Capacity Multiplier:</span>
+          <span className="font-bold text-emerald-800 px-2 py-0.5 rounded-full bg-white border border-emerald-200 shadow-2xs">
             {vault.capacityMultiplier}×
           </span>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono">
-        <div className="p-4 rounded-2xl bg-neutral-800/80 border border-neutral-700">
-          <span className="text-neutral-400 uppercase text-xs block">Curator Bond</span>
-          <span className="text-base font-bold text-white mt-1 block">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5 text-xs font-mono">
+        <div className="p-4 rounded-2xl bg-[#FAFAFA] border border-neutral-200/70">
+          <span className="text-neutral-400 uppercase text-[11px] block font-medium">Curator Bond</span>
+          <span className="text-lg font-bold text-neutral-950 mt-1 block">
             ${vault.bondAmount.toLocaleString()} USDC
           </span>
         </div>
-        <div className="p-4 rounded-2xl bg-neutral-800/80 border border-neutral-700">
-          <span className="text-neutral-400 uppercase text-xs block">Max Capacity</span>
-          <span className="text-base font-bold text-white mt-1 block">
+        <div className="p-4 rounded-2xl bg-[#FAFAFA] border border-neutral-200/70">
+          <span className="text-neutral-400 uppercase text-[11px] block font-medium">Max Capacity</span>
+          <span className="text-lg font-bold text-neutral-950 mt-1 block">
             ${vault.capacity.toLocaleString()}
           </span>
         </div>
-        <div className="p-4 rounded-2xl bg-neutral-800/80 border border-neutral-700">
-          <span className="text-neutral-400 uppercase text-xs block">Deposited</span>
-          <span className="text-base font-bold text-neutral-200 mt-1 block">
+        <div className="p-4 rounded-2xl bg-[#FAFAFA] border border-neutral-200/70">
+          <span className="text-neutral-400 uppercase text-[11px] block font-medium">Deposited</span>
+          <span className="text-lg font-bold text-neutral-950 mt-1 block">
             ${vault.totalFollowerValue.toLocaleString()}
           </span>
         </div>
-        <div className="p-4 rounded-2xl bg-neutral-800/80 border border-neutral-700">
-          <span className="text-neutral-400 uppercase text-xs block">Status</span>
+        <div className="p-4 rounded-2xl bg-[#FAFAFA] border border-neutral-200/70">
+          <span className="text-neutral-400 uppercase text-[11px] block font-medium">Status</span>
           <span
-            className={`text-xs font-bold uppercase mt-1 inline-flex items-center gap-1.5 ${
-              vault.isParked ? "text-red-400" : "text-emerald-400"
+            className={`text-[12px] font-bold uppercase mt-1 inline-flex items-center gap-1.5 ${
+              vault.isParked ? "text-red-600" : "text-emerald-600"
             }`}
           >
-            <span className={`w-2 h-2 rounded-full ${vault.isParked ? "bg-red-400" : "bg-emerald-400 animate-pulse"}`} />
+            <span className={`w-2 h-2 rounded-full ${vault.isParked ? "bg-red-500" : "bg-emerald-500 animate-pulse"}`} />
             {vault.isParked ? "Parked (Frozen)" : "Active & Healthy"}
           </span>
         </div>
@@ -427,23 +433,23 @@ export function CuratorStudio({
       <div className="space-y-6 font-sans max-w-5xl mx-auto">
         {TopHUD}
 
-        <div className="bg-white border border-neutral-200 rounded-3xl p-6 sm:p-8 space-y-6 shadow-xs">
+        <div className="bg-white border border-neutral-200/80 rounded-[32px] p-6 sm:p-8 space-y-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-neutral-100 pb-4">
             <div>
               <h2 className="text-xl font-bold text-neutral-950 tracking-tight">
                 Range Rebalancer
               </h2>
-              <p className="text-xs text-neutral-500 mt-0.5">
+              <p className="text-[13px] text-neutral-500 mt-0.5">
                 Active ticks must remain within mandate bounds (${mandate.minPrice}–${mandate.maxPrice}).
               </p>
             </div>
 
             <button
               onClick={handleAddRange}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-full bg-neutral-100 hover:bg-neutral-200 text-xs text-neutral-900 transition-all font-medium cursor-pointer"
+              className="h-[38px] px-4 rounded-full bg-white border border-neutral-200 hover:bg-neutral-50 text-[13px] text-neutral-900 transition-all font-semibold cursor-pointer shadow-2xs flex items-center gap-1.5 active:scale-[0.98]"
             >
               <PlusIcon className="w-3.5 h-3.5" />
-              Add Range
+              <span>Add Range</span>
             </button>
           </div>
 
@@ -457,40 +463,40 @@ export function CuratorStudio({
               {ranges.map((r, idx) => (
                 <div
                   key={r.id || idx}
-                  className="grid grid-cols-1 sm:grid-cols-12 gap-3 p-4 rounded-2xl border border-neutral-200 bg-neutral-50 items-center text-xs"
+                  className="grid grid-cols-1 sm:grid-cols-12 gap-3 p-4 rounded-2xl border border-neutral-200/70 bg-[#FAFAFA] items-center text-xs"
                 >
                   <div className="sm:col-span-1 text-neutral-600 font-bold">#{idx + 1}</div>
                   <div className="sm:col-span-3">
-                    <span className="text-xs text-neutral-500 uppercase block">Min Price ($)</span>
+                    <span className="text-[11px] text-neutral-400 uppercase block font-medium">Min Price ($)</span>
                     <input
                       type="number"
                       value={r.lowerPrice}
                       onChange={(e) => handleUpdateRangeField(idx, "lowerPrice", parseFloat(e.target.value) || 0)}
-                      className="w-full bg-white border border-neutral-300 rounded-xl px-3 py-2 text-neutral-900 font-mono mt-1"
+                      className="w-full bg-white border border-neutral-200 rounded-xl px-3 py-2 text-neutral-950 font-mono mt-1 focus:border-neutral-950 focus:outline-none focus:ring-1 focus:ring-neutral-950 transition-all"
                     />
                   </div>
                   <div className="sm:col-span-3">
-                    <span className="text-xs text-neutral-500 uppercase block">Max Price ($)</span>
+                    <span className="text-[11px] text-neutral-400 uppercase block font-medium">Max Price ($)</span>
                     <input
                       type="number"
                       value={r.upperPrice}
                       onChange={(e) => handleUpdateRangeField(idx, "upperPrice", parseFloat(e.target.value) || 0)}
-                      className="w-full bg-white border border-neutral-300 rounded-xl px-3 py-2 text-neutral-900 font-mono mt-1"
+                      className="w-full bg-white border border-neutral-200 rounded-xl px-3 py-2 text-neutral-950 font-mono mt-1 focus:border-neutral-950 focus:outline-none focus:ring-1 focus:ring-neutral-950 transition-all"
                     />
                   </div>
                   <div className="sm:col-span-3">
-                    <span className="text-xs text-neutral-500 uppercase block">Allocation (%)</span>
+                    <span className="text-[11px] text-neutral-400 uppercase block font-medium">Allocation (%)</span>
                     <input
                       type="number"
                       value={r.liquidityPercent}
                       onChange={(e) => handleUpdateRangeField(idx, "liquidityPercent", parseFloat(e.target.value) || 0)}
-                      className="w-full bg-white border border-neutral-300 rounded-xl px-3 py-2 text-neutral-900 font-mono mt-1"
+                      className="w-full bg-white border border-neutral-200 rounded-xl px-3 py-2 text-neutral-950 font-mono mt-1 focus:border-neutral-950 focus:outline-none focus:ring-1 focus:ring-neutral-950 transition-all"
                     />
                   </div>
                   <div className="sm:col-span-2 flex justify-end">
                     <button
                       onClick={() => handleRemoveRange(idx)}
-                      className="p-2 text-neutral-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors cursor-pointer"
+                      className="w-8 h-8 rounded-full flex items-center justify-center text-neutral-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
                       title="Remove Range"
                     >
                       <TrashIcon className="w-4 h-4" />
@@ -505,8 +511,8 @@ export function CuratorStudio({
           <div
             className={`p-4 rounded-2xl border text-xs font-mono ${
               isValidRebalance
-                ? "bg-emerald-50 border-emerald-300 text-emerald-800"
-                : "bg-red-50 border-red-300 text-red-800"
+                ? "bg-emerald-50/70 border-emerald-200/80 text-emerald-800"
+                : "bg-red-50/70 border-red-200/80 text-red-800"
             }`}
           >
             <div className="flex items-center gap-2 font-bold mb-1">
@@ -532,15 +538,23 @@ export function CuratorStudio({
           </div>
 
           <button
-            onClick={handleApplyRebalance}
-            disabled={!isValidRebalance}
-            className={`w-full py-3.5 rounded-full font-semibold text-xs uppercase tracking-wider transition-all shadow-xs ${
-              isValidRebalance
-                ? "bg-neutral-900 text-white hover:bg-neutral-800 active:scale-95 cursor-pointer"
+            onClick={() => {
+              if (!connectedAddress) {
+                if (openConnectModal) openConnectModal();
+                return;
+              }
+              handleApplyRebalance();
+            }}
+            disabled={connectedAddress ? !isValidRebalance : false}
+            className={`w-full h-[46px] rounded-full font-semibold text-[13px] transition-all shadow-[0_1px_3px_rgba(0,0,0,0.06)] ${
+              !connectedAddress
+                ? "bg-neutral-950 text-white hover:bg-neutral-800 cursor-pointer active:scale-[0.98]"
+                : isValidRebalance
+                ? "bg-neutral-950 text-white hover:bg-neutral-800 active:scale-[0.98] cursor-pointer"
                 : "bg-neutral-100 border border-neutral-200 text-neutral-400 cursor-not-allowed"
             }`}
           >
-            Apply Rebalance On-Chain
+            {!connectedAddress ? "Connect Wallet to Rebalance" : "Apply Rebalance On-Chain"}
           </button>
         </div>
       </div>
@@ -555,55 +569,55 @@ export function CuratorStudio({
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Current Mandate Card */}
-          <div className="bg-white border border-neutral-200 rounded-3xl p-6 sm:p-8 space-y-4">
+          <div className="bg-white border border-neutral-200/80 rounded-[32px] p-6 sm:p-8 space-y-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
             <h3 className="text-base font-bold text-neutral-950">Active Published Mandate</h3>
-            <p className="text-xs text-neutral-500">
+            <p className="text-[13px] text-neutral-500">
               The Uniswap v4 hook validates every rebalance against these limits:
             </p>
             <div className="space-y-2.5 font-mono text-xs pt-1">
-              <div className="p-3 rounded-2xl bg-neutral-50 flex justify-between">
+              <div className="p-3.5 rounded-2xl bg-[#FAFAFA] border border-neutral-200/60 flex justify-between items-center">
                 <span className="text-neutral-500">Price Corridor</span>
-                <span className="font-bold text-neutral-900">${mandate.minPrice} – ${mandate.maxPrice}</span>
+                <span className="font-bold text-neutral-950">${mandate.minPrice} – ${mandate.maxPrice}</span>
               </div>
-              <div className="p-3 rounded-2xl bg-neutral-50 flex justify-between">
+              <div className="p-3.5 rounded-2xl bg-[#FAFAFA] border border-neutral-200/60 flex justify-between items-center">
                 <span className="text-neutral-500">Max Concentration</span>
-                <span className="font-bold text-neutral-900">{mandate.maxConcentrationBps / 100}% per range</span>
+                <span className="font-bold text-neutral-950">{mandate.maxConcentrationBps / 100}% per range</span>
               </div>
-              <div className="p-3 rounded-2xl bg-neutral-50 flex justify-between">
+              <div className="p-3.5 rounded-2xl bg-[#FAFAFA] border border-neutral-200/60 flex justify-between items-center">
                 <span className="text-neutral-500">Min Range Width</span>
-                <span className="font-bold text-neutral-900">{mandate.minRangeWidth} ticks</span>
+                <span className="font-bold text-neutral-950">{mandate.minRangeWidth} ticks</span>
               </div>
-              <div className="p-3 rounded-2xl bg-neutral-50 flex justify-between">
+              <div className="p-3.5 rounded-2xl bg-[#FAFAFA] border border-neutral-200/60 flex justify-between items-center">
                 <span className="text-neutral-500">Parking Shortfall Gap</span>
-                <span className="font-bold text-neutral-900">{mandate.maxShortfallBps / 100}%</span>
+                <span className="font-bold text-neutral-950">{mandate.maxShortfallBps / 100}%</span>
               </div>
             </div>
           </div>
 
           {/* Propose Updated Mandate */}
-          <div className="bg-white border border-neutral-200 rounded-3xl p-6 sm:p-8 space-y-4">
+          <div className="bg-white border border-neutral-200/80 rounded-[32px] p-6 sm:p-8 space-y-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
             <h3 className="text-base font-bold text-neutral-950">Propose Rules for Next Epoch</h3>
-            <p className="text-xs text-neutral-500">
+            <p className="text-[13px] text-neutral-500">
               Followers can inspect proposed changes and exit before the new epoch starts.
             </p>
 
             <div className="grid grid-cols-2 gap-3 text-xs font-mono">
               <div className="space-y-1">
-                <label className="text-neutral-700 font-semibold block">New Min Price ($)</label>
+                <label className="text-neutral-700 font-semibold block text-xs">New Min Price ($)</label>
                 <input
                   type="number"
                   value={newMinPrice}
                   onChange={(e) => setNewMinPrice(parseFloat(e.target.value) || 0)}
-                  className="w-full bg-neutral-50 border border-neutral-300 rounded-xl px-3 py-2 text-neutral-900"
+                  className="w-full bg-white border border-neutral-200 rounded-xl px-3 py-2 text-neutral-950 focus:border-neutral-950 focus:outline-none focus:ring-1 focus:ring-neutral-950 transition-all"
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-neutral-700 font-semibold block">New Max Price ($)</label>
+                <label className="text-neutral-700 font-semibold block text-xs">New Max Price ($)</label>
                 <input
                   type="number"
                   value={newMaxPrice}
                   onChange={(e) => setNewMaxPrice(parseFloat(e.target.value) || 0)}
-                  className="w-full bg-neutral-50 border border-neutral-300 rounded-xl px-3 py-2 text-neutral-900"
+                  className="w-full bg-white border border-neutral-200 rounded-xl px-3 py-2 text-neutral-950 focus:border-neutral-950 focus:outline-none focus:ring-1 focus:ring-neutral-950 transition-all"
                 />
               </div>
             </div>
@@ -617,7 +631,7 @@ export function CuratorStudio({
 
             <button
               onClick={handleProposeMandate}
-              className="w-full py-3 rounded-full bg-neutral-900 text-white font-semibold text-xs uppercase tracking-wider hover:bg-neutral-800 transition-all cursor-pointer shadow-xs mt-2"
+              className="w-full h-[44px] rounded-full bg-neutral-950 text-white font-semibold text-[13px] hover:bg-neutral-800 transition-all cursor-pointer shadow-xs active:scale-[0.98] mt-2"
             >
               Publish Proposed Rules
             </button>
@@ -633,9 +647,9 @@ export function CuratorStudio({
       <div className="space-y-6 font-sans max-w-5xl mx-auto">
         {TopHUD}
 
-        <div className="bg-white border border-neutral-200 rounded-3xl p-6 sm:p-8 space-y-4">
+        <div className="bg-white border border-neutral-200/80 rounded-[32px] p-6 sm:p-8 space-y-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
           <h3 className="text-base font-bold text-neutral-950">Settlement Epoch History</h3>
-          <p className="text-xs text-neutral-500">
+          <p className="text-[13px] text-neutral-500">
             Performance fees are earned at 20% on all alpha above The Pace. Any deficit must be fully recovered before new fees accrue.
           </p>
 
@@ -647,19 +661,19 @@ export function CuratorStudio({
             <div className="overflow-x-auto">
               <table className="w-full text-left font-mono text-xs">
                 <thead>
-                  <tr className="border-b border-neutral-200 text-neutral-500 uppercase text-xs">
-                    <th className="py-3 px-4 font-semibold">Epoch</th>
-                    <th className="py-3 px-4 font-semibold">Vault Value</th>
-                    <th className="py-3 px-4 font-semibold">Pace Benchmark</th>
-                    <th className="py-3 px-4 font-semibold">Alpha Gap</th>
-                    <th className="py-3 px-4 font-semibold">Fee / Bond Paid</th>
-                    <th className="py-3 px-4 font-semibold text-right">Result</th>
+                  <tr className="border-b border-neutral-200 text-neutral-400 uppercase text-[11px] font-semibold">
+                    <th className="py-3 px-4">Epoch</th>
+                    <th className="py-3 px-4">Vault Value</th>
+                    <th className="py-3 px-4">Pace Benchmark</th>
+                    <th className="py-3 px-4">Alpha Gap</th>
+                    <th className="py-3 px-4">Fee / Bond Paid</th>
+                    <th className="py-3 px-4 text-right">Result</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-neutral-100">
                   {vault.history.map((h, i) => (
-                    <tr key={i} className="hover:bg-neutral-50/70">
-                      <td className="py-3 px-4 font-bold text-neutral-800">Epoch #{h.epoch}</td>
+                    <tr key={i} className="hover:bg-neutral-50/70 transition-colors">
+                      <td className="py-3 px-4 font-bold text-neutral-900">Epoch #{h.epoch}</td>
                       <td className="py-3 px-4">${h.vaultValue.toLocaleString()}</td>
                       <td className="py-3 px-4 text-neutral-600">${h.paceValue.toLocaleString()}</td>
                       <td className={`py-3 px-4 font-bold ${h.gap >= 0 ? "text-emerald-700" : "text-red-700"}`}>
@@ -668,7 +682,7 @@ export function CuratorStudio({
                       <td className="py-3 px-4 font-semibold text-neutral-900">${h.feeOrPayout.toLocaleString()}</td>
                       <td className="py-3 px-4 text-right">
                         <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
-                          h.outcome === "ahead" ? "bg-emerald-50 text-emerald-800" : "bg-red-50 text-red-800"
+                          h.outcome === "ahead" ? "bg-emerald-50 text-emerald-800 border border-emerald-200/70" : "bg-red-50 text-red-800 border border-red-200/70"
                         }`}>
                           {h.outcome === "ahead" ? "Ahead" : "Behind"}
                         </span>
@@ -691,23 +705,23 @@ export function CuratorStudio({
 
       {/* Bond Collateral Expansion Panel */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white border border-neutral-200 rounded-3xl p-6 sm:p-8 space-y-4">
+        <div className="bg-white border border-neutral-200/80 rounded-[32px] p-6 sm:p-8 space-y-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
           <h3 className="text-base font-bold text-neutral-950">Add Bond Collateral</h3>
-          <p className="text-xs text-neutral-600 leading-relaxed">
+          <p className="text-[13px] text-neutral-500 leading-relaxed">
             Deposit USDC bond to expand your managing capacity ({vault.capacityMultiplier}× capacity per USDC).
           </p>
 
           <div className="space-y-1.5 font-mono text-xs">
-            <label className="text-neutral-700 font-semibold block">Bond Amount (USDC)</label>
-            <div className="flex items-center border border-neutral-300 bg-neutral-50 rounded-2xl px-4 py-2.5">
+            <label className="text-neutral-700 font-semibold block text-xs">Bond Amount (USDC)</label>
+            <div className="flex items-center border border-neutral-200 bg-white rounded-xl px-4 py-2.5 focus-within:border-neutral-950 focus-within:ring-1 focus-within:ring-neutral-950 transition-all">
               <input
                 type="number"
                 value={bondInput}
                 onChange={(e) => setBondInput(e.target.value)}
-                className="bg-transparent text-neutral-900 w-full focus:outline-none font-mono"
+                className="bg-transparent text-neutral-950 w-full focus:outline-none font-mono"
                 placeholder="5000"
               />
-              <span className="text-neutral-500 font-bold">USDC</span>
+              <span className="text-neutral-400 font-bold ml-2">USDC</span>
             </div>
           </div>
 
@@ -716,31 +730,31 @@ export function CuratorStudio({
               const val = parseFloat(bondInput);
               if (val > 0) onPostBond(vault.id, val);
             }}
-            className="w-full py-3 rounded-full bg-neutral-900 text-white font-semibold text-xs uppercase tracking-wider hover:bg-neutral-800 transition-all shadow-xs cursor-pointer"
+            className="w-full h-[44px] rounded-full bg-neutral-950 text-white font-semibold text-[13px] hover:bg-neutral-800 transition-all shadow-xs cursor-pointer active:scale-[0.98]"
           >
             Deposit Bond Collateral
           </button>
         </div>
 
         {/* Quick Strategy Summary */}
-        <div className="bg-white border border-neutral-200 rounded-3xl p-6 sm:p-8 space-y-4">
+        <div className="bg-white border border-neutral-200/80 rounded-[32px] p-6 sm:p-8 space-y-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
           <h3 className="text-base font-bold text-neutral-950">Strategy Mandate Summary</h3>
-          <p className="text-xs text-neutral-600 leading-relaxed">
+          <p className="text-[13px] text-neutral-500 leading-relaxed">
             Your mandate sets bounds on price ranges, concentration caps, and emergency safety parking.
           </p>
 
-          <div className="space-y-2 font-mono text-xs">
-            <div className="p-3 rounded-2xl bg-neutral-50 flex justify-between">
+          <div className="space-y-2.5 font-mono text-xs">
+            <div className="p-3.5 rounded-2xl bg-[#FAFAFA] border border-neutral-200/60 flex justify-between items-center">
               <span className="text-neutral-500">Corridor</span>
-              <span className="font-bold text-neutral-900">${mandate.minPrice} – ${mandate.maxPrice}</span>
+              <span className="font-bold text-neutral-950">${mandate.minPrice} – ${mandate.maxPrice}</span>
             </div>
-            <div className="p-3 rounded-2xl bg-neutral-50 flex justify-between">
+            <div className="p-3.5 rounded-2xl bg-[#FAFAFA] border border-neutral-200/60 flex justify-between items-center">
               <span className="text-neutral-500">Max Concentration</span>
-              <span className="font-bold text-neutral-900">{mandate.maxConcentrationBps / 100}% per range</span>
+              <span className="font-bold text-neutral-950">{mandate.maxConcentrationBps / 100}% per range</span>
             </div>
-            <div className="p-3 rounded-2xl bg-neutral-50 flex justify-between">
+            <div className="p-3.5 rounded-2xl bg-[#FAFAFA] border border-neutral-200/60 flex justify-between items-center">
               <span className="text-neutral-500">Capacity</span>
-              <span className="font-bold text-neutral-900">${vault.capacity.toLocaleString()} max</span>
+              <span className="font-bold text-neutral-950">${vault.capacity.toLocaleString()} max</span>
             </div>
           </div>
         </div>

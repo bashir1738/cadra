@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import "./globals.css";
 import { CadraProvider } from "../context/CadraContext";
+import { RainbowProviders } from "../components/RainbowProviders";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://cadra.finance"),
@@ -25,12 +26,21 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className="h-full antialiased">
+      <head>
+        <link rel="preconnect" href="https://api.fontshare.com" crossOrigin="anonymous" />
+        <link
+          href="https://api.fontshare.com/v2/css?f[]=satoshi@1&display=swap"
+          rel="stylesheet"
+        />
+      </head>
       <body className="min-h-full flex flex-col bg-white text-neutral-900 font-sans selection:bg-neutral-900 selection:text-white">
-        <CadraProvider>
-          <Suspense fallback={<div className="min-h-screen bg-white" />}>
-            {children}
-          </Suspense>
-        </CadraProvider>
+        <RainbowProviders>
+          <CadraProvider>
+            <Suspense fallback={<div className="min-h-screen bg-white" />}>
+              {children}
+            </Suspense>
+          </CadraProvider>
+        </RainbowProviders>
       </body>
     </html>
   );

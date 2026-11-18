@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -14,6 +14,7 @@ import {
   RefreshCwIcon,
   ChevronLeftIcon,
 } from "./Icons";
+import { CadraRainbowButton } from "./CadraRainbowButton";
 import { useCadra } from "../context/CadraContext";
 
 export interface SidebarProps {
@@ -37,9 +38,6 @@ export function Sidebar({
   const pathname = usePathname();
   const {
     vaults,
-    connectedAddress,
-    connectWallet,
-    disconnectWallet,
     seedArchetypes,
     resetDemo,
     setActiveRole,
@@ -145,19 +143,17 @@ export function Sidebar({
           <div className="flex items-center justify-between">
             <Link
               href="/"
-              className="flex items-center gap-2.5 group"
+              aria-label="Cadra Home"
+              className="flex items-center group"
               onClick={onCloseMobile}
             >
-              <div className="w-8 h-8 rounded-xl bg-neutral-950 flex items-center justify-center p-1.5 group-hover:scale-105 transition-transform">
+              <div className="w-8 h-8 rounded-xl bg-neutral-950 flex items-center justify-center p-1.5 group-hover:scale-105 transition-transform shadow-sm">
                 <img
                   src="/cadra/logo/cadra-mark-white.svg"
                   alt="Cadra"
                   className="w-full h-full object-contain"
                 />
               </div>
-              <span className="font-bold text-[19px] tracking-[-0.03em] text-neutral-950 lowercase">
-                cadra
-              </span>
             </Link>
 
             {onCloseMobile && (
@@ -262,41 +258,8 @@ export function Sidebar({
 
         {/* Bottom Wallet & Sandbox Controls */}
         <div className="p-4 border-t border-neutral-100 space-y-3 bg-[#FAFAFA]">
-          <div className="flex items-center justify-between bg-white border border-neutral-200/80 rounded-xl p-2.5">
-            <div className="flex items-center gap-2 truncate">
-              <span
-                className={`w-2 h-2 rounded-full shrink-0 ${
-                  connectedAddress ? "bg-emerald-500" : "bg-neutral-300"
-                }`}
-              />
-              <div className="truncate">
-                <span className="text-[12px] font-mono font-medium text-neutral-900 block truncate">
-                  {connectedAddress
-                    ? `${connectedAddress.slice(0, 6)}...${connectedAddress.slice(-4)}`
-                    : "Not connected"}
-                </span>
-                <span className="text-[11px] text-neutral-400 block">
-                  {connectedAddress ? "Testnet active" : "Read-only"}
-                </span>
-              </div>
-            </div>
-
-            {connectedAddress ? (
-              <button
-                onClick={disconnectWallet}
-                className="text-[11px] text-neutral-500 hover:text-neutral-950 px-2 py-1 hover:bg-neutral-100 rounded-lg cursor-pointer"
-              >
-                Exit
-              </button>
-            ) : (
-              <button
-                onClick={connectWallet}
-                className="text-[11px] font-semibold px-3 py-1.5 bg-neutral-950 text-white rounded-lg hover:bg-neutral-800 cursor-pointer"
-              >
-                Connect
-              </button>
-            )}
-          </div>
+          {/* RainbowKit Wallet Status Card */}
+          <CadraRainbowButton variant="sidebar" />
 
           <div className="flex items-center justify-between text-[11px] text-neutral-500">
             <span>{vaults.length} vaults</span>

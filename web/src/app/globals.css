@@ -3,20 +3,22 @@
 :root {
   --background: #ffffff;
   --foreground: #09090b;
+  --font-sans: "Satoshi", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
 html {
   scroll-behavior: smooth;
+  font-family: var(--font-sans);
 }
 
 body {
   background-color: #ffffff;
   color: #09090b;
-  font-family: -apple-system, BlinkMacSystemFont, "Inter", "Plus Jakarta Sans", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family: var(--font-sans);
   letter-spacing: -0.012em;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  overflow-x: hidden;
+  overflow-x: clip;
 }
 
 /* Soft radial mask so isometric hero backdrop tiles dissolve seamlessly into pure white */
@@ -74,83 +76,150 @@ body {
   animation: float-gentle 4.5s ease-in-out infinite;
 }
 
-/* 3D Rotating Cadra Cube */
+/* Section 5 Mechanism Tab Progress Timer */
+@keyframes progressTimer {
+  0% {
+    width: 0%;
+  }
+  100% {
+    width: 100%;
+  }
+}
+
+.animate-progress-timer {
+  animation: progressTimer 6s linear forwards;
+}
+
+/* 3D Interactive Cadra Cube — Solid Rounded-Corner Obsidian Monolith */
 .cadra-cube-scene {
-  --cube-size: 184px;
-  perspective: 1100px;
+  --cube-size: 164px;
+  perspective: 1000px;
   width: var(--cube-size);
   height: var(--cube-size);
 }
 
 @media (min-width: 640px) {
   .cadra-cube-scene {
-    --cube-size: 224px;
+    --cube-size: 196px;
   }
 }
 
-.cadra-cube {
+.cadra-cube-interactive {
   width: 100%;
   height: 100%;
   position: relative;
   transform-style: preserve-3d;
-  animation: cadra-cube-spin 18s linear infinite;
+  will-change: transform;
 }
 
-.cadra-cube-scene:hover .cadra-cube {
-  animation-play-state: paused;
+/* Solid dark interior core layers so rounded corners never show white gaps */
+.cadra-cube-core-plane {
+  position: absolute;
+  inset: 2px;
+  border-radius: 22px;
+  background: #09090b;
+  pointer-events: none;
 }
 
-@keyframes cadra-cube-spin {
-  0% {
-    transform: rotateX(-20deg) rotateY(0deg);
-  }
-  25% {
-    transform: rotateX(14deg) rotateY(90deg);
-  }
-  50% {
-    transform: rotateX(-20deg) rotateY(180deg);
-  }
-  75% {
-    transform: rotateX(14deg) rotateY(270deg);
-  }
-  100% {
-    transform: rotateX(-20deg) rotateY(360deg);
-  }
+.cadra-cube-bevel {
+  position: absolute;
+  inset: 3px;
+  border-radius: 20px;
+  background: #0c0c0f;
+  pointer-events: none;
+}
+
+.cadra-cube-bevel-front {
+  transform: rotateY(0deg) translateZ(calc(var(--cube-size) / 2 - 4px));
+}
+.cadra-cube-bevel-back {
+  transform: rotateY(180deg) translateZ(calc(var(--cube-size) / 2 - 4px));
+}
+.cadra-cube-bevel-right {
+  transform: rotateY(90deg) translateZ(calc(var(--cube-size) / 2 - 4px));
+}
+.cadra-cube-bevel-left {
+  transform: rotateY(-90deg) translateZ(calc(var(--cube-size) / 2 - 4px));
+}
+.cadra-cube-bevel-top {
+  transform: rotateX(90deg) translateZ(calc(var(--cube-size) / 2 - 4px));
+}
+.cadra-cube-bevel-bottom {
+  transform: rotateX(-90deg) translateZ(calc(var(--cube-size) / 2 - 4px));
+}
+
+.cadra-cube-inner {
+  position: absolute;
+  inset: 8px;
+  border-radius: 14px;
+  background: #09090b;
+  pointer-events: none;
+}
+
+.cadra-cube-inner-front {
+  transform: rotateY(0deg) translateZ(calc(var(--cube-size) / 2 - 9px));
+}
+.cadra-cube-inner-back {
+  transform: rotateY(180deg) translateZ(calc(var(--cube-size) / 2 - 9px));
+}
+.cadra-cube-inner-right {
+  transform: rotateY(90deg) translateZ(calc(var(--cube-size) / 2 - 9px));
+}
+.cadra-cube-inner-left {
+  transform: rotateY(-90deg) translateZ(calc(var(--cube-size) / 2 - 9px));
+}
+.cadra-cube-inner-top {
+  transform: rotateX(90deg) translateZ(calc(var(--cube-size) / 2 - 9px));
+}
+.cadra-cube-inner-bottom {
+  transform: rotateX(-90deg) translateZ(calc(var(--cube-size) / 2 - 9px));
 }
 
 .cadra-cube-face {
   position: absolute;
   inset: 0;
   border-radius: 26px;
-  background: linear-gradient(145deg, #1b1b1f 0%, #0b0b0d 62%, #050506 100%);
   border: 1px solid rgba(255, 255, 255, 0.14);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), inset 0 0 36px rgba(255, 255, 255, 0.03);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), inset 0 0 0 1px rgba(255, 255, 255, 0.04);
   backface-visibility: hidden;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 24px;
+  padding: 20px;
   text-align: center;
   color: #ffffff;
+  transition: border-color 220ms ease, box-shadow 220ms ease;
 }
 
+.cadra-cube-scene.is-active .cadra-cube-face {
+  border-color: rgba(255, 255, 255, 0.28);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.24), inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+/* Subtle directional studio lighting per face for crisp 3D depth */
 .cadra-cube-front {
+  background: linear-gradient(145deg, #1d1d22 0%, #0d0d10 100%);
   transform: rotateY(0deg) translateZ(calc(var(--cube-size) / 2));
 }
-.cadra-cube-back {
-  transform: rotateY(180deg) translateZ(calc(var(--cube-size) / 2));
-}
 .cadra-cube-right {
+  background: linear-gradient(145deg, #16161a 0%, #09090b 100%);
   transform: rotateY(90deg) translateZ(calc(var(--cube-size) / 2));
 }
+.cadra-cube-back {
+  background: linear-gradient(145deg, #141418 0%, #070709 100%);
+  transform: rotateY(180deg) translateZ(calc(var(--cube-size) / 2));
+}
 .cadra-cube-left {
+  background: linear-gradient(145deg, #111115 0%, #070709 100%);
   transform: rotateY(-90deg) translateZ(calc(var(--cube-size) / 2));
 }
 .cadra-cube-top {
+  background: linear-gradient(135deg, #28282e 0%, #16161b 100%);
   transform: rotateX(90deg) translateZ(calc(var(--cube-size) / 2));
 }
 .cadra-cube-bottom {
+  background: #050506;
   transform: rotateX(-90deg) translateZ(calc(var(--cube-size) / 2));
 }
 

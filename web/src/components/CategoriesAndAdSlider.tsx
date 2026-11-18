@@ -1,129 +1,80 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React from "react";
 import {
   ArrowRightIcon,
-  SparklesIcon,
   ShieldIcon,
   ZapIcon,
-  ScaleIcon,
-  ActivityIcon,
   LockIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
 } from "./Icons";
 
-export interface CategoryItem {
-  id: string;
-  name: string;
-  count: string;
-  tagline: string;
-}
-
-export const CATEGORIES: CategoryItem[] = [
-  {
-    id: "all",
-    name: "All strategies",
-    count: "4 active vaults",
-    tagline: "Verified Uniswap v4 curated vaults benchmarked on-chain against The Pace",
-  },
-  {
-    id: "tight",
-    name: "Tight-range alpha",
-    count: "High fee capture",
-    tagline: "Narrow concentrated tick bands actively rebalanced around spot price",
-  },
-  {
-    id: "wide",
-    name: "Wide-range steady",
-    count: "Lower rebalance drag",
-    tagline: "Broad liquidity corridors designed to minimize out-of-range impermanent loss",
-  },
-  {
-    id: "bonded",
-    name: "Bond-protected",
-    count: "USDC collateralized",
-    tagline: "Curators posting deep USDC bonds to reimburse follower shortfalls automatically",
-  },
-  {
-    id: "capacity",
-    name: "High-capacity",
-    count: "Up to 20x multiplier",
-    tagline: "Top curators whose capacity scales automatically as they beat The Pace",
-  },
-  {
-    id: "parking",
-    name: "TWAP-guarded",
-    count: "Automated parking",
-    tagline: "Vaults guarded by O(1) swap checks and automated full-range Pace parking",
-  },
-];
-
-function renderCategoryIcon(id: string, className = "w-4 h-4") {
-  switch (id) {
-    case "all":
-      return <SparklesIcon className={className} />;
-    case "tight":
-      return <ZapIcon className={className} />;
-    case "wide":
-      return <ScaleIcon className={className} />;
-    case "bonded":
-      return <ShieldIcon className={className} />;
-    case "capacity":
-      return <ActivityIcon className={className} />;
-    case "parking":
-      return <LockIcon className={className} />;
-    default:
-      return <SparklesIcon className={className} />;
-  }
-}
-
-export interface SlideItem {
+export interface StrategyStackCard {
   id: number;
-  eyebrow: string;
+  num: string;
+  tag: string;
   title: string;
   subtitle: string;
-  surface: string;
-  glow: string;
   ctaText: string;
   categoryLink: string;
+  surface: string;
+  stickyTop: string;
+  zIndex: string;
 }
 
-export const AD_SLIDES: SlideItem[] = [
+export const AD_SLIDES: StrategyStackCard[] = [
   {
     id: 1,
-    eyebrow: "The Pace Benchmark",
-    title: "Pay performance fees only on true outperformance",
+    num: "01",
+    tag: "The Pace Benchmark",
+    title: "Pay fees only on true outperformance",
     subtitle:
-      "The Pace measures what your capital would have earned in a passive full-range position, fees included. Curators earn $0 unless they beat it.",
-    surface: "from-[#0A1F18] via-[#0B0F0E] to-[#09090B]",
-    glow: "bg-emerald-500/15",
+      "The Pace tracks passive full-range returns, fees included. Curators earn $0 unless they beat it.",
     ctaText: "Discover Curators",
     categoryLink: "tight",
+    surface: "bg-[#F5F5F7]",
+    stickyTop: "top-[96px]",
+    zIndex: "z-10",
   },
   {
     id: 2,
-    eyebrow: "Curator USDC Bonds",
-    title: "Real skin in the game covering follower shortfalls",
+    num: "02",
+    tag: "Curator USDC Bonds",
+    title: "Real collateral covering follower shortfalls",
     subtitle:
-      "Every curator posts a USDC bond before managing funds. If an epoch finishes behind The Pace, the hook pays followers directly from the bond.",
-    surface: "from-[#0C1829] via-[#0B0E14] to-[#09090B]",
-    glow: "bg-blue-500/15",
+      "Every curator posts a USDC bond up front. Finish behind The Pace and followers are reimbursed automatically.",
     ctaText: "Inspect Vault Bonds",
     categoryLink: "bonded",
+    surface: "bg-[#EFEFF2]",
+    stickyTop: "top-[132px]",
+    zIndex: "z-20",
   },
   {
     id: 3,
-    eyebrow: "Automated Parking",
-    title: "On-chain mandates and TWAP parking cap relative loss",
+    num: "03",
+    tag: "Automated Parking",
+    title: "On-chain mandates that cap relative downside",
     subtitle:
-      "CadraHook reverts invalid rebalances inline and freezes lagging curators—redeploying 100% of vault capital safely into The Pace.",
-    surface: "from-[#1A1424] via-[#100D16] to-[#09090B]",
-    glow: "bg-indigo-500/15",
-    ctaText: "Launch Live Simulator",
+      "CadraHook reverts invalid ticks inline and parks lagging vaults into the passive Pace automatically.",
+    ctaText: "Launch Simulator",
     categoryLink: "parking",
+    surface: "bg-[#EAEAEF]",
+    stickyTop: "top-[168px]",
+    zIndex: "z-30",
   },
 ];
+
+function renderCardIcon(categoryLink: string) {
+  switch (categoryLink) {
+    case "tight":
+      return <ZapIcon className="w-4 h-4 text-neutral-900" />;
+    case "bonded":
+      return <ShieldIcon className="w-4 h-4 text-neutral-900" />;
+    case "parking":
+      return <LockIcon className="w-4 h-4 text-neutral-900" />;
+    default:
+      return <ZapIcon className="w-4 h-4 text-neutral-900" />;
+  }
+}
 
 interface CategoriesAndAdSliderProps {
   onSelectCategory?: (categoryId: string) => void;
@@ -131,194 +82,51 @@ interface CategoriesAndAdSliderProps {
 }
 
 export function CategoriesAndAdSlider({
-  onSelectCategory,
   onExploreProducts,
 }: CategoriesAndAdSliderProps) {
-  const [selectedCategory, setSelectedCategory] = useState<string>("all");
-  const [currentSlide, setCurrentSlide] = useState<number>(0);
-  const [isPaused, setIsPaused] = useState<boolean>(false);
-
-  useEffect(() => {
-    if (isPaused) return;
-    const interval = setInterval(() => {
-      setCurrentSlide((prev) => (prev + 1) % AD_SLIDES.length);
-    }, 5500);
-    return () => clearInterval(interval);
-  }, [isPaused]);
-
-  const handleCategoryClick = (catId: string) => {
-    setSelectedCategory(catId);
-    if (onSelectCategory) onSelectCategory(catId);
-    const slideIdx = AD_SLIDES.findIndex((s) => s.categoryLink === catId);
-    if (slideIdx !== -1) {
-      setCurrentSlide(slideIdx);
-    }
-  };
-
-  const handlePrevSlide = () => {
-    setCurrentSlide((prev) => (prev - 1 + AD_SLIDES.length) % AD_SLIDES.length);
-  };
-
-  const handleNextSlide = () => {
-    setCurrentSlide((prev) => (prev + 1) % AD_SLIDES.length);
-  };
-
-  const activeSlide = AD_SLIDES[currentSlide];
-  const activeCategoryObj = CATEGORIES.find((c) => c.id === selectedCategory) || CATEGORIES[0];
-
   return (
-    <div className="w-full space-y-6">
-      {/* Top Horizontal Strategy Pill Strip */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-        {CATEGORIES.map((cat) => {
-          const isActive = selectedCategory === cat.id;
-          return (
-            <button
-              key={cat.id}
-              onClick={() => handleCategoryClick(cat.id)}
-              className={`px-4 py-2 rounded-full text-[13px] font-medium whitespace-nowrap transition-all duration-200 flex items-center gap-2 cursor-pointer shrink-0 ${
-                isActive
-                  ? "bg-neutral-950 text-white"
-                  : "bg-neutral-100/80 text-neutral-600 hover:bg-neutral-200/70 hover:text-neutral-950"
-              }`}
-            >
-              <span className={isActive ? "text-white" : "text-neutral-400"}>
-                {renderCategoryIcon(cat.id, "w-3.5 h-3.5")}
-              </span>
-              <span>{cat.name}</span>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Side-by-Side: Strategy Panel (Left) + 3-Slide Cadra Showcase (Right) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
-        {/* Left: Clean Strategy List (4 cols) */}
-        <div className="lg:col-span-4 bg-[#FAFAFA] border border-neutral-200/70 rounded-[28px] p-5 flex flex-col justify-between">
-          <div className="space-y-1">
-            {CATEGORIES.map((cat) => {
-              const isActive = selectedCategory === cat.id;
-              return (
-                <button
-                  key={cat.id}
-                  onClick={() => handleCategoryClick(cat.id)}
-                  className={`w-full text-left px-3.5 py-3 rounded-2xl transition-all duration-150 cursor-pointer flex items-center justify-between group ${
-                    isActive
-                      ? "bg-white text-neutral-950 shadow-[0_2px_10px_rgba(0,0,0,0.04)] border border-neutral-200/70"
-                      : "text-neutral-600 hover:bg-white/60 hover:text-neutral-950 border border-transparent"
-                  }`}
-                >
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div
-                      className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
-                        isActive
-                          ? "bg-neutral-950 text-white"
-                          : "bg-neutral-200/60 text-neutral-600 group-hover:bg-neutral-200"
-                      }`}
-                    >
-                      {renderCategoryIcon(cat.id, "w-4 h-4")}
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-[13px] font-semibold truncate">{cat.name}</p>
-                      <p className="text-[11px] text-neutral-400 truncate">{cat.count}</p>
-                    </div>
-                  </div>
-                  <ChevronRightIcon
-                    className={`w-4 h-4 shrink-0 transition-all ${
-                      isActive
-                        ? "text-neutral-950 translate-x-0.5"
-                        : "text-neutral-300 group-hover:text-neutral-500"
-                    }`}
-                  />
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="pt-4 mt-4 border-t border-neutral-200/60 px-2">
-            <p className="text-[12px] text-neutral-500 leading-relaxed">
-              {activeCategoryObj.tagline}
-            </p>
-          </div>
-        </div>
-
-        {/* Right: Editorial 3-Slide Cadra Showcase (8 cols) */}
+    <div className="relative w-full space-y-8 sm:space-y-10 pb-6">
+      {AD_SLIDES.map((card) => (
         <div
-          className="lg:col-span-8 relative rounded-[28px] overflow-hidden bg-[#09090B] text-white flex flex-col justify-between p-8 sm:p-12 min-h-[380px]"
-          onMouseEnter={() => setIsPaused(true)}
-          onMouseLeave={() => setIsPaused(false)}
+          key={card.id}
+          className={`sticky ${card.stickyTop} ${card.zIndex} ${card.surface} border border-neutral-200/90 rounded-[32px] p-8 sm:p-12 shadow-[0_-12px_36px_-14px_rgba(0,0,0,0.08),0_20px_50px_-28px_rgba(0,0,0,0.08)] min-h-[290px] sm:min-h-[320px] flex flex-col justify-between transition-transform duration-300`}
         >
-          <div
-            className={`absolute inset-0 bg-gradient-to-br ${activeSlide.surface} transition-all duration-700`}
-          />
-          <div
-            className={`absolute -top-24 -right-24 w-96 h-96 rounded-full ${activeSlide.glow} blur-3xl pointer-events-none transition-colors duration-700`}
-          />
-
-          {/* Top Bar */}
-          <div className="relative z-10 flex items-center justify-between gap-4">
-            <span className="inline-flex items-center gap-2 text-[12px] font-medium text-neutral-300 bg-white/[0.06] border border-white/[0.08] px-3.5 py-1.5 rounded-full">
-              {renderCategoryIcon(activeSlide.categoryLink, "w-3.5 h-3.5 text-white")}
-              <span>{activeSlide.eyebrow}</span>
-            </span>
-
-            <div className="flex items-center gap-2">
-              <button
-                onClick={handlePrevSlide}
-                aria-label="Previous slide"
-                className="w-9 h-9 rounded-full bg-white/[0.06] border border-white/[0.1] hover:bg-white/[0.12] text-neutral-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
-              >
-                <ChevronLeftIcon className="w-4 h-4" />
-              </button>
-              <button
-                onClick={handleNextSlide}
-                aria-label="Next slide"
-                className="w-9 h-9 rounded-full bg-white/[0.06] border border-white/[0.1] hover:bg-white/[0.12] text-neutral-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
-              >
-                <ChevronRightIcon className="w-4 h-4" />
-              </button>
+          {/* Top Row */}
+          <div className="flex items-center justify-between gap-4">
+            <div className="inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-white border border-neutral-200/80 text-[12px] font-medium text-neutral-800">
+              {renderCardIcon(card.categoryLink)}
+              <span>{card.tag}</span>
             </div>
+
+            <span className="text-[12px] font-mono font-medium text-neutral-400">
+              {card.num} / 0{AD_SLIDES.length}
+            </span>
           </div>
 
-          {/* Center Editorial Copy */}
-          <div className="relative z-10 space-y-5 my-auto py-8 max-w-xl">
-            <h3 className="text-2xl sm:text-4xl font-bold tracking-[-0.03em] leading-[1.12] text-white">
-              {activeSlide.title}
-            </h3>
-            <p className="text-[15px] text-neutral-400 leading-relaxed">
-              {activeSlide.subtitle}
-            </p>
-            <div className="pt-2">
+          {/* Bottom Content & CTA */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-end pt-10">
+            <div className="lg:col-span-8 space-y-3">
+              <h3 className="text-2xl sm:text-[36px] font-bold tracking-[-0.035em] leading-[1.1] text-neutral-950">
+                {card.title}
+              </h3>
+              <p className="text-[15px] text-neutral-600 leading-relaxed max-w-xl">
+                {card.subtitle}
+              </p>
+            </div>
+
+            <div className="lg:col-span-4 flex lg:justify-end">
               <button
-                onClick={() => onExploreProducts && onExploreProducts(activeSlide.categoryLink)}
-                className="px-6 py-3 rounded-full bg-white text-neutral-950 font-semibold text-[13px] hover:bg-neutral-100 transition-all active:scale-[0.98] inline-flex items-center gap-2 cursor-pointer"
+                type="button"
+                onClick={() => onExploreProducts && onExploreProducts(card.categoryLink)}
+                className="px-6 py-3 rounded-full bg-neutral-950 text-white font-semibold text-[13px] hover:bg-neutral-800 transition-all active:scale-[0.98] inline-flex items-center gap-2 cursor-pointer"
               >
-                <span>{activeSlide.ctaText}</span>
+                <span>{card.ctaText}</span>
                 <ArrowRightIcon className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
-
-          {/* Bottom Clean Progress Indicators */}
-          <div className="relative z-10 flex items-center justify-between pt-4 border-t border-white/[0.08]">
-            <div className="flex items-center gap-2">
-              {AD_SLIDES.map((_, idx) => (
-                <button
-                  key={idx}
-                  onClick={() => setCurrentSlide(idx)}
-                  aria-label={`Slide ${idx + 1}`}
-                  className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
-                    currentSlide === idx ? "w-8 bg-white" : "w-2 bg-white/25 hover:bg-white/40"
-                  }`}
-                />
-              ))}
-            </div>
-            <span className="text-[12px] text-neutral-500 font-medium">
-              0{currentSlide + 1} / 0{AD_SLIDES.length}
-            </span>
-          </div>
         </div>
-      </div>
+      ))}
     </div>
   );
 }

@@ -2,15 +2,21 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { VaultData, UserPosition, RangePosition } from "../types/cadra";
+import { useAccount, useDisconnect } from "wagmi";
+import { useConnectModal, useAccountModal, useChainModal } from "@rainbow-me/rainbowkit";
 
 interface CadraContextType {
   vaults: VaultData[];
   userPositions: Record<number, UserPosition>;
   connectedAddress: string | null;
+  isConnected: boolean;
   activeRole: "follower" | "curator";
   setActiveRole: (role: "follower" | "curator") => void;
-  connectWallet: () => Promise<void>;
+  connectWallet: () => void;
   disconnectWallet: () => void;
+  openConnectModal?: () => void;
+  openAccountModal?: () => void;
+  openChainModal?: () => void;
   deposit: (vaultId: number, amount: number) => void;
   withdraw: (vaultId: number, shares: number) => void;
   createVault: (newVault: VaultData) => void;
@@ -28,8 +34,16 @@ const CadraContext = createContext<CadraContextType | null>(null);
 export function CadraProvider({ children }: { children: React.ReactNode }) {
   const [vaults, setVaults] = useState<VaultData[]>([]);
   const [userPositions, setUserPositions] = useState<Record<number, UserPosition>>({});
-  const [connectedAddress, setConnectedAddress] = useState<string | null>(null);
   const [activeRole, setActiveRoleState] = useState<"follower" | "curator">("follower");
+
+  const { address, isConnected } = useAccount();
+  const { disconnect } = useDisconnect();
+  const { openConnectModal } = useConnectModal();
+  const { openAccountModal } = useAccountModal();
+  const { openChainModal } = useChainModal();
+
+  // Connected wallet strictly comes from the active RainbowKit / Wagmi session
+  const connectedAddress = isConnected && address ? address : null;
 
   // Load persisted user state
   useEffect(() => {
@@ -41,10 +55,6 @@ export function CadraProvider({ children }: { children: React.ReactNode }) {
       const savedPositions = localStorage.getItem("cadra_positions");
       if (savedPositions) {
         setUserPositions(JSON.parse(savedPositions));
-      }
-      const savedAddress = localStorage.getItem("cadra_address");
-      if (savedAddress) {
-        setConnectedAddress(savedAddress);
       }
       const savedRole = localStorage.getItem("cadra_role") as "follower" | "curator" | null;
       if (savedRole === "follower" || savedRole === "curator") {
@@ -76,40 +86,15 @@ export function CadraProvider({ children }: { children: React.ReactNode }) {
     } catch {}
   };
 
-  // Wallet
-  const connectWallet = async () => {
-    if (
-      typeof window !== "undefined" &&
-      (window as unknown as { ethereum?: { request: (args: { method: string }) => Promise<string[]> } }).ethereum
-    ) {
-      try {
-        const accounts = await (
-          window as unknown as { ethereum: { request: (args: { method: string }) => Promise<string[]> } }
-        ).ethereum.request({
-          method: "eth_requestAccounts",
-        });
-        if (accounts && accounts[0]) {
-          setConnectedAddress(accounts[0]);
-          localStorage.setItem("cadra_address", accounts[0]);
-          return;
-        }
-      } catch (err) {
-        console.error("Wallet connection error", err);
-      }
+  // Wallet actions strictly delegated to RainbowKit / Wagmi
+  const connectWallet = () => {
+    if (openConnectModal) {
+      openConnectModal();
     }
-    // Local dev address if no extension
-    const devAddress = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";
-    setConnectedAddress(devAddress);
-    try {
-      localStorage.setItem("cadra_address", devAddress);
-    } catch {}
   };
 
   const disconnectWallet = () => {
-    setConnectedAddress(null);
-    try {
-      localStorage.removeItem("cadra_address");
-    } catch {}
+    disconnect();
   };
 
   // Follower actions
@@ -449,10 +434,14 @@ export function CadraProvider({ children }: { children: React.ReactNode }) {
         vaults,
         userPositions,
         connectedAddress,
+        isConnected,
         activeRole,
         setActiveRole,
         connectWallet,
         disconnectWallet,
+        openConnectModal,
+        openAccountModal,
+        openChainModal,
         deposit,
         withdraw,
         createVault,
