@@ -84,32 +84,21 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
               Cadra reduces the steps required to earn curated Uniswap v4 yields, protect capital with real bonds, and spend crypto in your day-to-day life.
             </p>
 
-            {/* Primary Store / Launch Actions */}
+            {/* Primary Web App Launch Actions */}
             <div className="flex flex-wrap items-center gap-3 pt-1">
               <button
                 onClick={handleLaunchFollower}
-                className="h-[52px] px-5 rounded-xl bg-neutral-950 text-white hover:bg-neutral-800 transition-all active:scale-[0.98] flex items-center gap-3 cursor-pointer"
+                className="h-[50px] px-6 rounded-full bg-neutral-950 text-white hover:bg-neutral-800 transition-all active:scale-[0.98] inline-flex items-center gap-2 text-[14px] font-semibold cursor-pointer"
               >
-                <svg className="w-5 h-5 fill-current text-white shrink-0" viewBox="0 0 24 24">
-                  <path d="M3.609 1.814L13.793 12 3.61 22.186a2.235 2.235 0 0 1-.22-.962V2.776c0-.361.08-.696.22-.962zm11.242 11.244L4.85 23.059c.307.086.64.072.969-.117l11.534-6.61-2.502-3.274zm0-2.116l2.502-3.274L5.819 1.058c-.329-.189-.662-.203-.969-.117l10 10.001zm1.488 1.058l3.655 2.095c1.066.611 1.066 1.603 0 2.214l-3.655 2.095-2.095-3.202 2.095-3.202z" />
-                </svg>
-                <div className="text-left leading-tight">
-                  <div className="text-[10px] text-neutral-400 font-medium">Get it on</div>
-                  <div className="text-[14px] font-semibold tracking-tight">Play Store</div>
-                </div>
+                <span>Launch Follower App</span>
+                <ArrowRightIcon className="w-4 h-4" />
               </button>
 
               <button
                 onClick={handleLaunchCurator}
-                className="h-[52px] px-5 rounded-xl bg-neutral-950 text-white hover:bg-neutral-800 transition-all active:scale-[0.98] flex items-center gap-3 cursor-pointer"
+                className="h-[50px] px-6 rounded-full bg-white text-neutral-950 border border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50 transition-all active:scale-[0.98] inline-flex items-center gap-2 text-[14px] font-semibold cursor-pointer"
               >
-                <svg className="w-5 h-5 fill-current text-white shrink-0" viewBox="0 0 24 24">
-                  <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.37c.62-.75 1.04-1.8 0.92-2.85-.9.04-1.99.6-2.63 1.35-.57.65-1.07 1.72-.94 2.74 1 .08 2.03-.49 2.65-1.24z" />
-                </svg>
-                <div className="text-left leading-tight">
-                  <div className="text-[10px] text-neutral-400 font-medium">Download on</div>
-                  <div className="text-[14px] font-semibold tracking-tight">App Store</div>
-                </div>
+                <span>Open Curator Studio</span>
               </button>
             </div>
 
@@ -722,7 +711,7 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
 
           {/* 4-Column Footer Grid */}
           <div className="grid grid-cols-1 md:grid-cols-12 gap-10 pb-16 border-b border-neutral-100">
-            {/* Col 1: Stars, Light-Bordered Store Buttons & Compliance (4 cols) */}
+            {/* Col 1: Brand Trust, Web App CTAs & Compliance (4 cols) */}
             <div className="md:col-span-4 md:border-r md:border-neutral-100 md:pr-8 space-y-5">
               <div className="space-y-1.5">
                 <div className="flex items-center gap-1 text-amber-400">
@@ -731,36 +720,25 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
                   ))}
                 </div>
                 <p className="text-[13px] font-medium text-neutral-700">
-                  Download Cadra today
+                  Start with Cadra today
                 </p>
               </div>
 
-              {/* Clean White-Surface Store Buttons matching Spenda Screenshot 5 */}
+              {/* Clean Web App Launch Buttons */}
               <div className="flex flex-wrap items-center gap-2.5">
                 <button
                   onClick={handleLaunchFollower}
-                  className="px-3.5 py-2 rounded-xl bg-white border border-neutral-200 hover:border-neutral-300 text-neutral-950 transition-colors flex items-center gap-2.5 cursor-pointer"
+                  className="px-4 py-2.5 rounded-full bg-neutral-950 text-white hover:bg-neutral-800 transition-colors inline-flex items-center gap-2 text-[12px] font-semibold cursor-pointer"
                 >
-                  <svg className="w-5 h-5 fill-current text-neutral-950 shrink-0" viewBox="0 0 24 24">
-                    <path d="M3.609 1.814L13.793 12 3.61 22.186a2.235 2.235 0 0 1-.22-.962V2.776c0-.361.08-.696.22-.962zm11.242 11.244L4.85 23.059c.307.086.64.072.969-.117l11.534-6.61-2.502-3.274zm0-2.116l2.502-3.274L5.819 1.058c-.329-.189-.662-.203-.969-.117l10 10.001zm1.488 1.058l3.655 2.095c1.066.611 1.066 1.603 0 2.214l-3.655 2.095-2.095-3.202 2.095-3.202z" />
-                  </svg>
-                  <div className="text-left leading-tight">
-                    <div className="text-[9px] text-neutral-500">Get it on</div>
-                    <div className="text-[12px] font-bold">Play Store</div>
-                  </div>
+                  <span>Launch Web App</span>
+                  <ArrowRightIcon className="w-3.5 h-3.5" />
                 </button>
 
                 <button
                   onClick={handleLaunchCurator}
-                  className="px-3.5 py-2 rounded-xl bg-white border border-neutral-200 hover:border-neutral-300 text-neutral-950 transition-colors flex items-center gap-2.5 cursor-pointer"
+                  className="px-4 py-2.5 rounded-full bg-white border border-neutral-200 hover:border-neutral-300 text-neutral-950 transition-colors text-[12px] font-semibold cursor-pointer"
                 >
-                  <svg className="w-5 h-5 fill-current text-neutral-950 shrink-0" viewBox="0 0 24 24">
-                    <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.37c.62-.75 1.04-1.8 0.92-2.85-.9.04-1.99.6-2.63 1.35-.57.65-1.07 1.72-.94 2.74 1 .08 2.03-.49 2.65-1.24z" />
-                  </svg>
-                  <div className="text-left leading-tight">
-                    <div className="text-[9px] text-neutral-500">Download on</div>
-                    <div className="text-[12px] font-bold">App Store</div>
-                  </div>
+                  Curator Studio
                 </button>
               </div>
 

@@ -488,8 +488,8 @@
   .h-\[18px\] {
     height: 18px;
   }
-  .h-\[52px\] {
-    height: 52px;
+  .h-\[50px\] {
+    height: 50px;
   }
   .h-full {
     height: 100%;
@@ -1611,9 +1611,6 @@
   .fill-amber-400 {
     fill: var(--color-amber-400);
   }
-  .fill-current {
-    fill: currentcolor;
-  }
   .object-contain {
     object-fit: contain;
   }
@@ -1842,9 +1839,6 @@
   .text-xs {
     font-size: var(--text-xs);
     line-height: var(--tw-leading, var(--text-xs--line-height));
-  }
-  .text-\[9px\] {
-    font-size: 9px;
   }
   .text-\[10px\] {
     font-size: 10px;
