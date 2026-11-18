@@ -21,15 +21,15 @@ export interface CategoryItem {
 }
 
 export const CATEGORIES: CategoryItem[] = [
-  { id: "all", name: "All categories", count: "1,420+ Items", tagline: "Curated Web3 Commerce & Yields" },
-  { id: "food", name: "Food & groceries", count: "480+ Stores", tagline: "Fresh groceries & daily essentials with 0% swap fees" },
-  { id: "fashion", name: "Fashion", count: "320+ Brands", tagline: "Luxury & street style settled with crypto virtual card" },
-  { id: "beauty", name: "Beauty", count: "190+ Outlets", tagline: "Skincare, cosmetics & wellness checkout in seconds" },
-  { id: "electronics", name: "Electronics", count: "260+ Gadgets", tagline: "Smartphones, laptops & hardware with instant escrow" },
-  { id: "office", name: "Home & office", count: "170+ Spaces", tagline: "Workstations, decor & home essentials paid via crypto" },
+  { id: "all", name: "All categories", count: "1,420+ merchants", tagline: "Everyday commerce powered by your vault yield" },
+  { id: "food", name: "Food & groceries", count: "480+ stores", tagline: "Fresh groceries and daily essentials with instant settlement" },
+  { id: "fashion", name: "Fashion", count: "320+ brands", tagline: "Global apparel and footwear with virtual dollar cards" },
+  { id: "beauty", name: "Beauty", count: "190+ outlets", tagline: "Skincare, wellness, and cosmetics checkout in seconds" },
+  { id: "electronics", name: "Electronics", count: "260+ retailers", tagline: "Laptops, audio, and smart gear with on-chain escrow" },
+  { id: "office", name: "Home & office", count: "170+ spaces", tagline: "Workstations and home upgrades funded directly from crypto" },
 ];
 
-function renderCategoryIcon(id: string, className = "w-3.5 h-3.5") {
+function renderCategoryIcon(id: string, className = "w-4 h-4") {
   switch (id) {
     case "all":
       return <SparklesIcon className={className} />;
@@ -50,12 +50,11 @@ function renderCategoryIcon(id: string, className = "w-3.5 h-3.5") {
 
 export interface SlideItem {
   id: number;
-  tag: string;
+  eyebrow: string;
   title: string;
   subtitle: string;
-  accentBg: string;
-  accentBorder: string;
-  badgeColor: string;
+  surface: string;
+  glow: string;
   ctaText: string;
   categoryLink: string;
 }
@@ -63,35 +62,32 @@ export interface SlideItem {
 export const AD_SLIDES: SlideItem[] = [
   {
     id: 1,
-    tag: "FEATURED CAMPAIGN",
-    title: "Spend Crypto on Food & Daily Groceries",
-    subtitle: "Use your Cadra Uniswap v4 earnings for fresh meals and supermarket orders. Zero P2P delays, instant checkout.",
-    accentBg: "from-emerald-950 via-neutral-900 to-black",
-    accentBorder: "border-emerald-500/30",
-    badgeColor: "bg-emerald-500/20 text-emerald-400 border-emerald-500/40",
-    ctaText: "Shop Groceries Now",
+    eyebrow: "Food & Groceries",
+    title: "Spend your yield on everyday meals and groceries",
+    subtitle: "Convert Uniswap v4 liquidity fees directly at checkout with zero P2P delays.",
+    surface: "from-[#0A1F18] via-[#0B0F0E] to-[#09090B]",
+    glow: "bg-emerald-500/15",
+    ctaText: "Explore Groceries",
     categoryLink: "food",
   },
   {
     id: 2,
-    tag: "VIRTUAL CARD POWER",
-    title: "Global Fashion & Luxury Brands",
-    subtitle: "Fund your digital Visa card directly from your curator vault. Spend at Zara, ASOS, Nike, and 40M+ merchants.",
-    accentBg: "from-sky-950 via-neutral-900 to-black",
-    accentBorder: "border-sky-500/30",
-    badgeColor: "bg-sky-500/20 text-sky-400 border-sky-500/40",
-    ctaText: "Explore Fashion Perks",
+    eyebrow: "Virtual Card",
+    title: "Global fashion and lifestyle, paid straight from your vault",
+    subtitle: "Fund an instant virtual dollar card directly from your protected Cadra balance.",
+    surface: "from-[#0C1829] via-[#0B0E14] to-[#09090B]",
+    glow: "bg-blue-500/15",
+    ctaText: "Explore Fashion",
     categoryLink: "fashion",
   },
   {
     id: 3,
-    tag: "HARDWARE & TECH",
-    title: "Electronics & Smart Home Essentials",
-    subtitle: "Upgrade your workstation with crypto yields. Laptops, monitors, and audio gear with buyer-protection escrow.",
-    accentBg: "from-amber-950 via-neutral-900 to-black",
-    accentBorder: "border-amber-500/30",
-    badgeColor: "bg-amber-500/20 text-amber-400 border-amber-500/40",
-    ctaText: "Discover Tech Gear",
+    eyebrow: "Electronics & Tech",
+    title: "Upgrade your setup with instant crypto settlement",
+    subtitle: "Shop hardware, laptops, and smart office essentials without leaving your wallet.",
+    surface: "from-[#1F170B] via-[#120F0B] to-[#09090B]",
+    glow: "bg-amber-500/15",
+    ctaText: "Explore Electronics",
     categoryLink: "electronics",
   },
 ];
@@ -109,20 +105,17 @@ export function CategoriesAndAdSlider({
   const [currentSlide, setCurrentSlide] = useState<number>(0);
   const [isPaused, setIsPaused] = useState<boolean>(false);
 
-  // Auto-slide every 5 seconds unless hovered
   useEffect(() => {
     if (isPaused) return;
     const interval = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % AD_SLIDES.length);
-    }, 5000);
+    }, 5500);
     return () => clearInterval(interval);
   }, [isPaused]);
 
   const handleCategoryClick = (catId: string) => {
     setSelectedCategory(catId);
-    if (onSelectCategory) {
-      onSelectCategory(catId);
-    }
+    if (onSelectCategory) onSelectCategory(catId);
     const slideIdx = AD_SLIDES.findIndex((s) => s.categoryLink === catId);
     if (slideIdx !== -1) {
       setCurrentSlide(slideIdx);
@@ -138,188 +131,158 @@ export function CategoriesAndAdSlider({
   };
 
   const activeSlide = AD_SLIDES[currentSlide];
+  const activeCategoryObj = CATEGORIES.find((c) => c.id === selectedCategory) || CATEGORIES[0];
 
   return (
     <div className="w-full space-y-6">
-      {/* 1. Top Working Categories Bar */}
-      <div className="flex items-center justify-between gap-3 overflow-x-auto pb-1 scrollbar-none">
-        <div className="flex items-center gap-2 flex-nowrap shrink-0">
-          {CATEGORIES.map((cat) => {
-            const isActive = selectedCategory === cat.id;
-            return (
-              <button
-                key={cat.id}
-                onClick={() => handleCategoryClick(cat.id)}
-                className={`px-4 py-2 rounded-full text-xs font-medium whitespace-nowrap transition-all flex items-center gap-1.5 cursor-pointer select-none ${
-                  isActive
-                    ? "bg-neutral-950 text-white shadow-sm font-semibold"
-                    : "bg-neutral-100/90 hover:bg-neutral-200/80 text-neutral-700 border border-neutral-200/70"
-                }`}
-              >
-                <span className={isActive ? "text-emerald-400" : "text-neutral-500"}>
-                  {renderCategoryIcon(cat.id, "w-3.5 h-3.5")}
-                </span>
-                <span>{cat.name}</span>
-                {isActive && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 ml-0.5 animate-pulse" />
-                )}
-              </button>
-            );
-          })}
-        </div>
-
-        <div className="hidden sm:flex items-center gap-1.5 text-xs text-neutral-400 shrink-0 font-mono">
-          <span className="w-2 h-2 rounded-full bg-emerald-500" />
-          <span>Real-time Off-Ramp</span>
-        </div>
+      {/* Top Horizontal Category Pill Strip */}
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
+        {CATEGORIES.map((cat) => {
+          const isActive = selectedCategory === cat.id;
+          return (
+            <button
+              key={cat.id}
+              onClick={() => handleCategoryClick(cat.id)}
+              className={`px-4 py-2 rounded-full text-[13px] font-medium whitespace-nowrap transition-all duration-200 flex items-center gap-2 cursor-pointer shrink-0 ${
+                isActive
+                  ? "bg-neutral-950 text-white"
+                  : "bg-neutral-100/80 text-neutral-600 hover:bg-neutral-200/70 hover:text-neutral-950"
+              }`}
+            >
+              <span className={isActive ? "text-white" : "text-neutral-400"}>
+                {renderCategoryIcon(cat.id, "w-3.5 h-3.5")}
+              </span>
+              <span>{cat.name}</span>
+            </button>
+          );
+        })}
       </div>
 
-      {/* 2. Side-by-Side: Categories Panel on Left + 3-Slide Ad Carousel on Right */}
+      {/* Side-by-Side: Minimal Category Panel (Left) + 3-Slide Showcase (Right) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-stretch">
-        {/* Left Side Category Quick-Navigation Menu (4 cols) */}
-        <div className="lg:col-span-4 bg-white border border-neutral-200/90 rounded-3xl p-5 sm:p-6 flex flex-col justify-between shadow-xs">
-          <div className="space-y-4">
-            <div className="flex items-center justify-between border-b border-neutral-100 pb-3">
-              <div>
-                <span className="text-xs font-mono font-semibold uppercase text-neutral-400 tracking-wider">
-                  BROWSE BY
-                </span>
-                <h3 className="text-lg font-bold text-neutral-950 tracking-tight">
-                  Everyday Spending
-                </h3>
-              </div>
-              <span className="text-xs font-mono px-2.5 py-1 rounded-full bg-neutral-100 text-neutral-600 border border-neutral-200">
-                6 Sectors
-              </span>
-            </div>
-
-            <div className="space-y-1.5">
-              {CATEGORIES.map((cat) => {
-                const isActive = selectedCategory === cat.id;
-                return (
-                  <div
-                    key={cat.id}
-                    onClick={() => handleCategoryClick(cat.id)}
-                    className={`w-full text-left px-3.5 py-2.5 rounded-2xl transition-all cursor-pointer flex items-center justify-between ${
-                      isActive
-                        ? "bg-neutral-900 text-white shadow-xs"
-                        : "hover:bg-neutral-100/80 text-neutral-700"
-                    }`}
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${
-                        isActive ? "bg-neutral-800 text-emerald-400" : "bg-neutral-100 text-neutral-600"
-                      }`}>
-                        {renderCategoryIcon(cat.id, "w-4 h-4")}
-                      </div>
-                      <div className="truncate">
-                        <p className={`text-xs font-semibold truncate ${isActive ? "text-white" : "text-neutral-900"}`}>
-                          {cat.name}
-                        </p>
-                        <p className={`text-[11px] truncate ${isActive ? "text-neutral-400" : "text-neutral-500"}`}>
-                          {cat.count}
-                        </p>
-                      </div>
+        {/* Left: Clean Category Navigation List (4 cols) */}
+        <div className="lg:col-span-4 bg-[#FAFAFA] border border-neutral-200/70 rounded-[28px] p-5 flex flex-col justify-between">
+          <div className="space-y-1">
+            {CATEGORIES.map((cat) => {
+              const isActive = selectedCategory === cat.id;
+              return (
+                <button
+                  key={cat.id}
+                  onClick={() => handleCategoryClick(cat.id)}
+                  className={`w-full text-left px-3.5 py-3 rounded-2xl transition-all duration-150 cursor-pointer flex items-center justify-between group ${
+                    isActive
+                      ? "bg-white text-neutral-950 shadow-[0_2px_10px_rgba(0,0,0,0.04)] border border-neutral-200/70"
+                      : "text-neutral-600 hover:bg-white/60 hover:text-neutral-950 border border-transparent"
+                  }`}
+                >
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div
+                      className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
+                        isActive
+                          ? "bg-neutral-950 text-white"
+                          : "bg-neutral-200/60 text-neutral-600 group-hover:bg-neutral-200"
+                      }`}
+                    >
+                      {renderCategoryIcon(cat.id, "w-4 h-4")}
                     </div>
-                    <ArrowRightIcon className={`w-3.5 h-3.5 shrink-0 transition-transform ${isActive ? "text-emerald-400 translate-x-0.5" : "text-neutral-400"}`} />
+                    <div className="min-w-0">
+                      <p className="text-[13px] font-semibold truncate">{cat.name}</p>
+                      <p className="text-[11px] text-neutral-400 truncate">{cat.count}</p>
+                    </div>
                   </div>
-                );
-              })}
-            </div>
+                  <ChevronRightIcon
+                    className={`w-4 h-4 shrink-0 transition-all ${
+                      isActive
+                        ? "text-neutral-950 translate-x-0.5"
+                        : "text-neutral-300 group-hover:text-neutral-500"
+                    }`}
+                  />
+                </button>
+              );
+            })}
           </div>
 
-          <div className="pt-4 mt-3 border-t border-neutral-100 flex items-center justify-between text-xs text-neutral-500">
-            <span>Instant Crypto Settlement</span>
-            <span className="font-mono text-emerald-600 font-semibold">0% P2P Fee</span>
+          <div className="pt-4 mt-4 border-t border-neutral-200/60 px-2">
+            <p className="text-[12px] text-neutral-500 leading-relaxed">
+              {activeCategoryObj.tagline}
+            </p>
           </div>
         </div>
 
-        {/* Right Side 3-Slide Ad Carousel (8 cols) */}
+        {/* Right: Editorial 3-Slide Auto Carousel (8 cols) */}
         <div
-          className="lg:col-span-8 relative rounded-3xl overflow-hidden bg-neutral-950 text-white border border-neutral-800 shadow-xl flex flex-col justify-between p-6 sm:p-10 min-h-[340px]"
+          className="lg:col-span-8 relative rounded-[28px] overflow-hidden bg-[#09090B] text-white flex flex-col justify-between p-8 sm:p-12 min-h-[380px]"
           onMouseEnter={() => setIsPaused(true)}
           onMouseLeave={() => setIsPaused(false)}
         >
-          {/* Background Gradient Mesh */}
-          <div className={`absolute inset-0 bg-gradient-to-br ${activeSlide.accentBg} opacity-90 transition-all duration-700`} />
-          <div className="absolute -top-24 -right-24 w-80 h-80 rounded-full bg-emerald-500/10 blur-3xl pointer-events-none" />
+          {/* Subtle Gradient Surface */}
+          <div
+            className={`absolute inset-0 bg-gradient-to-br ${activeSlide.surface} transition-all duration-700`}
+          />
+          <div
+            className={`absolute -top-24 -right-24 w-96 h-96 rounded-full ${activeSlide.glow} blur-3xl pointer-events-none transition-colors duration-700`}
+          />
 
-          {/* Slide Top HUD */}
+          {/* Top Bar: Minimal Eyebrow + Arrow Controls */}
           <div className="relative z-10 flex items-center justify-between gap-4">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border text-xs font-mono font-medium backdrop-blur-md">
-              <span className={`px-2 py-0.5 rounded-full border text-xs font-bold uppercase tracking-wider ${activeSlide.badgeColor}`}>
-                {activeSlide.tag}
-              </span>
-              <span className="text-neutral-400 text-xs">Slide {currentSlide + 1} of 3</span>
-            </div>
+            <span className="inline-flex items-center gap-2 text-[12px] font-medium text-neutral-300 bg-white/[0.06] border border-white/[0.08] px-3.5 py-1.5 rounded-full">
+              {renderCategoryIcon(activeSlide.categoryLink, "w-3.5 h-3.5 text-white")}
+              <span>{activeSlide.eyebrow}</span>
+            </span>
 
-            {/* Slide Navigation Arrows */}
             <div className="flex items-center gap-2">
               <button
                 onClick={handlePrevSlide}
                 aria-label="Previous slide"
-                className="w-8 h-8 rounded-full bg-neutral-900/80 border border-neutral-700/80 hover:bg-neutral-800 text-neutral-300 hover:text-white flex items-center justify-center transition-all cursor-pointer"
+                className="w-9 h-9 rounded-full bg-white/[0.06] border border-white/[0.1] hover:bg-white/[0.12] text-neutral-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
               >
-                <ChevronLeftIcon className="w-3.5 h-3.5" />
+                <ChevronLeftIcon className="w-4 h-4" />
               </button>
               <button
                 onClick={handleNextSlide}
                 aria-label="Next slide"
-                className="w-8 h-8 rounded-full bg-neutral-900/80 border border-neutral-700/80 hover:bg-neutral-800 text-neutral-300 hover:text-white flex items-center justify-center transition-all cursor-pointer"
+                className="w-9 h-9 rounded-full bg-white/[0.06] border border-white/[0.1] hover:bg-white/[0.12] text-neutral-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
               >
-                <ChevronRightIcon className="w-3.5 h-3.5" />
+                <ChevronRightIcon className="w-4 h-4" />
               </button>
             </div>
           </div>
 
-          {/* Slide Content Body */}
-          <div className="relative z-10 space-y-4 my-auto py-6">
-            <div className="w-14 h-14 rounded-2xl bg-neutral-900/90 border border-neutral-700 flex items-center justify-center text-emerald-400 shadow-lg">
-              {renderCategoryIcon(activeSlide.categoryLink, "w-7 h-7")}
-            </div>
-
-            <div className="space-y-2 max-w-xl">
-              <h4 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white leading-tight">
-                {activeSlide.title}
-              </h4>
-              <p className="text-sm sm:text-base text-neutral-300 leading-relaxed font-normal">
-                {activeSlide.subtitle}
-              </p>
-            </div>
-
-            <div className="pt-2 flex flex-wrap items-center gap-3">
+          {/* Center Editorial Copy */}
+          <div className="relative z-10 space-y-5 my-auto py-8 max-w-xl">
+            <h3 className="text-2xl sm:text-4xl font-bold tracking-[-0.03em] leading-[1.12] text-white">
+              {activeSlide.title}
+            </h3>
+            <p className="text-[15px] text-neutral-400 leading-relaxed">
+              {activeSlide.subtitle}
+            </p>
+            <div className="pt-2">
               <button
                 onClick={() => onExploreProducts && onExploreProducts(activeSlide.categoryLink)}
-                className="px-6 py-3 rounded-full bg-white text-neutral-950 font-semibold text-xs uppercase tracking-wider hover:bg-neutral-100 transition-all shadow-md hover:scale-[1.02] active:scale-95 flex items-center gap-2 cursor-pointer"
+                className="px-6 py-3 rounded-full bg-white text-neutral-950 font-semibold text-[13px] hover:bg-neutral-100 transition-all active:scale-[0.98] inline-flex items-center gap-2 cursor-pointer"
               >
                 <span>{activeSlide.ctaText}</span>
                 <ArrowRightIcon className="w-3.5 h-3.5" />
               </button>
-
-              <div className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-neutral-900/60 border border-neutral-800 text-xs text-neutral-300 font-mono">
-                <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                <span>Instant settlement via Cadra Hook</span>
-              </div>
             </div>
           </div>
 
-          {/* Bottom Indicators */}
-          <div className="relative z-10 flex items-center justify-between border-t border-neutral-800/80 pt-4 text-xs">
+          {/* Bottom Clean Progress Indicators */}
+          <div className="relative z-10 flex items-center justify-between pt-4 border-t border-white/[0.08]">
             <div className="flex items-center gap-2">
               {AD_SLIDES.map((_, idx) => (
                 <button
                   key={idx}
                   onClick={() => setCurrentSlide(idx)}
-                  aria-label={`Jump to slide ${idx + 1}`}
-                  className={`h-1.5 rounded-full transition-all cursor-pointer ${
-                    currentSlide === idx ? "w-8 bg-emerald-400" : "w-2 bg-neutral-700 hover:bg-neutral-500"
+                  aria-label={`Slide ${idx + 1}`}
+                  className={`h-1.5 rounded-full transition-all duration-300 cursor-pointer ${
+                    currentSlide === idx ? "w-8 bg-white" : "w-2 bg-white/25 hover:bg-white/40"
                   }`}
                 />
               ))}
             </div>
-
-            <span className="text-neutral-400 font-mono text-xs">
-              Powered by Uniswap v4 Liquidity Rails
+            <span className="text-[12px] text-neutral-500 font-medium">
+              0{currentSlide + 1} / 0{AD_SLIDES.length}
             </span>
           </div>
         </div>

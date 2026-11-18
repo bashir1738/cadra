@@ -42,9 +42,9 @@ export function DashboardLayout({
   const isFollower = portalMode === "follower";
 
   return (
-    <div className="min-h-screen bg-neutral-50 flex text-neutral-900 font-sans antialiased selection:bg-neutral-900 selection:text-white">
+    <div className="min-h-screen bg-[#FAFAFA] flex text-neutral-950 font-sans antialiased selection:bg-neutral-950 selection:text-white">
       {/* 1. Left Sidebar Navigation (Desktop permanent + Mobile slide-over drawer) */}
-      <Suspense fallback={<div className="w-64 hidden lg:block shrink-0 bg-white border-r border-neutral-200" />}>
+      <Suspense fallback={<div className="w-64 hidden lg:block shrink-0 bg-white border-r border-neutral-200/75" />}>
         <Sidebar
           portalMode={portalMode}
           isOpenMobile={isMobileOpen}
@@ -53,49 +53,49 @@ export function DashboardLayout({
       </Suspense>
 
       {/* 2. Main Dashboard Content Column */}
-      <div className="flex-1 flex flex-col min-w-0 bg-neutral-50">
+      <div className="flex-1 flex flex-col min-w-0 bg-[#FAFAFA]">
         {/* Top Sticky Dashboard Navigation Bar */}
-        <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-neutral-200 px-3 sm:px-6 lg:px-8 py-3 flex items-center justify-between gap-3 shadow-2xs">
+        <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-xl border-b border-neutral-200/70 px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5 sm:gap-3">
             {/* Mobile / Tablet Menu Button */}
             <button
               onClick={() => setIsMobileOpen(true)}
-              className="lg:hidden flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-neutral-200 bg-white text-neutral-800 hover:bg-neutral-100 transition-colors cursor-pointer shadow-2xs text-xs font-semibold"
+              className="lg:hidden flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-neutral-200 bg-white text-neutral-800 hover:bg-neutral-50 transition-colors cursor-pointer text-xs font-medium"
               aria-label="Open Sidebar Menu"
             >
-              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
               </svg>
               <span>Menu</span>
             </button>
 
             {/* Breadcrumb Hierarchy */}
-            <div className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm font-medium truncate">
+            <div className="flex items-center gap-2 text-[13px] font-medium truncate">
               <Link
                 href={isFollower ? "/follower/portfolio" : "/curator/overview"}
-                className="text-neutral-500 hover:text-neutral-800 font-normal truncate hidden xs:inline"
+                className="text-neutral-400 hover:text-neutral-800 transition-colors truncate hidden xs:inline"
               >
                 {breadcrumb || (isFollower ? "Follower Portal" : "Curator Studio")}
               </Link>
               <span className="text-neutral-300 hidden xs:inline">/</span>
-              <span className="text-neutral-950 font-bold truncate">{pageTitle}</span>
+              <span className="text-neutral-950 font-semibold truncate">{pageTitle}</span>
             </div>
           </div>
 
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
-            {/* Pool Status Badge (Collapses on small screens) */}
-            <div className="hidden md:inline-flex items-center gap-2 px-3 py-1 rounded-full bg-neutral-100 border border-neutral-200 text-xs font-mono">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="text-neutral-700 font-medium">WETH/USDC (0.05%)</span>
+          <div className="flex items-center gap-2.5 sm:gap-3 shrink-0">
+            {/* Pool Status Badge */}
+            <div className="hidden md:inline-flex items-center gap-2 px-3 py-1 rounded-full bg-neutral-100/80 text-[12px] font-medium text-neutral-600">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+              <span>WETH/USDC · 0.05%</span>
             </div>
 
             {/* Role Quick Toggle for Tablet / Mobile */}
-            <div className="hidden sm:inline-flex lg:hidden items-center bg-neutral-100 border border-neutral-200 p-0.5 rounded-full text-xs font-medium">
+            <div className="hidden sm:inline-flex lg:hidden items-center bg-neutral-100 p-0.5 rounded-full text-xs font-medium">
               <Link
                 href="/follower/portfolio"
                 onClick={() => setActiveRole("follower")}
                 className={`px-2.5 py-1 rounded-full transition-all ${
-                  isFollower ? "bg-white text-neutral-900 font-semibold shadow-xs" : "text-neutral-500"
+                  isFollower ? "bg-white text-neutral-950 font-semibold shadow-2xs" : "text-neutral-500"
                 }`}
               >
                 Follower
@@ -104,7 +104,7 @@ export function DashboardLayout({
                 href="/curator/overview"
                 onClick={() => setActiveRole("curator")}
                 className={`px-2.5 py-1 rounded-full transition-all ${
-                  !isFollower ? "bg-neutral-900 text-white font-semibold shadow-xs" : "text-neutral-500"
+                  !isFollower ? "bg-neutral-950 text-white font-semibold" : "text-neutral-500"
                 }`}
               >
                 Curator
@@ -114,11 +114,11 @@ export function DashboardLayout({
             {/* Wallet Action Pill */}
             <button
               onClick={connectedAddress ? disconnectWallet : connectWallet}
-              className="px-3.5 sm:px-4 py-1.5 rounded-full bg-neutral-900 text-white text-xs font-semibold hover:bg-neutral-800 transition-all cursor-pointer shadow-xs shrink-0 active:scale-95"
+              className="px-4 py-1.5 rounded-full bg-neutral-950 text-white text-[12px] font-medium hover:bg-neutral-800 transition-all cursor-pointer shrink-0 active:scale-[0.98]"
             >
               {connectedAddress
                 ? `${connectedAddress.slice(0, 5)}...${connectedAddress.slice(-4)}`
-                : "Connect"}
+                : "Connect Wallet"}
             </button>
           </div>
         </header>

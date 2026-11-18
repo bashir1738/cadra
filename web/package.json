@@ -3,8 +3,11 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "css:build": "node scripts/build-tailwind.mjs",
+    "predev": "node scripts/build-tailwind.mjs",
     "dev": "WATCHPACK_POLLING=true next dev --webpack",
     "dev:turbo": "next dev --turbopack",
+    "prebuild": "node scripts/build-tailwind.mjs",
     "build": "next build",
     "start": "next start"
   },
