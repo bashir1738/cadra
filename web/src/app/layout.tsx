@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import "./globals.css";
 import { CadraProvider } from "../context/CadraContext";
-import { RainbowProviders } from "../components/RainbowProviders";
+import { PrivyProviders } from "../components/PrivyProviders";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://cadra.finance"),
@@ -34,13 +34,13 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-full flex flex-col bg-white text-neutral-900 font-sans selection:bg-neutral-900 selection:text-white">
-        <RainbowProviders>
+        <PrivyProviders>
           <CadraProvider>
             <Suspense fallback={<div className="min-h-screen bg-white" />}>
               {children}
             </Suspense>
           </CadraProvider>
-        </RainbowProviders>
+        </PrivyProviders>
       </body>
     </html>
   );

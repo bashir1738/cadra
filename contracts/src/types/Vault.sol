@@ -13,10 +13,10 @@ struct Record {
 }
 
 /// @notice Queued deposit to be processed at the next epoch settlement.
+/// @dev sharesToMint is locked at deposit time using TWAP valuation (eliminates settle-time sandwich attacks).
 struct QueuedDeposit {
     address follower;
-    uint256 amount0;
-    uint256 amount1;
+    uint256 sharesToMint;
 }
 
 /// @notice Queued withdrawal to be processed at the next epoch settlement.
@@ -39,6 +39,7 @@ struct Vault {
     uint256 deficit;                // Carried deficit D from uncovered shortfalls
     bool isFrozen;                  // True if vault is parked and curator is frozen
     bool bandLeft;                  // Flag set if spot price left [minTick, maxTick]
+    bool epochReadyEmitted;         // Flag set when EpochReady event is emitted for Reactive settlement
     uint256 epoch;                  // Current epoch index (starts at 1)
     uint256 epochStart;             // Timestamp when the current epoch began
     uint256 startValue;             // V0: Vault benchmark value at epoch start (in token1)

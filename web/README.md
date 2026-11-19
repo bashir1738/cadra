@@ -8,38 +8,39 @@ A minimalist, high-contrast black & white web interface for **Cadra** built with
 
 - **Minimalist Palette**: Built exclusively around `#000000` (deep void black), `#FFFFFF` (pure white), and architectural grayscale borders (`#171717`, `#262626`, `#A1A1AA`).
 - **High-Contrast Geometry**: Razor-sharp borders (`border border-neutral-800`, `border-white/20`), clean rectangular cards, and zero distracting gradients.
-- **Phone-First Layout**: Fully responsive interface optimized for mobile viewport navigation as well as wide desktop screens.
+- **Typography**: Clean Satoshi typography hierarchy with tabular figures for real-time financial counters.
+- **No Emojis**: 100% SVG vector iconography throughout all navigation, indicators, and alerts.
 - **Strict Terminology**: Designed for clarity—uses intuitive language (*"curator"*, *"the Pace"*, *"ahead"*, *"behind"*, *"bond"*, *"rules"*) rather than low-level Uniswap jargon (*"LP"*, *"tick"*, *"sqrtPriceX96"*) on user-facing screens.
 - **Testnet Notice**: Persistent header indicator marking the application as **"UNAUDITED / TESTNET ONLY · UHI11 HOOKATHON"**.
 
 ---
 
-## 2. Core Views & Features
+## 2. Core Views & Architecture
 
 ### 1. Platform Landing Page (`LandingPage.tsx`)
 - **Product Overview & Pitch**: Explains the core problem (paying fees for passive market beta) and Cadra's solution (The Pace benchmark and on-chain mandate enforcement).
 - **Separation of Dashboards**: Clarifies the distinct separation between the **Follower Dashboard** (portfolio benchmarking, bond protection, zero fees on market beta) and the **Curator Studio** (mandate configuration, live rule validation, capacity scaling, hook-owned liquidity rebalancing).
 - **Three-Step Mechanism**: Explains how Cadra operates from queued deposits to active epoch parking and honest settlement.
-- **Roadmap & Next Up**: Displays the progression through smart contracts, frontend, bot fleet, and real-time indexer.
 
-### 2. Follower Dashboard (`FollowerDashboard.tsx`)
+### 2. Follower Portal (`FollowerDashboard.tsx`)
 - **"You vs the Pace" Hero Card**: The centerpiece card comparing the follower's current balance directly against the passive Pace benchmark in real-time. Highlights net outperformance (Ahead $+g$ or Behind $-g$).
 - **Protection Gauge**: Displays the curator's posted USDC bond protecting follower capital.
+- **Reactive Proof Chain**: Displays the 3-transaction proof chain (`Origin Tx` on Unichain $\to$ `Reactive Tx` on Lasna $\to$ `Callback Tx` on Unichain).
 - **Settlement Countdown**: Live countdown timer tracking remaining time in the current epoch.
 - **Queued Deposit & Exit Modals**: Clear interfaces for queuing deposits or redemptions with transparent explanations of why epoch boundary settlement prevents front-running.
 
-### 2. Curator Leaderboard (`Leaderboard.tsx`)
+### 3. Curator Leaderboard (`Leaderboard.tsx`)
 - Ranks curators based on verified on-chain track records against the Pace.
 - Shows Ahead/Behind epoch record pills (e.g., `6 Ahead / 0 Behind`).
 - Displays cumulative outperformance, capacity multiplier ($m \times \text{Bond}$), and capacity utilization percentage.
 - Sortable by record, multiplier, cumulative outperformance, and total capacity.
 
-### 3. Curator Profile & Mandate Inspector (`CuratorProfile.tsx`)
+### 4. Curator Profile & Mandate Inspector (`CuratorProfile.tsx`)
 - **Interactive Price Band Visualizer**: A visual bar displaying the curator's allowed mandate corridor ($[\text{minPrice}, \text{maxPrice}]$), active concentrated ranges, and the current pool spot price.
 - **Mandate Rules**: Summarizes the on-chain enforced constraints (Max Concentration, Min Range Width, Shortfall Threshold before Parking).
 - **Epoch History Table**: Complete historical settlement log showing vault values, Pace benchmark, outperformance gaps, and fee/bond payouts.
 
-### 4. Curator Studio (`CuratorStudio.tsx`)
+### 5. Curator Studio (`CuratorStudio.tsx`)
 - **Interactive Rebalancer**: Allows curators to configure multiple range positions and liquidity allocations.
 - **Live Mandate Rule Validator**: Replicates `MandateLib.sol` directly in the frontend, providing instant real-time feedback:
   - Validates if ranges stay within the published price band.
@@ -49,11 +50,11 @@ A minimalist, high-contrast black & white web interface for **Cadra** built with
 - **Propose New Mandate**: Allows curators to propose rule updates that take effect at the next settlement epoch.
 - **Bond Management**: Interface to post additional USDC bond and immediately scale managing capacity.
 
-### 5. Mechanism Demo Sandbox (`LiveSimulator.tsx`)
+### 6. Mechanism Demo Sandbox (`LiveSimulator.tsx`)
 An interactive sandbox designed for judges and users to test Cadra's unique mechanisms:
 - **Slide Pool Price**: Push the ETH/USDC spot price to observe the hook's `afterSwap` callback detect and flag `bandLeft = true`.
-- **Trigger Keeper `enforce(vaultId)`**: Simulate a shortfall breach to watch the vault automatically freeze the curator and park 100% of follower funds into the Pace full-range position.
-- **Trigger Keeper `settle(vaultId)`**: Settle an epoch to observe fee minting for outperformance or bond reimbursement for shortfalls, accompanied by dynamic multiplier adjustments.
+- **Observe Reactive Cross-Chain Defense**: Watch the simulated cross-chain event loop freeze the curator and park 100% of follower funds into the Pace full-range position.
+- **Trigger `settle(vaultId)`**: Settle an epoch to observe fee minting for outperformance or bond reimbursement for shortfalls, accompanied by dynamic multiplier adjustments.
 - **Live Event Stream**: Real-time contract event execution log.
 
 ---
@@ -67,11 +68,32 @@ The header includes a built-in role switcher allowing instant testing across dif
 
 ---
 
-## 4. Getting Started
+## 4. Autonomous Bot Fleet & Simulation
+
+The web workspace includes a self-contained simulation fleet to drive realistic trading volume and automated epoch lifecycle triggers:
+
+* **Swapper Bot (`web/bots/swapper.ts`)**: Generates continuous Uniswap v4 volume. Supports `--sharp` to execute a sudden -15% price crash for testing cross-chain Reactive defense.
+* **Curator Swarm (`web/bots/curators.ts`)**: Simulates 4 distinct curator strategies (Tight +/-1%, Wide +/-10%, Lazy inactive, and Reckless mandate-breaching).
+* **Thin Epoch Alarm (`web/src/bots/epochAlarm.ts`)**: Reads on-chain epoch timers and triggers `signalEpochReady(vaultId)` when an epoch ends, prompting the Reactive network to settle.
+
+### Running the Bots:
+```bash
+# Run all simulation bots concurrently:
+pnpm run bots
+
+# Run individual bots:
+pnpm run bots:swapper
+pnpm run bots:curators
+pnpm run bots:sharp
+```
+
+---
+
+## 5. Getting Started
 
 ### Installation
 ```bash
-# From the web/ directory
+cd web
 pnpm install
 ```
 
@@ -85,4 +107,4 @@ Open [http://localhost:3000](http://localhost:3000) to view the application.
 ```bash
 pnpm run build
 ```
-The application compiles completely offline with zero external network dependencies during static page generation.
+Compiles all 18 routes statically with zero build errors.

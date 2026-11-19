@@ -14,7 +14,7 @@ import {
   RefreshCwIcon,
   ChevronLeftIcon,
 } from "./Icons";
-import { CadraRainbowButton } from "./CadraRainbowButton";
+import { CadraPrivyButton } from "./CadraPrivyButton";
 import { useCadra } from "../context/CadraContext";
 
 export interface SidebarProps {
@@ -270,7 +270,7 @@ export const Sidebar = React.memo(function Sidebar({
         {/* Bottom Wallet & Sandbox Controls */}
         <div className="p-4 border-t border-neutral-100 space-y-3 bg-[#FAFAFA]">
           {/* RainbowKit Wallet Status Card */}
-          <CadraRainbowButton variant="sidebar" />
+          <CadraPrivyButton variant="sidebar" />
 
           <div className="flex items-center justify-between text-[11px] text-neutral-500">
             <span suppressHydrationWarning>{vaults.length} vaults</span>
@@ -292,6 +292,21 @@ export const Sidebar = React.memo(function Sidebar({
                 <span>Reset</span>
               </button>
             </div>
+          </div>
+
+          <div className="pt-2.5 border-t border-neutral-200/60 flex items-center justify-between text-[11px] font-mono">
+            <span className="flex items-center gap-1.5 text-emerald-800 font-semibold">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+              Unichain Sepolia
+            </span>
+            <a
+              href="https://sepolia.uniscan.xyz/address/0x8a316B53c5cE57B34Fb1f071Ebe4A6C953c990c0"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-neutral-500 hover:text-neutral-950 underline text-[10px]"
+            >
+              Hook 0x8a31...90c0
+            </a>
           </div>
         </div>
       </aside>

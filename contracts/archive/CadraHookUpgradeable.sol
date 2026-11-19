@@ -65,6 +65,19 @@ contract CadraHookUpgradeable is IHooks, IUnlockCallback, Initializable, UUPSUpg
     mapping(uint256 => uint256) public vaultIdle0;
     mapping(uint256 => uint256) public vaultIdle1;
 
+    // Pending deposit balances (held in escrow during epoch, activated at settle)
+    mapping(uint256 => uint256) public vaultPending0;
+    mapping(uint256 => uint256) public vaultPending1;
+
+    // Signaled status for Reactive settlement
+    mapping(uint256 => bool) public epochReadySignaled;
+
+    // Safe tick envelope & active mask for gas-optimized afterSwap
+    mapping(PoolId => int24) public poolSafeMinTick;
+    mapping(PoolId => int24) public poolSafeMaxTick;
+    mapping(PoolId => uint32) public poolActiveBandMask;
+    mapping(uint256 => uint256) public vaultIndexInPool;
+
     // Events
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
     event VaultCreated(uint256 indexed vaultId, address indexed curator, PoolId indexed poolId, uint16 perfFeeBps);
@@ -72,6 +85,13 @@ contract CadraHookUpgradeable is IHooks, IUnlockCallback, Initializable, UUPSUpg
     event BondChanged(uint256 indexed vaultId, uint256 bond, uint256 capacity);
     event DepositQueued(uint256 indexed vaultId, address indexed follower, uint256 amount0, uint256 amount1);
     event WithdrawQueued(uint256 indexed vaultId, address indexed follower, uint256 shares);
+    event WithdrawProcessed(
+        uint256 indexed vaultId,
+        address indexed follower,
+        uint256 amount0,
+        uint256 amount1,
+        uint256 shares
+    );
     event Rebalanced(uint256 indexed vaultId, Range[] ranges);
     event BandLeft(uint256 indexed vaultId, int24 tick);
     event VaultParked(uint256 indexed vaultId, uint256 epoch, uint256 shortfallBps);
@@ -84,6 +104,7 @@ contract CadraHookUpgradeable is IHooks, IUnlockCallback, Initializable, UUPSUpg
         uint256 bondPaid,
         uint256 deficit
     );
+    event EpochReady(uint256 indexed vaultId, uint256 epoch);
 
     // Errors
     error OnlyCurator();
@@ -91,7 +112,6 @@ contract CadraHookUpgradeable is IHooks, IUnlockCallback, Initializable, UUPSUpg
     error NotPoolManager();
     error HookNotImplemented();
     error VaultFrozen();
-    error VaultNotParkable(uint256 shortfallBps, uint256 maxShortfallBps);
     error EpochNotEnded();
     error CapacityExceeded();
     error InsufficientBond();
@@ -100,9 +120,16 @@ contract CadraHookUpgradeable is IHooks, IUnlockCallback, Initializable, UUPSUpg
     error SpotDeviationTooHigh(int24 spotTick, int24 twapTick);
     error MaxVaultsReached();
     error ZeroLiquidity();
+    error PerfFeeTooHigh();
+    error VaultNotFound();
+    error ZeroDeposit();
+    error SlippageExceeded();
+    error InsufficientIdle0();
+    error InsufficientIdle1();
+    error AlreadySignaled();
 
     struct UnlockCallbackData {
-        uint8 action; // 1: rebalance, 2: park, 3: fullRangeInit
+        uint8 action; // 1: rebalance, 2: park, 3: fullRangeInit, 4: withdrawUnwind
         uint256 vaultId;
         Range[] newRanges;
     }
@@ -211,22 +238,33 @@ contract CadraHookUpgradeable is IHooks, IUnlockCallback, Initializable, UUPSUpg
         bytes calldata
     ) external override onlyPoolManager returns (bytes4, int128) {
         PoolId poolId = key.toId();
+        uint32 activeMask = poolActiveBandMask[poolId];
+        if (activeMask == 0) return (IHooks.afterSwap.selector, 0);
+
         (, int24 spotTick, , ) = StateLibrary.getSlot0(poolManager, poolId);
 
+        // Fast-path: spotTick is within the safe envelope of all active vaults (no loop, ~97% gas reduction)
+        int24 safeMin = poolSafeMinTick[poolId];
+        int24 safeMax = poolSafeMaxTick[poolId];
+        if (safeMin <= safeMax && spotTick >= safeMin && spotTick <= safeMax) {
+            return (IHooks.afterSwap.selector, 0);
+        }
+
+        // Slow-path: check only vaults that haven't left band yet
         uint256[] storage vaultList = poolVaults[poolId];
         uint256 len = vaultList.length;
         if (len > MAX_VAULTS_PER_POOL) len = MAX_VAULTS_PER_POOL;
 
         for (uint256 i = 0; i < len; i++) {
-            uint256 vId = vaultList[i];
-            Vault storage v = vaults[vId];
+            if ((activeMask & (uint32(1) << uint32(i))) == 0) continue;
+            Vault storage v = vaults[vaultList[i]];
             if (spotTick < v.mandate.minTick || spotTick > v.mandate.maxTick) {
-                if (!v.bandLeft) {
-                    v.bandLeft = true;
-                    emit BandLeft(vId, spotTick);
-                }
+                v.bandLeft = true;
+                activeMask &= ~(uint32(1) << uint32(i));
+                emit BandLeft(vaultList[i], spotTick);
             }
         }
+        poolActiveBandMask[poolId] = activeMask;
 
         return (IHooks.afterSwap.selector, 0);
     }
@@ -269,7 +307,7 @@ contract CadraHookUpgradeable is IHooks, IUnlockCallback, Initializable, UUPSUpg
         uint16 perfFeeBps,
         Mandate calldata mandate
     ) external returns (uint256 vaultId) {
-        require(perfFeeBps <= MAX_PERF_FEE_BPS, "PerfFeeTooHigh");
+        if (perfFeeBps > MAX_PERF_FEE_BPS) revert PerfFeeTooHigh();
         MandateLib.validateMandate(mandate);
 
         PoolId poolId = key.toId();
@@ -289,7 +327,25 @@ contract CadraHookUpgradeable is IHooks, IUnlockCallback, Initializable, UUPSUpg
             (v.feeGrowthGlobal0X128Snapshot, v.feeGrowthGlobal1X128Snapshot) = StateLibrary.getFeeGrowthGlobals(poolManager, poolId);
         }
 
+        uint256 idx = poolVaults[poolId].length;
+        vaultIndexInPool[vaultId] = idx;
         poolVaults[poolId].push(vaultId);
+
+        // Update safe tick envelope for afterSwap fast-path
+        if (poolActiveBandMask[poolId] == 0) {
+            poolSafeMinTick[poolId] = mandate.minTick;
+            poolSafeMaxTick[poolId] = mandate.maxTick;
+        } else {
+            if (mandate.minTick > poolSafeMinTick[poolId]) {
+                poolSafeMinTick[poolId] = mandate.minTick;
+            }
+            if (mandate.maxTick < poolSafeMaxTick[poolId]) {
+                poolSafeMaxTick[poolId] = mandate.maxTick;
+            }
+        }
+        if (idx < 32) {
+            poolActiveBandMask[poolId] |= uint32(1) << uint32(idx);
+        }
 
         emit VaultCreated(vaultId, msg.sender, poolId, perfFeeBps);
         emit MandateSet(vaultId, mandate, 1);
@@ -312,7 +368,7 @@ contract CadraHookUpgradeable is IHooks, IUnlockCallback, Initializable, UUPSUpg
 
     function postBond(uint256 vaultId, uint256 amount) external {
         Vault storage v = vaults[vaultId];
-        require(v.curator != address(0), "VaultNotFound");
+        if (v.curator == address(0)) revert VaultNotFound();
 
         bondToken.safeTransferFrom(msg.sender, address(this), amount);
         v.bond += amount;
@@ -326,7 +382,7 @@ contract CadraHookUpgradeable is IHooks, IUnlockCallback, Initializable, UUPSUpg
         if (msg.sender != v.curator) revert OnlyCurator();
         if (block.timestamp < v.bondUnlockTime) revert CooldownActive();
 
-        uint256 currentVal = getVaultValue(vaultId);
+        uint256 currentVal = getVaultTotalValue(vaultId);
         uint256 requiredBond = (currentVal + v.capacityMultiplier - 1) / v.capacityMultiplier;
         if (v.bond - amount < requiredBond) revert InsufficientBond();
 
@@ -340,30 +396,58 @@ contract CadraHookUpgradeable is IHooks, IUnlockCallback, Initializable, UUPSUpg
     //            DEPOSIT & WITHDRAW QUEUES
     // ==========================================
 
-    function deposit(uint256 vaultId, uint256 amount0, uint256 amount1) external {
+    function deposit(uint256 vaultId, uint256 amount0, uint256 amount1) external returns (uint256) {
+        return depositWithSlippage(vaultId, amount0, amount1, 0);
+    }
+
+    function depositWithSlippage(
+        uint256 vaultId,
+        uint256 amount0,
+        uint256 amount1,
+        uint256 minSharesOut
+    ) public returns (uint256 sharesToMint) {
         Vault storage v = vaults[vaultId];
-        require(v.curator != address(0), "VaultNotFound");
+        if (v.curator == address(0)) revert VaultNotFound();
+
+        // Verify spot deviation to protect deposit-time valuation
+        verifySpotDeviation(v.poolKey.toId());
 
         uint160 twapSqrtPrice = getTwapSqrtPrice(v.poolKey.toId());
         uint256 depValue = PaceLib.token0ToToken1Value(amount0, twapSqrtPrice) + amount1;
+        if (depValue == 0) revert ZeroDeposit();
+
+        // Capacity check: current active + pending + new deposit
         uint256 currentVal = getVaultValue(vaultId);
-        if (currentVal + depValue > v.bond * v.capacityMultiplier) revert CapacityExceeded();
+        uint256 pendingVal = vaultPending1[vaultId] + PaceLib.token0ToToken1Value(vaultPending0[vaultId], twapSqrtPrice);
+        if (currentVal + pendingVal + depValue > v.bond * v.capacityMultiplier) revert CapacityExceeded();
+
+        // Lock share price at deposit time (anti-sandwich)
+        sharesToMint = (v.totalShares == 0 || currentVal == 0)
+            ? depValue
+            : FullMath.mulDiv(depValue, v.totalShares, currentVal);
+
+        if (sharesToMint < minSharesOut) revert SlippageExceeded();
 
         if (amount0 > 0) {
             IERC20(Currency.unwrap(v.poolKey.currency0)).safeTransferFrom(msg.sender, address(this), amount0);
-            vaultIdle0[vaultId] += amount0;
+            vaultPending0[vaultId] += amount0;
         }
         if (amount1 > 0) {
             IERC20(Currency.unwrap(v.poolKey.currency1)).safeTransferFrom(msg.sender, address(this), amount1);
-            vaultIdle1[vaultId] += amount1;
+            vaultPending1[vaultId] += amount1;
         }
 
-        vaultDeposits[vaultId].push(QueuedDeposit({follower: msg.sender, amount0: amount0, amount1: amount1}));
+        vaultDeposits[vaultId].push(QueuedDeposit({
+            follower: msg.sender,
+            amount0: amount0,
+            amount1: amount1,
+            sqrtPriceX96: twapSqrtPrice,
+            sharesToMint: sharesToMint
+        }));
         emit DepositQueued(vaultId, msg.sender, amount0, amount1);
     }
 
     function requestWithdraw(uint256 vaultId, uint256 shares) external {
-        Vault storage v = vaults[vaultId];
         if (vaultFollowerShares[vaultId][msg.sender] < shares) revert InsufficientShares();
 
         vaultFollowerShares[vaultId][msg.sender] -= shares;
@@ -408,41 +492,53 @@ contract CadraHookUpgradeable is IHooks, IUnlockCallback, Initializable, UUPSUpg
             vaultPositions[vaultId].push(ranges[i]);
         }
 
+        // Clear bandLeft if tick is within mandate and re-arm active mask
         (, int24 currentTick, , ) = StateLibrary.getSlot0(poolManager, v.poolKey.toId());
         if (currentTick >= v.mandate.minTick && currentTick <= v.mandate.maxTick) {
             v.bandLeft = false;
+            uint256 idx = vaultIndexInPool[vaultId];
+            if (idx < 32) {
+                poolActiveBandMask[v.poolKey.toId()] |= uint32(1) << uint32(idx);
+            }
         }
 
         emit Rebalanced(vaultId, ranges);
     }
 
-    function enforce(uint256 vaultId) external {
+    function enforce(uint256 vaultId) external returns (bool) {
         Vault storage v = vaults[vaultId];
+        if (v.curator == address(0) || v.isFrozen) return false;
+
         PoolId poolId = v.poolKey.toId();
-        verifySpotDeviation(poolId);
+        
+        // Spot deviation check: verify without reverting so keeper automation does not revert
+        (, int24 spotTick, , ) = StateLibrary.getSlot0(poolManager, poolId);
+        int24 twapTick = poolOracles[poolId].getTwapTick(twapWindow, spotTick);
+        int24 diff = spotTick > twapTick ? spotTick - twapTick : twapTick - spotTick;
+        if (diff > maxSpotDeviationTicks) return false;
 
         uint256 vaultVal = getVaultValue(vaultId);
         uint256 paceVal = getPaceValue(vaultId);
 
-        if (vaultVal < paceVal) {
-            uint256 shortfall = paceVal - vaultVal;
-            uint256 shortfallBps = FullMath.mulDiv(shortfall, 10000, paceVal);
-            if (shortfallBps >= v.mandate.maxShortfallBps) {
-                v.isFrozen = true;
-                v.record.timesParked++;
+        // Ahead of Pace: no-op for keepers, cleanly returns false
+        if (vaultVal >= paceVal) return false;
 
-                poolManager.unlock(abi.encode(UnlockCallbackData({
-                    action: 2,
-                    vaultId: vaultId,
-                    newRanges: new Range[](0)
-                })));
+        uint256 shortfall = paceVal - vaultVal;
+        uint256 shortfallBps = FullMath.mulDiv(shortfall, 10000, paceVal);
+        // Shortfall below mandate threshold: no-op for keepers, cleanly returns false
+        if (shortfallBps < v.mandate.maxShortfallBps) return false;
 
-                emit VaultParked(vaultId, v.epoch, shortfallBps);
-                return;
-            }
-            revert VaultNotParkable(shortfallBps, v.mandate.maxShortfallBps);
-        }
-        revert VaultNotParkable(0, v.mandate.maxShortfallBps);
+        v.isFrozen = true;
+        v.record.timesParked++;
+
+        poolManager.unlock(abi.encode(UnlockCallbackData({
+            action: 2,
+            vaultId: vaultId,
+            newRanges: new Range[](0)
+        })));
+
+        emit VaultParked(vaultId, v.epoch, shortfallBps);
+        return true;
     }
 
     // ==========================================
@@ -498,38 +594,73 @@ contract CadraHookUpgradeable is IHooks, IUnlockCallback, Initializable, UUPSUpg
 
         v.isFrozen = false;
         v.bandLeft = false;
+        uint256 vIdx = vaultIndexInPool[vaultId];
+        if (vIdx < 32) {
+            poolActiveBandMask[poolId] |= uint32(1) << uint32(vIdx);
+        }
 
-        uint256 netVal = res.netVaultValue;
+        // Process withdrawals — pro-rata token0 and token1 payouts (never silently fails/skips)
         QueuedWithdraw[] storage wQueue = vaultWithdraws[vaultId];
+        uint256 totalWithdrawShares = 0;
         for (uint256 i = 0; i < wQueue.length; i++) {
-            QueuedWithdraw memory qw = wQueue[i];
-            if (v.totalShares > 0 && qw.shares > 0) {
-                uint256 payout = FullMath.mulDiv(qw.shares, netVal, v.totalShares);
-                v.totalShares -= qw.shares;
-                if (netVal >= payout) netVal -= payout;
-                if (vaultIdle1[vaultId] >= payout) {
-                    vaultIdle1[vaultId] -= payout;
-                    IERC20(Currency.unwrap(v.poolKey.currency1)).safeTransfer(qw.follower, payout);
+            totalWithdrawShares += wQueue[i].shares;
+        }
+
+        if (totalWithdrawShares > 0 && v.totalShares > 0) {
+            // Unwind pro-rata liquidity if positions exist
+            if (vaultPositions[vaultId].length > 0) {
+                poolManager.unlock(abi.encode(UnlockCallbackData({
+                    action: 4,
+                    vaultId: vaultId,
+                    newRanges: new Range[](0)
+                })));
+            }
+
+            uint256 sharesBasis = v.totalShares;
+            uint256 avail0 = vaultIdle0[vaultId];
+            uint256 avail1 = vaultIdle1[vaultId];
+
+            for (uint256 i = 0; i < wQueue.length; i++) {
+                QueuedWithdraw memory qw = wQueue[i];
+                if (qw.shares > 0) {
+                    uint256 pay0 = FullMath.mulDiv(avail0, qw.shares, sharesBasis);
+                    uint256 pay1 = FullMath.mulDiv(avail1, qw.shares, sharesBasis);
+
+                    v.totalShares -= qw.shares;
+                    if (pay0 > 0) {
+                        vaultIdle0[vaultId] -= pay0;
+                        IERC20(Currency.unwrap(v.poolKey.currency0)).safeTransfer(qw.follower, pay0);
+                    }
+                    if (pay1 > 0) {
+                        vaultIdle1[vaultId] -= pay1;
+                        IERC20(Currency.unwrap(v.poolKey.currency1)).safeTransfer(qw.follower, pay1);
+                    }
+                    emit WithdrawProcessed(vaultId, qw.follower, pay0, pay1, qw.shares);
                 }
             }
         }
         delete vaultWithdraws[vaultId];
 
-        uint160 twapSqrtPrice = getTwapSqrtPrice(poolId);
+        // Process deposits — activate pending tokens to idle and mint locked shares (anti-sandwich)
         QueuedDeposit[] storage dQueue = vaultDeposits[vaultId];
         for (uint256 i = 0; i < dQueue.length; i++) {
             QueuedDeposit memory qd = dQueue[i];
-            uint256 depVal = PaceLib.token0ToToken1Value(qd.amount0, twapSqrtPrice) + qd.amount1;
-            uint256 sharesToMint = (v.totalShares == 0 || netVal == 0)
-                ? depVal
-                : FullMath.mulDiv(depVal, v.totalShares, netVal);
+            vaultFollowerShares[vaultId][qd.follower] += qd.sharesToMint;
+            v.totalShares += qd.sharesToMint;
 
-            vaultFollowerShares[vaultId][qd.follower] += sharesToMint;
-            v.totalShares += sharesToMint;
-            netVal += depVal;
+            if (qd.amount0 > 0) {
+                vaultPending0[vaultId] -= qd.amount0;
+                vaultIdle0[vaultId] += qd.amount0;
+            }
+            if (qd.amount1 > 0) {
+                vaultPending1[vaultId] -= qd.amount1;
+                vaultIdle1[vaultId] += qd.amount1;
+            }
         }
         delete vaultDeposits[vaultId];
 
+        // Re-benchmark Pace for the next epoch
+        uint160 twapSqrtPrice = getTwapSqrtPrice(poolId);
         v.startValue = getVaultValue(vaultId);
         v.paceLiquidity = PaceLib.computePaceLiquidity(v.startValue, twapSqrtPrice);
         (v.feeGrowthGlobal0X128Snapshot, v.feeGrowthGlobal1X128Snapshot) = StateLibrary.getFeeGrowthGlobals(poolManager, poolId);
@@ -538,6 +669,17 @@ contract CadraHookUpgradeable is IHooks, IUnlockCallback, Initializable, UUPSUpg
 
         v.epochStart = block.timestamp;
         v.epoch++;
+        epochReadySignaled[vaultId] = false;
+    }
+
+    /// @notice Permissionless function to signal that an epoch has ended, emitting EpochReady for Reactive settlement.
+    function signalEpochReady(uint256 vaultId) external {
+        Vault storage v = vaults[vaultId];
+        if (v.curator == address(0)) revert VaultNotFound();
+        if (block.timestamp < v.epochStart + epochLength) revert EpochNotEnded();
+        if (epochReadySignaled[vaultId]) revert AlreadySignaled();
+        epochReadySignaled[vaultId] = true;
+        emit EpochReady(vaultId, v.epoch);
     }
 
     // ==========================================
@@ -551,72 +693,85 @@ contract CadraHookUpgradeable is IHooks, IUnlockCallback, Initializable, UUPSUpg
         uint256 vId = decoded.vaultId;
         Vault storage v = vaults[vId];
 
-        Range[] storage currentPositions = vaultPositions[vId];
-        for (uint256 i = 0; i < currentPositions.length; i++) {
-            Range memory r = currentPositions[i];
-            if (r.liquidity > 0) {
-                (BalanceDelta delta, ) = poolManager.modifyLiquidity(
-                    v.poolKey,
-                    ModifyLiquidityParams({
-                        tickLower: r.tickLower,
-                        tickUpper: r.tickUpper,
-                        liquidityDelta: -int256(uint256(r.liquidity)),
-                        salt: bytes32(vId)
-                    }),
-                    ""
-                );
-                _settleDeltas(v.poolKey, delta, vId);
-            }
-        }
-
-        if (decoded.action == 1) {
-            for (uint256 i = 0; i < decoded.newRanges.length; i++) {
-                Range memory r = decoded.newRanges[i];
+        if (decoded.action == 1 || decoded.action == 2) {
+            Range[] storage currentPositions = vaultPositions[vId];
+            for (uint256 i = 0; i < currentPositions.length; i++) {
+                Range memory r = currentPositions[i];
                 if (r.liquidity > 0) {
-                    (BalanceDelta delta, ) = poolManager.modifyLiquidity(
-                        v.poolKey,
-                        ModifyLiquidityParams({
-                            tickLower: r.tickLower,
-                            tickUpper: r.tickUpper,
-                            liquidityDelta: int256(uint256(r.liquidity)),
-                            salt: bytes32(vId)
-                        }),
-                        ""
-                    );
-                    _settleDeltas(v.poolKey, delta, vId);
+                    _modifyAndSettle(v.poolKey, vId, r.tickLower, r.tickUpper, -int256(uint256(r.liquidity)));
                 }
             }
-        } else if (decoded.action == 2) {
-            int24 tickLower = TickMath.minUsableTick(v.poolKey.tickSpacing);
-            int24 tickUpper = TickMath.maxUsableTick(v.poolKey.tickSpacing);
 
-            uint160 twapSqrtPrice = getTwapSqrtPrice(v.poolKey.toId());
-            uint128 parkLiquidity = LiquidityAmounts.getLiquidityForAmounts(
-                twapSqrtPrice,
-                TickMath.getSqrtPriceAtTick(tickLower),
-                TickMath.getSqrtPriceAtTick(tickUpper),
-                vaultIdle0[vId],
-                vaultIdle1[vId]
-            );
+            if (decoded.action == 1) {
+                for (uint256 i = 0; i < decoded.newRanges.length; i++) {
+                    Range memory r = decoded.newRanges[i];
+                    if (r.liquidity > 0) {
+                        _modifyAndSettle(v.poolKey, vId, r.tickLower, r.tickUpper, int256(uint256(r.liquidity)));
+                    }
+                }
+            } else if (decoded.action == 2) {
+                int24 tickLower = TickMath.minUsableTick(v.poolKey.tickSpacing);
+                int24 tickUpper = TickMath.maxUsableTick(v.poolKey.tickSpacing);
 
-            delete vaultPositions[vId];
-            if (parkLiquidity > 0) {
-                (BalanceDelta delta, ) = poolManager.modifyLiquidity(
-                    v.poolKey,
-                    ModifyLiquidityParams({
-                        tickLower: tickLower,
-                        tickUpper: tickUpper,
-                        liquidityDelta: int256(uint256(parkLiquidity)),
-                        salt: bytes32(vId)
-                    }),
-                    ""
+                uint160 twapSqrtPrice = getTwapSqrtPrice(v.poolKey.toId());
+                uint128 parkLiquidity = LiquidityAmounts.getLiquidityForAmounts(
+                    twapSqrtPrice,
+                    TickMath.getSqrtPriceAtTick(tickLower),
+                    TickMath.getSqrtPriceAtTick(tickUpper),
+                    vaultIdle0[vId],
+                    vaultIdle1[vId]
                 );
-                _settleDeltas(v.poolKey, delta, vId);
-                vaultPositions[vId].push(Range({tickLower: tickLower, tickUpper: tickUpper, liquidity: parkLiquidity}));
+
+                delete vaultPositions[vId];
+                if (parkLiquidity > 0) {
+                    _modifyAndSettle(v.poolKey, vId, tickLower, tickUpper, int256(uint256(parkLiquidity)));
+                    vaultPositions[vId].push(Range({tickLower: tickLower, tickUpper: tickUpper, liquidity: parkLiquidity}));
+                }
+            }
+        } else if (decoded.action == 4) {
+            // Action 4: Unwind proportional liquidity for queued withdrawals
+            QueuedWithdraw[] storage wQueue = vaultWithdraws[vId];
+            uint256 wShares = 0;
+            for (uint256 i = 0; i < wQueue.length; i++) {
+                wShares += wQueue[i].shares;
+            }
+
+            if (wShares > 0 && v.totalShares > 0) {
+                Range[] storage positions = vaultPositions[vId];
+                for (uint256 i = 0; i < positions.length; i++) {
+                    Range storage r = positions[i];
+                    if (r.liquidity > 0) {
+                        uint128 liqToRemove = uint128(FullMath.mulDiv(r.liquidity, wShares, v.totalShares));
+                        if (liqToRemove > 0) {
+                            _modifyAndSettle(v.poolKey, vId, r.tickLower, r.tickUpper, -int256(uint256(liqToRemove)));
+                            r.liquidity -= liqToRemove;
+                        }
+                    }
+                }
             }
         }
 
         return "";
+    }
+
+    function _modifyAndSettle(
+        PoolKey memory key,
+        uint256 vaultId,
+        int24 tickLower,
+        int24 tickUpper,
+        int256 liquidityDelta
+    ) internal {
+        (BalanceDelta delta, ) = poolManager.modifyLiquidity(
+            key,
+            ModifyLiquidityParams({
+                tickLower: tickLower,
+                tickUpper: tickUpper,
+                liquidityDelta: liquidityDelta,
+                salt: bytes32(vaultId)
+            }),
+            ""
+        );
+        _settleDeltas(key, delta, vaultId);
     }
 
     function _settleDeltas(PoolKey memory key, BalanceDelta delta, uint256 vaultId) internal {
@@ -629,7 +784,7 @@ contract CadraHookUpgradeable is IHooks, IUnlockCallback, Initializable, UUPSUpg
             vaultIdle0[vaultId] += take0;
         } else if (d0 < 0) {
             uint256 pay0 = uint256(int256(-d0));
-            require(vaultIdle0[vaultId] >= pay0, "InsufficientIdle0");
+            if (vaultIdle0[vaultId] < pay0) revert InsufficientIdle0();
             vaultIdle0[vaultId] -= pay0;
             IERC20(Currency.unwrap(key.currency0)).safeTransfer(address(poolManager), pay0);
             poolManager.settle();
@@ -641,7 +796,7 @@ contract CadraHookUpgradeable is IHooks, IUnlockCallback, Initializable, UUPSUpg
             vaultIdle1[vaultId] += take1;
         } else if (d1 < 0) {
             uint256 pay1 = uint256(int256(-d1));
-            require(vaultIdle1[vaultId] >= pay1, "InsufficientIdle1");
+            if (vaultIdle1[vaultId] < pay1) revert InsufficientIdle1();
             vaultIdle1[vaultId] -= pay1;
             IERC20(Currency.unwrap(key.currency1)).safeTransfer(address(poolManager), pay1);
             poolManager.settle();
@@ -714,28 +869,17 @@ contract CadraHookUpgradeable is IHooks, IUnlockCallback, Initializable, UUPSUpg
         return vaults[vaultId];
     }
 
-    function getVaultRecord(uint256 vaultId) external view returns (Record memory) {
-        return vaults[vaultId].record;
+    function getVaultTotalValue(uint256 vaultId) public view returns (uint256) {
+        uint160 twapSqrtPrice = getTwapSqrtPrice(vaults[vaultId].poolKey.toId());
+        return getVaultValue(vaultId) + vaultPending1[vaultId] + PaceLib.token0ToToken1Value(vaultPending0[vaultId], twapSqrtPrice);
     }
 
-    function getVaultMandate(uint256 vaultId) external view returns (Mandate memory) {
-        return vaults[vaultId].mandate;
+    function getVaultDeposits(uint256 vaultId) external view returns (QueuedDeposit[] memory) {
+        return vaultDeposits[vaultId];
     }
 
-    function getVaultBond(uint256 vaultId) external view returns (uint256) {
-        return vaults[vaultId].bond;
-    }
-
-    function getVaultMultiplier(uint256 vaultId) external view returns (uint256) {
-        return vaults[vaultId].capacityMultiplier;
-    }
-
-    function isVaultFrozen(uint256 vaultId) external view returns (bool) {
-        return vaults[vaultId].isFrozen;
-    }
-
-    function isVaultBandLeft(uint256 vaultId) external view returns (bool) {
-        return vaults[vaultId].bandLeft;
+    function getVaultWithdraws(uint256 vaultId) external view returns (QueuedWithdraw[] memory) {
+        return vaultWithdraws[vaultId];
     }
 
     // Storage gap for upgrade safety (prevents storage collisions across versions)

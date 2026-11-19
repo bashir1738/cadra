@@ -460,14 +460,14 @@ export const FollowerDashboard = React.memo(function FollowerDashboard({
                   {/* 3-Transaction Chain (Proof for Judges) */}
                   <div className="p-3.5 rounded-2xl bg-[#FAFAFA] border border-neutral-200/60 font-mono text-[11px] space-y-1.5">
                     <div className="text-neutral-400 font-semibold uppercase text-[10px] tracking-wider mb-1">
-                      On-Chain Proof Chain ({action.originChain} -&gt; Reactive Kopli -&gt; Unichain Sepolia)
+                      On-Chain Proof Chain ({action.originChain} -&gt; Reactive Lasna -&gt; Unichain Sepolia)
                     </div>
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-neutral-600">
                       <span>1. Origin Event ({action.originChain}):</span>
                       <span className="text-neutral-900 font-bold break-all sm:break-normal">{action.originTxHash}</span>
                     </div>
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-neutral-600">
-                      <span>2. Reactive Contract (Kopli Testnet):</span>
+                      <span>2. Reactive Contract (Lasna Testnet):</span>
                       <span className="text-neutral-900 font-bold break-all sm:break-normal">{action.reactiveTxHash}</span>
                     </div>
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-neutral-600">

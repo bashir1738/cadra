@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Sidebar } from "./Sidebar";
 import { useCadra } from "../context/CadraContext";
-import { CadraRainbowButton } from "./CadraRainbowButton";
+import { CadraPrivyButton } from "./CadraPrivyButton";
 
 interface DashboardLayoutProps {
   portalMode?: "follower" | "curator";
@@ -107,7 +107,7 @@ export function DashboardLayout({
             </div>
 
             {/* RainbowKit Wallet Action Pill */}
-            <CadraRainbowButton variant="dashboard" />
+            <CadraPrivyButton variant="dashboard" />
           </div>
         </header>
 

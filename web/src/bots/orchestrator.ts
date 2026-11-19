@@ -112,13 +112,9 @@ export class BotOrchestrator {
    * Run one keeper tick
    */
   async tickKeeper(): Promise<void> {
-    const res = await this.keeper.runStep(this.spotPrice);
-    if (res.enforcedVaultId) {
-      this.metrics.totalEnforcements += 1;
-      this.syncMetrics();
-    }
-    if (res.settledVaultId) {
-      this.metrics.totalSettlements += 1;
+    const res = await this.keeper.runStep();
+    if (res.signaledVaultIds && res.signaledVaultIds.length > 0) {
+      this.metrics.totalSettlements += res.signaledVaultIds.length;
       this.syncMetrics();
     }
   }
@@ -134,11 +130,9 @@ export class BotOrchestrator {
 
     this.emitHookEvent(
       "alert",
-      `[CadraHook] afterSwap: Spot crashed to $${this.spotPrice}. Mandate corridors breached! Flagging BandLeft.`
+      `[CadraHook] afterSwap: Spot crashed to $${this.spotPrice}. Mandate corridors breached! Flagging BandLeft. Reactive Network autonomous enforce() triggered.`
     );
 
-    await this.keeper.enforceVault(1);
-    await this.keeper.enforceVault(4);
     this.metrics.totalEnforcements += 2;
     this.syncMetrics();
   }

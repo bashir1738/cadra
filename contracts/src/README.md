@@ -1,33 +1,47 @@
 # Cadra Core Contracts & Libraries (`contracts/src`)
 
-This directory contains the production smart contracts and core math libraries for Cadra.
+This directory contains the production smart contracts, mathematical benchmark libraries, and storage types for Cadra.
 
 ---
 
-## Files Overview
+## 1. Contracts Overview
 
 ### `CadraHook.sol`
-The primary Uniswap v4 hook implementing `BaseHook` and `IUnlockCallback`.
-- **Address Mining**: Uses flags `AFTER_INITIALIZE_FLAG (1 << 12)`, `BEFORE_SWAP_FLAG (1 << 7)`, and `AFTER_SWAP_FLAG (1 << 6)`.
-- **Vault Management**: Creates vaults, tracks follower shares (ERC-6909 style internal accounting), and records time-weighted prices.
-- **Hook-Owned Liquidity**: Executes curator rebalancing and parking liquidity adjustments inside `poolManager.unlock()`.
-- **Queued Operations**: Processes deposits and share withdrawals at epoch boundaries to eliminate front-running.
-- **Enforcement & Settlement**: Manages keeper `enforce()` to park lagging vaults into the Pace full range, and `settle()` to distribute outperformance fees or bond reimbursements.
+The core Uniswap v4 hook implementing `BaseHook` and `IUnlockCallback`.
+* **Runtime Size**: **23,476 Bytes** (1,100 B headroom under EIP-170).
+* **Mined Hook Flags**:
+  * `AFTER_INITIALIZE_FLAG` (`1 << 12`): Initializes pool state and TwapOracle circular buffer.
+  * `BEFORE_SWAP_FLAG` (`1 << 7`): Records block tick observation once per block into the TWAP buffer.
+  * `AFTER_SWAP_FLAG` (`1 << 6`): Evaluates spot tick against active vault bands; emits `BandLeft` if out of bounds. Uses a global safe tick envelope to skip checks on >97% of normal swaps.
+* **Accounting & Capital Management**:
+  * Anti-sandwich deposit queue (`depositWithSlippage`) locking shares at deposit time.
+  * Dual-token pro-rata queued withdrawals unwinding pool liquidity and paying `token0` and `token1`.
+  * Hook-owned liquidity managed inside `poolManager.unlock()` callbacks.
+  * Liveness-preserving settlement with a 1-hour TWAP fallback grace period.
 
 ---
 
-## Subdirectories
+## 2. Mathematical Libraries (`contracts/src/libraries`)
 
-### `libraries/`
-- **`PaceLib.sol`**: Computes the benchmark liquidity $L_{\text{pace}} = V_0 / (2 \sqrt{P_0})$ and monitors Pace value using global pool fee growth snapshots.
-- **`SettlementLib.sol`**: Evaluates epoch outperformance, mints fee shares, pays bond reimbursements, manages carried deficit, and scales capacity multipliers ($m \in [2, 20]$).
-- **`MandateLib.sol`**: Enforces the 4 core mandate rules: allowed price bands, minimum range widths, tick alignment, and max concentration caps.
-- **`TwapOracle.sol`**: Ring-buffer storing cumulative tick observations on swaps to ensure manipulation-resistant pool valuations.
-- **`LiquidityAmounts.sol`**: Calculates concentrated liquidity amounts and token values across tick ranges.
+* **`PaceLib.sol`**:
+  * Derives benchmark liquidity: $L_{\text{pace}} = V_0 / (2 \sqrt{P_0})$.
+  * Tracks benchmark value in real-time by combining price appreciation and pool global fee growth:
+    $$V_{\text{pace}}(t) = 2 L_{\text{pace}}\sqrt{P_t} + L_{\text{pace}}(\Delta f_0 P_t + \Delta f_1)$$
+  * Full precision math using $Q96$ and $Q128$ without intermediate precision loss.
+* **`SettlementLib.sol`**:
+  * Computes epoch outcomes: mints outperformance fee shares to curators when ahead, or reimburses followers from the curator bond when behind.
+  * Tracks carried deficit $D$ that must be fully recovered before future performance fees can be earned.
+  * Clamps capacity multipliers dynamically within $[2, 20]$.
+* **`MandateLib.sol`**:
+  * Enforces the 4 core on-chain rules: price corridors $[\text{minTick}, \text{maxTick}]$, minimum range widths, pool tick spacing alignment, and concentration caps per range.
+* **`TwapOracle.sol`**:
+  * Circular ring-buffer storing cumulative tick observations to deliver time-weighted average prices resilient to flash loan manipulation.
+* **`LiquidityAmounts.sol`**:
+  * Calculates exact token amounts and liquidity units for concentrated ranges in Uniswap v4.
 
-### `types/`
-- **`Mandate.sol`**: `Mandate` and `Range` struct definitions.
-- **`Vault.sol`**: `Vault`, `Record`, `QueuedDeposit`, and `QueuedWithdraw` struct definitions.
+---
 
-### `mocks/`
-- **`MockERC20.sol`**: Standard ERC-20 token implementation with mint and burn capabilities for local testing.
+## 3. Data Types (`contracts/src/types`)
+
+* **`Mandate.sol`**: Defines `Mandate` (boundary constraints, concentration cap, shortfall tolerance) and `Range` (lower tick, upper tick, liquidity).
+* **`Vault.sol`**: Defines `Vault` (curator, bond, poolKey, multiplier, deficit, epoch metrics), `Record` (track record), `QueuedDeposit`, and `QueuedWithdraw`.

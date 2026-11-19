@@ -119,7 +119,7 @@ contract CadraHookTest is Test, Deployers {
         vm.prank(curator);
         hook.postBond(vaultId, 10_000 ether);
 
-        assertEq(hook.getVaultBond(vaultId), 10_000 ether);
+        assertEq(hook.getVault(vaultId).bond, 10_000 ether);
     }
 
     function test_proposeMandate_applies_only_at_settlement() public {
@@ -144,7 +144,7 @@ contract CadraHookTest is Test, Deployers {
         hook.proposeMandate(vaultId, newMandate);
 
         // Current mandate remains unchanged
-        Mandate memory currentM = hook.getVaultMandate(vaultId);
+        Mandate memory currentM = hook.getVault(vaultId).mandate;
         assertEq(currentM.minTick, defaultMandate.minTick);
 
         // Warp past epoch and settle
@@ -152,7 +152,7 @@ contract CadraHookTest is Test, Deployers {
         hook.settle(vaultId);
 
         // After settlement, pending mandate is now current mandate
-        Mandate memory appliedM = hook.getVaultMandate(vaultId);
+        Mandate memory appliedM = hook.getVault(vaultId).mandate;
         assertEq(appliedM.minTick, newMandate.minTick);
         assertEq(appliedM.maxTick, newMandate.maxTick);
     }
@@ -170,9 +170,14 @@ contract CadraHookTest is Test, Deployers {
         vm.expectRevert(CadraHook.CapacityExceeded.selector);
         hook.deposit(vaultId, 0, 6000 ether);
 
-        // Follower deposits $2,000 -> succeeds
+        // Follower deposits $2,000 -> succeeds in pending queue
         vm.prank(follower);
         hook.deposit(vaultId, 0, 2000 ether);
+        assertEq(hook.vaultPending1(vaultId), 2000 ether);
+
+        // Settle epoch activates deposit to idle1
+        vm.warp(block.timestamp + EPOCH_LENGTH + 1);
+        hook.settle(vaultId);
         assertEq(hook.vaultIdle1(vaultId), 2000 ether);
     }
 
@@ -272,6 +277,49 @@ contract CadraHookTest is Test, Deployers {
         assertTrue(MockERC20(Currency.unwrap(currency1)).balanceOf(follower) > 0);
     }
 
+    function test_enforce_noop_when_ahead_or_below_threshold() public {
+        vm.prank(curator);
+        uint256 vaultId = hook.createVault(poolKey, 2000, defaultMandate);
+
+        vm.prank(curator);
+        hook.postBond(vaultId, 10_000 ether);
+
+        // Healthy vault: enforce is a keeper-friendly no-op (does not revert)
+        hook.enforce(vaultId);
+        assertFalse(hook.getVault(vaultId).isFrozen);
+    }
+
+    function test_withdrawal_pays_token0_when_idle1_insufficient() public {
+        vm.prank(curator);
+        uint256 vaultId = hook.createVault(poolKey, 2000, defaultMandate);
+        vm.prank(curator);
+        hook.postBond(vaultId, 10_000 ether);
+
+        // Deposit mostly token0 so idle1 cannot cover a later withdrawal
+        address token0 = Currency.unwrap(currency0);
+        MockERC20(token0).mint(follower, 10 ether);
+        vm.prank(follower);
+        MockERC20(token0).approve(address(hook), type(uint256).max);
+        vm.prank(follower);
+        hook.deposit(vaultId, 10 ether, 0);
+
+        vm.warp(hook.getVault(vaultId).epochStart + EPOCH_LENGTH + 1);
+        hook.settle(vaultId);
+
+        uint256 shares = hook.vaultFollowerShares(vaultId, follower);
+        assertTrue(shares > 0);
+
+        uint256 bal0Before = MockERC20(token0).balanceOf(follower);
+        vm.prank(follower);
+        hook.requestWithdraw(vaultId, shares);
+
+        vm.warp(hook.getVault(vaultId).epochStart + EPOCH_LENGTH + 1);
+        hook.settle(vaultId);
+
+        uint256 bal0After = MockERC20(token0).balanceOf(follower);
+        assertGt(bal0After, bal0Before, "expected token0 payout from idle0");
+    }
+
     function test_afterSwap_sets_bandLeft_and_enforce_parks_vault() public {
         vm.prank(curator);
         uint256 vaultId = hook.createVault(poolKey, 2000, defaultMandate);
@@ -301,23 +349,164 @@ contract CadraHookTest is Test, Deployers {
             ""
         );
 
-        bool bandLeft = hook.isVaultBandLeft(vaultId);
+        bool bandLeft = hook.getVault(vaultId).bandLeft;
         assertTrue(bandLeft);
 
-        // Rebalance rejected while frozen (if parked)
-        Range[] memory ranges = new Range[](1);
-        ranges[0] = Range({tickLower: -120, tickUpper: 120, liquidity: 100});
-
-        try hook.enforce(vaultId) {
-            bool isFrozen = hook.isVaultFrozen(vaultId);
+        // Enforce is a keeper-friendly call returning bool (does not revert)
+        bool parked = hook.enforce(vaultId);
+        if (parked) {
+            bool isFrozen = hook.getVault(vaultId).isFrozen;
             assertTrue(isFrozen);
 
             // Rebalance while frozen reverts
+            Range[] memory ranges = new Range[](1);
+            ranges[0] = Range({tickLower: -120, tickUpper: 120, liquidity: 100});
             vm.prank(curator);
             vm.expectRevert(CadraHook.VaultFrozen.selector);
             hook.rebalance(vaultId, ranges);
-        } catch {
-            // Shortfall was below mandate limit
         }
+    }
+
+    function test_anti_sandwich_deposit_locks_shares() public {
+        vm.prank(curator);
+        uint256 vaultId = hook.createVault(poolKey, 2000, defaultMandate);
+        vm.prank(curator);
+        hook.postBond(vaultId, 10_000 ether);
+
+        // Follower deposits $1,000 -> locked shares are recorded at deposit time
+        vm.prank(follower);
+        hook.deposit(vaultId, 0, 1000 ether);
+
+        // Verify deposit is in pending queue and not yet in idle
+        assertEq(hook.vaultPending1(vaultId), 1000 ether);
+        assertEq(hook.vaultIdle1(vaultId), 0);
+
+        // Settle epoch
+        vm.warp(block.timestamp + EPOCH_LENGTH + 1);
+        hook.settle(vaultId);
+
+        // Shares minted exactly as calculated at deposit time
+        assertEq(hook.vaultFollowerShares(vaultId, follower), 1000 ether);
+        assertEq(hook.vaultPending1(vaultId), 0);
+        assertEq(hook.vaultIdle1(vaultId), 1000 ether);
+    }
+
+    function test_pro_rata_dual_token_withdrawal_with_position_unwind() public {
+        vm.prank(curator);
+        uint256 vaultId = hook.createVault(poolKey, 2000, defaultMandate);
+        vm.prank(curator);
+        hook.postBond(vaultId, 20_000 ether);
+
+        // Deposit both token0 and token1
+        address token0 = Currency.unwrap(currency0);
+        address token1 = Currency.unwrap(currency1);
+        MockERC20(token0).mint(follower, 10 ether);
+        vm.startPrank(follower);
+        MockERC20(token0).approve(address(hook), type(uint256).max);
+        hook.deposit(vaultId, 10 ether, 1000 ether);
+        vm.stopPrank();
+
+        // Settle epoch 1
+        vm.warp(block.timestamp + EPOCH_LENGTH + 1);
+        hook.settle(vaultId);
+
+        uint256 shares = hook.vaultFollowerShares(vaultId, follower);
+        assertTrue(shares > 0);
+
+        // Follower requests 50% withdrawal
+        uint256 halfShares = shares / 2;
+        vm.prank(follower);
+        hook.requestWithdraw(vaultId, halfShares);
+
+        uint256 bal0Before = MockERC20(token0).balanceOf(follower);
+        uint256 bal1Before = MockERC20(token1).balanceOf(follower);
+
+        // Settle epoch 2
+        vm.warp(hook.getVault(vaultId).epochStart + EPOCH_LENGTH + 1);
+        hook.settle(vaultId);
+
+        uint256 bal0After = MockERC20(token0).balanceOf(follower);
+        uint256 bal1After = MockERC20(token1).balanceOf(follower);
+
+        // Both token0 and token1 must be received pro-rata (neither fails/skips)
+        assertGt(bal0After, bal0Before, "token0 payout expected");
+        assertGt(bal1After, bal1Before, "token1 payout expected");
+    }
+
+    event EpochReady(uint256 indexed vaultId, uint256 epoch);
+
+    function test_signalEpochReady_emits_when_epoch_ended() public {
+        vm.prank(curator);
+        uint256 vaultId = hook.createVault(poolKey, 2000, defaultMandate);
+
+        // Warp past epoch end
+        vm.warp(hook.getVault(vaultId).epochStart + EPOCH_LENGTH + 1);
+
+        // Expect EpochReady event
+        vm.expectEmit(true, false, false, true);
+        emit EpochReady(vaultId, 1);
+
+        hook.signalEpochReady(vaultId);
+        assertTrue(hook.epochReadySignaled(vaultId));
+    }
+
+    function test_signalEpochReady_reverts_early() public {
+        vm.prank(curator);
+        uint256 vaultId = hook.createVault(poolKey, 2000, defaultMandate);
+
+        // Before epoch end: must revert EpochNotEnded
+        vm.expectRevert(CadraHook.EpochNotEnded.selector);
+        hook.signalEpochReady(vaultId);
+    }
+
+    function test_signalEpochReady_reverts_double() public {
+        vm.prank(curator);
+        uint256 vaultId = hook.createVault(poolKey, 2000, defaultMandate);
+
+        // Warp past epoch end
+        vm.warp(hook.getVault(vaultId).epochStart + EPOCH_LENGTH + 1);
+        hook.signalEpochReady(vaultId);
+
+        // Second call before settle must revert AlreadySignaled
+        vm.expectRevert(CadraHook.AlreadySignaled.selector);
+        hook.signalEpochReady(vaultId);
+
+        // After settle, epochReadySignaled is reset
+        hook.settle(vaultId);
+        assertFalse(hook.epochReadySignaled(vaultId));
+    }
+
+    function test_settle_spot_deviation_grace_fallback() public {
+        vm.prank(curator);
+        uint256 vaultId = hook.createVault(poolKey, 2000, defaultMandate);
+
+        // Advance to epoch end
+        uint256 epochEnd = hook.getVault(vaultId).epochStart + EPOCH_LENGTH;
+        vm.warp(epochEnd + 1);
+
+        // Artificially move spot price past maxSpotDeviationTicks via a swap
+        MockERC20(Currency.unwrap(currency0)).mint(address(this), 10 ether);
+        MockERC20(Currency.unwrap(currency0)).approve(address(swapRouter), type(uint256).max);
+        swapRouter.swap(
+            poolKey,
+            SwapParams({
+                zeroForOne: true,
+                amountSpecified: -1 ether,
+                sqrtPriceLimitX96: TickMath.MIN_SQRT_PRICE + 1
+            }),
+            PoolSwapTest.TestSettings({takeClaims: false, settleUsingBurn: false}),
+            ""
+        );
+
+        // Immediate settlement must revert SpotDeviationTooHigh
+        vm.expectRevert();
+        hook.settle(vaultId);
+
+        // Advance past SETTLEMENT_GRACE_PERIOD (1 hour)
+        vm.warp(epochEnd + 1 hours + 1);
+
+        // Now settlement must succeed using TWAP fallback (no revert)
+        hook.settle(vaultId);
+        assertEq(hook.getVault(vaultId).epoch, 2);
     }
 }

@@ -13,6 +13,7 @@ const nextConfig: NextConfig = {
       "@coinbase/cdp-sdk": path.resolve(__dirname, "src/lib/baseAccountMock.js"),
       "@solana/kit": path.resolve(__dirname, "src/lib/solanaKitMock.js"),
       "@solana-program/token": path.resolve(__dirname, "src/lib/solanaKitMock.js"),
+      "@solana-program/system": path.resolve(__dirname, "src/lib/solanaKitMock.js"),
     };
     config.resolve.fallback = {
       ...config.resolve.fallback,
@@ -20,6 +21,7 @@ const nextConfig: NextConfig = {
       "@coinbase/cdp-sdk": false,
       "@solana/kit": false,
       "@solana-program/token": false,
+      "@solana-program/system": false,
       "pino-pretty": false,
       lokijs: false,
       encoding: false,
@@ -41,6 +43,7 @@ const nextConfig: NextConfig = {
       "@coinbase/cdp-sdk": "./src/lib/baseAccountMock.js",
       "@solana/kit": "./src/lib/solanaKitMock.js",
       "@solana-program/token": "./src/lib/solanaKitMock.js",
+      "@solana-program/system": "./src/lib/solanaKitMock.js",
     },
   },
 };

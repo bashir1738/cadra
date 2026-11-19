@@ -53,7 +53,7 @@ contract DeployScript is Script {
             Hooks.AFTER_INITIALIZE_FLAG | Hooks.BEFORE_SWAP_FLAG | Hooks.AFTER_SWAP_FLAG
         );
 
-        // Deploy CadraHook at mined address matching flags
+        // Deploy CadraHook at mined address matching flags via CREATE2 Deployer proxy
         bytes memory constructorArgs = abi.encode(
             manager,
             IERC20(address(usdc)),
@@ -62,20 +62,20 @@ contract DeployScript is Script {
             MAX_SPOT_DEVIATION
         );
 
-        (, bytes32 salt) = HookMiner.find(
-            deployer,
+        address CREATE2_DEPLOYER = 0x4e59b44847b379578588920cA78FbF26c0B4956C;
+
+        (address expectedHookAddress, bytes32 salt) = HookMiner.find(
+            CREATE2_DEPLOYER,
             flags,
             type(CadraHook).creationCode,
             constructorArgs
         );
 
-        hook = new CadraHook{salt: salt}(
-            manager,
-            IERC20(address(usdc)),
-            EPOCH_LENGTH,
-            TWAP_WINDOW,
-            MAX_SPOT_DEVIATION
-        );
+        bytes memory initCode = abi.encodePacked(type(CadraHook).creationCode, constructorArgs);
+        (bool success, ) = CREATE2_DEPLOYER.call(abi.encodePacked(salt, initCode));
+        require(success, "CadraHook CREATE2 deployment failed");
+        hook = CadraHook(expectedHookAddress);
+        require(address(hook).code.length > 0, "CadraHook code length is 0");
 
         // 4. Initialize Pool
         key = PoolKey({

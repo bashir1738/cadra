@@ -75,7 +75,7 @@ export interface ReactiveSafetyAction {
   vaultId: number;
   vaultName: string;
   latencySeconds: number; // e.g. 1.1s for rule guard, 0.8s for shock guard
-  originChain: "Unichain Sepolia" | "Base Sepolia";
+  originChain: "Unichain Sepolia" | "Base Sepolia" | "Reactive Lasna";
   originTxHash: string;
   reactiveTxHash: string;
   callbackTxHash: string;

@@ -1,12 +1,17 @@
 /**
- * Cadra Keeper Bot
- * 1. Listens for `BandLeft` events emitted by `afterSwap` and immediately calls `enforce(vaultId)`.
- *    If vault shortfall >= maxShortfallBps, CadraHook freezes curator & parks liquidity into The Pace.
- * 2. Monitors epoch durations and triggers `settle(vaultId)` when an epoch ends.
+ * Cadra Epoch Keeper & Reactive Sentinel
+ * 
+ * NOTE: Emergency parking (enforce) is now 100% autonomous and bot-free via Reactive Network.
+ * CadraReactive on Lasna listens directly to `BandLeft` logs on Unichain Sepolia and executes
+ * `enforce(vaultId)` in ~1 second via CadraCallback.
+ * 
+ * This keeper only runs the thin epoch alarm: calling the permissionless `signalEpochReady(vaultId)`
+ * when an epoch concludes. This emits `EpochReady`, triggering CadraReactive to execute batch settlement.
  */
 
 import { getConfig } from "./config";
 import { VaultState, BotLogEvent } from "./types";
+import { EpochAlarm } from "./epochAlarm";
 
 export type KeeperLogCallback = (event: BotLogEvent) => void;
 
@@ -15,6 +20,7 @@ export class KeeperBot {
   private pollIntervalMs = 4800;
   private isRunning = false;
   private logCallback?: KeeperLogCallback;
+  private alarm = new EpochAlarm();
 
   // Track known vaults
   private trackedVaults: Map<number, VaultState> = new Map([
@@ -45,88 +51,27 @@ export class KeeperBot {
   }
 
   /**
-   * Call `enforce(vaultId)` when BandLeft is observed
+   * Check if any epoch has ended and signal EpochReady for Reactive settlement.
+   * Emergency enforce is handled entirely by Reactive Network.
    */
-  async enforceVault(vaultId: number): Promise<boolean> {
-    const vault = this.trackedVaults.get(vaultId);
-    const vaultName = vault?.name || `Vault #${vaultId}`;
+  async runStep(): Promise<{ signaledVaultIds?: number[] }> {
+    const vaultIds = Array.from(this.trackedVaults.keys());
+    const signaledVaultIds = await this.alarm.checkVaults(vaultIds);
 
-    this.emit("alert", `[ALERT] BandLeft breach detected for ${vaultName}! Calling enforce(vaultId=${vaultId})...`);
-
-    try {
-      this.emit("alert", `[PARKED] TWAP shortfall confirmed (>5%). Emergency brake tripped: ${vaultName} PARKED into The Pace! Curator frozen.`);
-      if (vault) {
-        vault.isParked = true;
-        vault.bandLeft = false;
-      }
-      return true;
-    } catch (err) {
-      this.emit("warn", `enforce(${vaultId}) failed: ${err}`);
-      return false;
-    }
-  }
-
-  /**
-   * Call `settle(vaultId)` when epoch timestamp elapses
-   */
-  async settleVault(vaultId: number, simulatedGapUsdc?: number): Promise<boolean> {
-    const vault = this.trackedVaults.get(vaultId);
-    const vaultName = vault?.name || `Vault #${vaultId}`;
-    const gap = simulatedGapUsdc ?? Math.floor((Math.random() - 0.35) * 450);
-
-    try {
-      if (gap >= 0) {
-        const fee = (gap * 0.15).toFixed(2);
-        this.emit("success", `[SETTLED] Epoch settlement complete for ${vaultName}: Outperformed Pace by +$${gap}. Curator earned $${fee} fee. Capacity expanded.`);
-      } else {
-        this.emit("warn", `[SETTLED] Epoch settlement complete for ${vaultName}: Lagged Pace by -$${Math.abs(gap)}. Curator bond reimbursed followers.`);
-      }
-
-      if (vault) {
-        vault.epoch += 1;
-        vault.epochStart = Math.floor(Date.now() / 1000);
-        vault.isParked = false;
-      }
-      return true;
-    } catch (err) {
-      this.emit("warn", `settle(${vaultId}) failed: ${err}`);
-      return false;
-    }
-  }
-
-  /**
-   * Single keeper monitoring step
-   */
-  async runStep(currentSpotPrice = 3120): Promise<{ enforcedVaultId?: number; settledVaultId?: number }> {
-    let enforcedVaultId: number | undefined;
-    let settledVaultId: number | undefined;
-
-    // Check corridor breach
-    for (const [id, vault] of this.trackedVaults.entries()) {
-      if (!vault.isParked && vault.minPrice && vault.maxPrice) {
-        if (currentSpotPrice < vault.minPrice || currentSpotPrice > vault.maxPrice || vault.bandLeft) {
-          await this.enforceVault(id);
-          enforcedVaultId = id;
-          return { enforcedVaultId };
-        }
-      }
+    for (const vId of signaledVaultIds) {
+      const v = this.trackedVaults.get(vId);
+      const name = v?.name || `Vault #${vId}`;
+      this.emit("info", `[EPOCH ALARM] Epoch ended for ${name}. Calling signalEpochReady(${vId})...`);
+      this.emit("success", `[REACTIVE READY] EpochReady emitted for ${name}. CadraReactive triggered.`);
     }
 
-    // Periodic epoch settlement check
-    const eligibleVaults = Array.from(this.trackedVaults.values()).filter((v) => !v.isParked);
-    if (eligibleVaults.length > 0 && Math.random() > 0.65) {
-      const target = eligibleVaults[Math.floor(Math.random() * eligibleVaults.length)];
-      await this.settleVault(target.id);
-      settledVaultId = target.id;
-    }
-
-    return { enforcedVaultId, settledVaultId };
+    return { signaledVaultIds };
   }
 
   async start(): Promise<void> {
     this.isRunning = true;
-    this.emit("info", `Starting Cadra Keeper Bot on ${this.config.rpcUrl}...`);
-    this.emit("info", `Monitoring ${this.trackedVaults.size} vaults for BandLeft and Epoch Settlement.`);
+    this.emit("info", `Starting Cadra Epoch Keeper on ${this.config.rpcUrl}...`);
+    this.emit("info", `Monitoring ${this.trackedVaults.size} vaults for EpochReady signals. Emergency parking is autonomously handled by Reactive Network.`);
 
     while (this.isRunning) {
       await this.runStep();

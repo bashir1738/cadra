@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 
 import { ShieldIcon, ZapIcon, ActivityIcon, XIcon, ArrowRightIcon } from "./Icons";
-import { CadraRainbowButton } from "./CadraRainbowButton";
+import { CadraPrivyButton } from "./CadraPrivyButton";
 
 interface HeaderProps {
   currentRole?: string;
@@ -24,7 +24,6 @@ export function Header({
   onConnectWallet,
   onDisconnectWallet,
 }: HeaderProps = {}) {
-  const [mounted, setMounted] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [productsOpen, setProductsOpen] = useState(false);
   const pathname = usePathname();
@@ -154,7 +153,7 @@ export function Header({
         {/* Right: RainbowKit Wallet Action */}
         <div className="flex items-center gap-3 shrink-0">
           {/* RainbowKit Wallet Connect */}
-          <CadraRainbowButton variant="header" />
+          <CadraPrivyButton variant="header" />
 
           {/* Mobile Menu Toggle */}
           <button
@@ -218,7 +217,7 @@ export function Header({
             >
               Launch App
             </button>
-            <CadraRainbowButton variant="mobile" className="w-full" />
+            <CadraPrivyButton variant="mobile" className="w-full" />
           </div>
         </div>
       )}
