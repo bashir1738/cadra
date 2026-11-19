@@ -10,6 +10,7 @@ import { unichainSepolia } from "viem/chains";
 import { CADRA_HOOK_ABI } from "../bots/abis";
 
 interface CadraContextType {
+  isHydrated: boolean;
   vaults: VaultData[];
   userPositions: Record<number, UserPosition>;
   reactiveSafetyFeed: ReactiveSafetyAction[];
@@ -40,8 +41,7 @@ interface CadraContextType {
 
 const CadraContext = createContext<CadraContextType | null>(null);
 
-// Zero dummy data: Clean initial protocol state
-export const DEFAULT_VAULTS: VaultData[] = [];
+// Clean initial protocol state with testnet curator archetypes
 export const DEFAULT_POSITIONS: Record<number, UserPosition> = {};
 
 // Clean testnet archetypes available on demand via the "Seed" button
@@ -244,10 +244,17 @@ export const TESTNET_ARCHETYPES: VaultData[] = [
   },
 ];
 
+export const DEFAULT_VAULTS: VaultData[] = TESTNET_ARCHETYPES;
+
 export function CadraProvider({ children }: { children: React.ReactNode }) {
+  const [isHydrated, setIsHydrated] = useState(false);
   const [vaults, setVaults] = useState<VaultData[]>(DEFAULT_VAULTS);
   const [userPositions, setUserPositions] = useState<Record<number, UserPosition>>(DEFAULT_POSITIONS);
   const [activeRole, setActiveRoleState] = useState<"follower" | "curator">("follower");
+
+  useEffect(() => {
+    setIsHydrated(true);
+  }, []);
 
   const [reactiveSafetyFeed, setReactiveSafetyFeed] = useState<ReactiveSafetyAction[]>([]);
 
@@ -595,6 +602,7 @@ export function CadraProvider({ children }: { children: React.ReactNode }) {
 
   const contextValue = useMemo(
     () => ({
+      isHydrated,
       vaults,
       userPositions,
       reactiveSafetyFeed,
@@ -623,6 +631,7 @@ export function CadraProvider({ children }: { children: React.ReactNode }) {
       resetDemo,
     }),
     [
+      isHydrated,
       vaults,
       userPositions,
       reactiveSafetyFeed,

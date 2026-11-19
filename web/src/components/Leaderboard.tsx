@@ -47,7 +47,7 @@ export const Leaderboard = React.memo(function Leaderboard({
 
   if (vaults.length === 0) {
     return (
-      <div className="space-y-6 font-sans max-w-5xl mx-auto">
+      <div suppressHydrationWarning className="space-y-6 font-sans max-w-5xl mx-auto">
         <div className="rounded-[32px] bg-white border border-neutral-200/80 p-10 sm:p-14 text-center space-y-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)] text-neutral-950">
           <div className="flex flex-col items-center max-w-md mx-auto space-y-4">
             <div className="w-16 h-16 rounded-3xl bg-neutral-950 text-white flex items-center justify-center shadow-sm">
@@ -75,7 +75,7 @@ export const Leaderboard = React.memo(function Leaderboard({
   }
 
   return (
-    <div className="space-y-6 font-sans max-w-5xl mx-auto">
+    <div suppressHydrationWarning className="space-y-6 font-sans max-w-5xl mx-auto">
       {/* Title & Filter Pills */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>

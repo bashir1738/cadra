@@ -112,7 +112,7 @@ export function DashboardLayout({
         </header>
 
         {/* Dynamic Page Content View */}
-        <main className="flex-1 p-4 sm:p-8 lg:p-10 max-w-6xl w-full mx-auto pb-16 lg:pb-20">
+        <main suppressHydrationWarning className="flex-1 p-4 sm:p-8 lg:p-10 max-w-6xl w-full mx-auto pb-16 lg:pb-20">
           <Suspense fallback={<div className="p-8 text-center text-neutral-400 text-xs">Loading page...</div>}>
             {children}
           </Suspense>

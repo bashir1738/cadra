@@ -143,7 +143,7 @@ export const FollowerDashboard = React.memo(function FollowerDashboard({
     });
 
     return (
-      <div className="space-y-6 font-sans max-w-5xl mx-auto">
+      <div suppressHydrationWarning className="space-y-6 font-sans max-w-5xl mx-auto">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-neutral-950 tracking-tight">
@@ -281,7 +281,7 @@ export const FollowerDashboard = React.memo(function FollowerDashboard({
   // =========================================================================
   if (activeSubPage === "queue") {
     return (
-      <div className="space-y-6 font-sans max-w-5xl mx-auto">
+      <div suppressHydrationWarning className="space-y-6 font-sans max-w-5xl mx-auto">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-neutral-950 tracking-tight">
@@ -361,7 +361,7 @@ export const FollowerDashboard = React.memo(function FollowerDashboard({
   // =========================================================================
   if (activeSubPage === "safety") {
     return (
-      <div className="space-y-6 font-sans max-w-5xl mx-auto">
+      <div suppressHydrationWarning className="space-y-6 font-sans max-w-5xl mx-auto">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
           <div>
             <div className="flex items-center gap-2">

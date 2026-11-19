@@ -107,7 +107,7 @@ export function CuratorStudio({
     };
 
     return (
-      <div className="space-y-6 font-sans max-w-2xl mx-auto">
+      <div suppressHydrationWarning className="space-y-6 font-sans max-w-2xl mx-auto">
         {/* Curator Bond Spotlight Card */}
         <div className="rounded-[32px] bg-white border border-neutral-200/80 p-6 sm:p-8 shadow-[0_1px_3px_rgba(0,0,0,0.04)] flex flex-col sm:flex-row items-center gap-5">
           <div className="w-12 h-12 rounded-2xl bg-neutral-950 text-white flex items-center justify-center p-2.5 shrink-0 shadow-sm">
@@ -389,7 +389,7 @@ export function CuratorStudio({
 
   // Top HUD with the Parking Limit Gauge
   const TopHUD = (
-    <div className="bg-white border border-neutral-200/80 rounded-[32px] p-6 sm:p-8 space-y-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+    <div suppressHydrationWarning className="bg-white border border-neutral-200/80 rounded-[32px] p-6 sm:p-8 space-y-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-neutral-100 pb-5">
         <div className="flex items-center gap-3.5">
           <div className="w-11 h-11 rounded-2xl bg-neutral-950 text-white flex items-center justify-center shrink-0 shadow-sm">
@@ -519,7 +519,7 @@ export function CuratorStudio({
   // 3. REBALANCE SUB-PAGE (WITH MANDATE PRE-CHECK)
   if (activeSubPage === "rebalance") {
     return (
-      <div className="space-y-6 font-sans max-w-5xl mx-auto">
+      <div suppressHydrationWarning className="space-y-6 font-sans max-w-5xl mx-auto">
         {TopHUD}
 
         <div className="bg-white border border-neutral-200/80 rounded-[32px] p-6 sm:p-8 space-y-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
@@ -678,7 +678,7 @@ export function CuratorStudio({
   // 4. MANDATE & RULES SUB-PAGE
   if (activeSubPage === "mandate") {
     return (
-      <div className="space-y-6 font-sans max-w-5xl mx-auto">
+      <div suppressHydrationWarning className="space-y-6 font-sans max-w-5xl mx-auto">
         {TopHUD}
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -758,7 +758,7 @@ export function CuratorStudio({
   // 5. SETTLEMENTS & FEES SUB-PAGE
   if (activeSubPage === "settlements") {
     return (
-      <div className="space-y-6 font-sans max-w-5xl mx-auto">
+      <div suppressHydrationWarning className="space-y-6 font-sans max-w-5xl mx-auto">
         {TopHUD}
 
         <div className="bg-white border border-neutral-200/80 rounded-[32px] p-6 sm:p-8 space-y-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
@@ -816,7 +816,7 @@ export function CuratorStudio({
 
   // 6. DEFAULT OVERVIEW SUB-PAGE
   return (
-    <div className="space-y-6 font-sans max-w-5xl mx-auto">
+    <div suppressHydrationWarning className="space-y-6 font-sans max-w-5xl mx-auto">
       {TopHUD}
 
       {/* Bond Collateral Expansion Panel */}
