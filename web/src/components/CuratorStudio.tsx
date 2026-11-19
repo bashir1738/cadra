@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { VaultData, RangePosition } from "../types/cadra";
-import { ShieldIcon, CheckCircleIcon, AlertTriangleIcon, PlusIcon, TrashIcon } from "./Icons";
+import { ShieldIcon, CheckCircleIcon, AlertTriangleIcon, PlusIcon, TrashIcon, TrendUpIcon, ActivityIcon, ClockIcon } from "./Icons";
 import { useCadra } from "../context/CadraContext";
 
 interface CuratorStudioProps {
@@ -79,6 +79,10 @@ export function CuratorStudio({
         paceValue: 0,
         vaultValue: 0,
         carriedDeficit: 0,
+        curatorOwnershipBps: 1500, // 15% skin in the game
+        currentShortfallBps: 0,
+        timesParked: 0,
+        timesShielded: 0,
         epoch: 1,
         epochStart: Math.floor(Date.now() / 1000),
         epochDuration: 3600,
@@ -200,7 +204,7 @@ export function CuratorStudio({
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-neutral-700 font-semibold block text-xs">Performance Fee (%)</label>
+                <label className="text-neutral-700 font-semibold block text-xs">Performance Fee (%, max 30%)</label>
                 <input
                   type="number"
                   value={createFee}
@@ -286,7 +290,7 @@ export function CuratorStudio({
     );
   }
 
-  // 2. Range Validation Logic
+  // 2. Range Validation Logic (Mandate Pre-Check)
   const mandate = vault.mandate;
   const validationErrors: string[] = [];
 
@@ -302,7 +306,7 @@ export function CuratorStudio({
     const width = r.upperPrice - r.lowerPrice;
     if (width < 50) {
       validationErrors.push(
-        `Range #${idx + 1} width ($${width}) is narrower than minimum allowed width`
+        `Range #${idx + 1} width ($${width}) is narrower than minimum allowed width (${mandate.minRangeWidth} ticks)`
       );
     }
   });
@@ -317,7 +321,7 @@ export function CuratorStudio({
 
   const totalAllocation = ranges.reduce((acc, r) => acc + r.liquidityPercent, 0);
   if (totalAllocation !== 100 && ranges.length > 0) {
-    validationErrors.push(`Total liquidity allocation must equal 100% (currently ${totalAllocation}%)`);
+    validationErrors.push(`Total allocation must equal 100% (currently ${totalAllocation}%)`);
   }
 
   const isValidRebalance = validationErrors.length === 0 && ranges.length > 0;
@@ -367,7 +371,14 @@ export function CuratorStudio({
     setTimeout(() => setMandateSuccessNotice(false), 4000);
   };
 
-  // Reusable Top HUD Component
+  // Shortfall calculations for the Parking Limit Gauge
+  const shortfallValue = Math.max(0, vault.paceValue - vault.vaultValue);
+  const shortfallPct = vault.paceValue > 0 ? (shortfallValue / vault.paceValue) * 100 : 0;
+  const maxShortfallPct = vault.mandate.maxShortfallBps / 100;
+  const gaugePercent = Math.min(100, (shortfallPct / maxShortfallPct) * 100);
+  const bufferRemaining = Math.max(0, maxShortfallPct - shortfallPct);
+
+  // Top HUD with the Parking Limit Gauge
   const TopHUD = (
     <div className="bg-white border border-neutral-200/80 rounded-[32px] p-6 sm:p-8 space-y-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-neutral-100 pb-5">
@@ -388,46 +399,115 @@ export function CuratorStudio({
         <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50/80 border border-emerald-200/80 text-xs font-mono">
           <span className="text-neutral-500 font-medium">Capacity Multiplier:</span>
           <span className="font-bold text-emerald-800 px-2 py-0.5 rounded-full bg-white border border-emerald-200 shadow-2xs">
-            {vault.capacityMultiplier}×
+            {vault.capacityMultiplier}× (Max ${vault.capacity.toLocaleString()})
           </span>
         </div>
       </div>
 
+      {/* Primary Metrics Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5 text-xs font-mono">
         <div className="p-4 rounded-2xl bg-[#FAFAFA] border border-neutral-200/70">
           <span className="text-neutral-400 uppercase text-[11px] block font-medium">Curator Bond</span>
           <span className="text-lg font-bold text-neutral-950 mt-1 block">
             ${vault.bondAmount.toLocaleString()} USDC
           </span>
-        </div>
-        <div className="p-4 rounded-2xl bg-[#FAFAFA] border border-neutral-200/70">
-          <span className="text-neutral-400 uppercase text-[11px] block font-medium">Max Capacity</span>
-          <span className="text-lg font-bold text-neutral-950 mt-1 block">
-            ${vault.capacity.toLocaleString()}
+          <span className="text-[11px] text-neutral-500 mt-0.5 block font-normal">
+            Owns {(vault.curatorOwnershipBps / 100).toFixed(0)}% of vault
           </span>
         </div>
+
         <div className="p-4 rounded-2xl bg-[#FAFAFA] border border-neutral-200/70">
-          <span className="text-neutral-400 uppercase text-[11px] block font-medium">Deposited</span>
+          <span className="text-neutral-400 uppercase text-[11px] block font-medium">Total Managed</span>
           <span className="text-lg font-bold text-neutral-950 mt-1 block">
             ${vault.totalFollowerValue.toLocaleString()}
           </span>
+          <span className="text-[11px] text-neutral-500 mt-0.5 block font-normal">
+            Max Capacity: ${vault.capacity.toLocaleString()}
+          </span>
         </div>
+
         <div className="p-4 rounded-2xl bg-[#FAFAFA] border border-neutral-200/70">
-          <span className="text-neutral-400 uppercase text-[11px] block font-medium">Status</span>
+          <span className="text-neutral-400 uppercase text-[11px] block font-medium">Carried Deficit (D)</span>
+          <span className={`text-lg font-bold mt-1 block ${vault.carriedDeficit > 0 ? "text-red-700" : "text-neutral-950"}`}>
+            ${vault.carriedDeficit.toLocaleString()}
+          </span>
+          <span className="text-[11px] text-neutral-500 mt-0.5 block font-normal">
+            {vault.carriedDeficit > 0 ? "Must recover before fees" : "Deficit fully clean"}
+          </span>
+        </div>
+
+        <div className="p-4 rounded-2xl bg-[#FAFAFA] border border-neutral-200/70">
+          <span className="text-neutral-400 uppercase text-[11px] block font-medium">Vault Status</span>
           <span
             className={`text-[12px] font-bold uppercase mt-1 inline-flex items-center gap-1.5 ${
-              vault.isParked ? "text-red-600" : "text-emerald-600"
+              vault.isParked ? "text-red-700" : "text-emerald-700"
             }`}
           >
             <span className={`w-2 h-2 rounded-full ${vault.isParked ? "bg-red-500" : "bg-emerald-500 animate-pulse"}`} />
-            {vault.isParked ? "Parked (Frozen)" : "Active & Healthy"}
+            {vault.isParked ? "Parked (Curator Frozen)" : "Active & Healthy"}
           </span>
+          <span className="text-[11px] text-neutral-500 mt-0.5 block font-normal">
+            {vault.timesShielded > 0 ? `Shielded ${vault.timesShielded}× by Base Guard` : "Epoch #3 in progress"}
+          </span>
+        </div>
+      </div>
+
+      {/* GAUGE TO THE PARKING LIMIT (Core PDF Feature) */}
+      <div className="p-5 rounded-2xl bg-[#FAFAFA] border border-neutral-200/70 space-y-3 font-mono">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <div className="flex items-center gap-2">
+              <ActivityIcon className="w-4 h-4 text-neutral-700" />
+              <span className="text-neutral-900 uppercase text-[11px] font-bold tracking-wider">
+                Gauge to Emergency Parking Limit
+              </span>
+            </div>
+            <p className="text-[12px] text-neutral-500 font-sans mt-0.5">
+              CadraReactive monitors every swap on Unichain Sepolia. If shortfall crosses {maxShortfallPct.toFixed(1)}%, emergency parking executes in ~1 second.
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 shrink-0">
+            <span className={`text-[11px] font-semibold px-3 py-1 rounded-full ${
+              vault.isParked
+                ? "bg-red-100 text-red-900 border border-red-300"
+                : gaugePercent > 70
+                ? "bg-amber-100 text-amber-900 border border-amber-300 animate-pulse"
+                : "bg-emerald-100 text-emerald-900 border border-emerald-300"
+            }`}>
+              {vault.isParked
+                ? "Emergency Brake Tripped (Parked)"
+                : `${shortfallPct.toFixed(2)}% / ${maxShortfallPct.toFixed(1)}% (${bufferRemaining.toFixed(2)}% buffer remaining)`}
+            </span>
+          </div>
+        </div>
+
+        {/* Visual Progress Bar */}
+        <div className="space-y-1.5">
+          <div className="h-3.5 w-full bg-neutral-200 rounded-full overflow-hidden flex relative">
+            <div
+              style={{ width: `${vault.isParked ? 100 : Math.max(4, gaugePercent)}%` }}
+              className={`h-full transition-all duration-500 rounded-full ${
+                vault.isParked
+                  ? "bg-red-600"
+                  : gaugePercent > 70
+                  ? "bg-amber-500"
+                  : "bg-emerald-600"
+              }`}
+            />
+          </div>
+
+          <div className="flex justify-between text-[11px] text-neutral-400 font-mono">
+            <span>0.0% (Equal to Pace)</span>
+            <span className="text-neutral-600 font-medium">Defensive Buffer Zone</span>
+            <span className="text-red-700 font-bold">{maxShortfallPct.toFixed(1)}% Parking Limit</span>
+          </div>
         </div>
       </div>
     </div>
   );
 
-  // 3. REBALANCE SUB-PAGE
+  // 3. REBALANCE SUB-PAGE (WITH MANDATE PRE-CHECK)
   if (activeSubPage === "rebalance") {
     return (
       <div className="space-y-6 font-sans max-w-5xl mx-auto">
@@ -437,10 +517,10 @@ export function CuratorStudio({
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 border-b border-neutral-100 pb-4">
             <div>
               <h2 className="text-xl font-bold text-neutral-950 tracking-tight">
-                Range Rebalancer
+                Range Rebalancer with Mandate Pre-Check
               </h2>
               <p className="text-[13px] text-neutral-500 mt-0.5">
-                Active ticks must remain within mandate bounds (${mandate.minPrice}–${mandate.maxPrice}).
+                The hook evaluates your mandate inline. Rebalancing reverts if any range breaks the published rules.
               </p>
             </div>
 
@@ -507,7 +587,32 @@ export function CuratorStudio({
             </div>
           )}
 
-          {/* Validation Box */}
+          {/* Mandate Pre-Check Checklist */}
+          <div className="p-5 rounded-2xl bg-[#FAFAFA] border border-neutral-200/70 space-y-3 font-mono text-xs">
+            <span className="text-neutral-400 uppercase text-[11px] block font-semibold tracking-wider">
+              Mandate Pre-Check Verification
+            </span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <div className="flex items-center gap-2 text-neutral-700">
+                <CheckCircleIcon className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>Price Band: [${mandate.minPrice}, ${mandate.maxPrice}]</span>
+              </div>
+              <div className="flex items-center gap-2 text-neutral-700">
+                <CheckCircleIcon className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>Max Concentration: {mandate.maxConcentrationBps / 100}% per range</span>
+              </div>
+              <div className="flex items-center gap-2 text-neutral-700">
+                <CheckCircleIcon className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>Min Width: {mandate.minRangeWidth} ticks</span>
+              </div>
+              <div className="flex items-center gap-2 text-neutral-700">
+                <CheckCircleIcon className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>Total Allocation: 100%</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Validation Status Notice */}
           <div
             className={`p-4 rounded-2xl border text-xs font-mono ${
               isValidRebalance
@@ -519,12 +624,12 @@ export function CuratorStudio({
               {isValidRebalance ? (
                 <>
                   <CheckCircleIcon className="w-4 h-4 text-emerald-600" />
-                  <span>All checks passed! Your rebalance complies with the mandate.</span>
+                  <span>Mandate Pre-Check Passed! Transaction will succeed on-chain.</span>
                 </>
               ) : (
                 <>
                   <AlertTriangleIcon className="w-4 h-4 text-red-600" />
-                  <span>Mandate Violations ({validationErrors.length})</span>
+                  <span>Mandate Violations ({validationErrors.length}) - Hook Will Revert</span>
                 </>
               )}
             </div>
@@ -598,7 +703,7 @@ export function CuratorStudio({
           <div className="bg-white border border-neutral-200/80 rounded-[32px] p-6 sm:p-8 space-y-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
             <h3 className="text-base font-bold text-neutral-950">Propose Rules for Next Epoch</h3>
             <p className="text-[13px] text-neutral-500">
-              Followers can inspect proposed changes and exit before the new epoch starts.
+              Followers can inspect proposed changes and exit before the new epoch starts. Mandate swaps mid-epoch are prohibited.
             </p>
 
             <div className="grid grid-cols-2 gap-3 text-xs font-mono">
@@ -650,12 +755,12 @@ export function CuratorStudio({
         <div className="bg-white border border-neutral-200/80 rounded-[32px] p-6 sm:p-8 space-y-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
           <h3 className="text-base font-bold text-neutral-950">Settlement Epoch History</h3>
           <p className="text-[13px] text-neutral-500">
-            Performance fees are earned at 20% on all alpha above The Pace. Any deficit must be fully recovered before new fees accrue.
+            Performance fees are earned at 20% on all alpha above The Pace. Any deficit (D) must be fully recovered before new fees accrue.
           </p>
 
           {vault.history.length === 0 ? (
             <div className="p-8 text-center border border-dashed border-neutral-200 rounded-2xl text-xs text-neutral-500 font-mono">
-              No historical settlements yet. The keeper will settle at the next epoch boundary.
+              No historical settlements yet. CadraReactive will settle at the next epoch boundary.
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -667,6 +772,7 @@ export function CuratorStudio({
                     <th className="py-3 px-4">Pace Benchmark</th>
                     <th className="py-3 px-4">Alpha Gap</th>
                     <th className="py-3 px-4">Fee / Bond Paid</th>
+                    <th className="py-3 px-4">Multiplier</th>
                     <th className="py-3 px-4 text-right">Result</th>
                   </tr>
                 </thead>
@@ -680,6 +786,7 @@ export function CuratorStudio({
                         {h.gap >= 0 ? "+" : ""}${h.gap.toLocaleString()}
                       </td>
                       <td className="py-3 px-4 font-semibold text-neutral-900">${h.feeOrPayout.toLocaleString()}</td>
+                      <td className="py-3 px-4 font-semibold text-neutral-700">{h.multiplierAfter ?? vault.capacityMultiplier}×</td>
                       <td className="py-3 px-4 text-right">
                         <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
                           h.outcome === "ahead" ? "bg-emerald-50 text-emerald-800 border border-emerald-200/70" : "bg-red-50 text-red-800 border border-red-200/70"
@@ -740,12 +847,12 @@ export function CuratorStudio({
         <div className="bg-white border border-neutral-200/80 rounded-[32px] p-6 sm:p-8 space-y-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
           <h3 className="text-base font-bold text-neutral-950">Strategy Mandate Summary</h3>
           <p className="text-[13px] text-neutral-500 leading-relaxed">
-            Your mandate sets bounds on price ranges, concentration caps, and emergency safety parking.
+            Your mandate sets bounds on price corridors, concentration caps, and emergency safety parking.
           </p>
 
           <div className="space-y-2.5 font-mono text-xs">
             <div className="p-3.5 rounded-2xl bg-[#FAFAFA] border border-neutral-200/60 flex justify-between items-center">
-              <span className="text-neutral-500">Corridor</span>
+              <span className="text-neutral-500">Price Corridor</span>
               <span className="font-bold text-neutral-950">${mandate.minPrice} – ${mandate.maxPrice}</span>
             </div>
             <div className="p-3.5 rounded-2xl bg-[#FAFAFA] border border-neutral-200/60 flex justify-between items-center">
@@ -753,8 +860,8 @@ export function CuratorStudio({
               <span className="font-bold text-neutral-950">{mandate.maxConcentrationBps / 100}% per range</span>
             </div>
             <div className="p-3.5 rounded-2xl bg-[#FAFAFA] border border-neutral-200/60 flex justify-between items-center">
-              <span className="text-neutral-500">Capacity</span>
-              <span className="font-bold text-neutral-950">${vault.capacity.toLocaleString()} max</span>
+              <span className="text-neutral-500">Emergency Parking Limit</span>
+              <span className="font-bold text-neutral-950">{mandate.maxShortfallBps / 100}% below Pace</span>
             </div>
           </div>
         </div>

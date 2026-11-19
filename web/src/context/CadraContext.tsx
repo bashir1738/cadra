@@ -41,7 +41,7 @@ export function CadraProvider({ children }: { children: React.ReactNode }) {
   const [reactiveSafetyFeed, setReactiveSafetyFeed] = useState<ReactiveSafetyAction[]>([
     {
       id: "sec-1",
-      timestamp: Date.now() - 1000 * 60 * 3,
+      timestamp: 1763550000000,
       timeFormatted: "3 mins ago",
       type: "rule_guard",
       vaultId: 4,
@@ -56,7 +56,7 @@ export function CadraProvider({ children }: { children: React.ReactNode }) {
     },
     {
       id: "sec-2",
-      timestamp: Date.now() - 1000 * 60 * 14,
+      timestamp: 1763549000000,
       timeFormatted: "14 mins ago",
       type: "shock_guard",
       vaultId: 1,
@@ -71,7 +71,7 @@ export function CadraProvider({ children }: { children: React.ReactNode }) {
     },
     {
       id: "sec-3",
-      timestamp: Date.now() - 1000 * 60 * 35,
+      timestamp: 1763548000000,
       timeFormatted: "35 mins ago",
       type: "settlement",
       vaultId: 1,
