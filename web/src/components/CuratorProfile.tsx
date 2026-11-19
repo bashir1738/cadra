@@ -51,7 +51,7 @@ export function CuratorProfile({ vault, onBack, onFollow }: CuratorProfileProps)
               {vault.isParked && (
                 <span className="text-xs font-mono uppercase px-3 py-1 rounded-full bg-red-100 border border-red-300 text-red-800 flex items-center gap-1 font-semibold">
                   <AlertTriangleIcon className="w-3.5 h-3.5" />
-                  Parked by Keeper
+                  Parked by Reactive Guard
                 </span>
               )}
             </div>

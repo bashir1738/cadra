@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { VaultData, UserPosition, ReactiveSafetyAction } from "../types/cadra";
 import {
   ShieldIcon,
@@ -16,6 +16,27 @@ import {
 } from "./Icons";
 import { useCadra } from "../context/CadraContext";
 
+const SettlementCountdown = React.memo(function SettlementCountdown() {
+  const [timeLeft, setTimeLeft] = useState<{ m: number; s: number }>({ m: 18, s: 42 });
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev.s > 0) return { ...prev, s: prev.s - 1 };
+        if (prev.m > 0) return { m: prev.m - 1, s: 59 };
+        return { m: 59, s: 59 };
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  return (
+    <span className="font-mono" suppressHydrationWarning>
+      {String(timeLeft.m).padStart(2, "0")}:{String(timeLeft.s).padStart(2, "0")}
+    </span>
+  );
+});
+
 interface FollowerDashboardProps {
   vaults: VaultData[];
   userPositions: Record<number, UserPosition>;
@@ -28,7 +49,7 @@ interface FollowerDashboardProps {
   onNavigateToStudio?: () => void;
 }
 
-export function FollowerDashboard({
+export const FollowerDashboard = React.memo(function FollowerDashboard({
   vaults,
   userPositions,
   activeSubPage = "portfolio",
@@ -45,46 +66,36 @@ export function FollowerDashboard({
   const [amountInput, setAmountInput] = useState<string>("1000");
   const [safetyFilter, setSafetyFilter] = useState<"all" | "rule_guard" | "shock_guard" | "settlement">("all");
 
-  // Countdown timer simulation for epoch
-  const [timeLeft, setTimeLeft] = useState<{ m: number; s: number }>({ m: 18, s: 42 });
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => {
-        if (prev.s > 0) return { ...prev, s: prev.s - 1 };
-        if (prev.m > 0) return { m: prev.m - 1, s: 59 };
-        return { m: 59, s: 59 };
-      });
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  const userVaultIds = Object.keys(userPositions).map(Number);
-  const totalValue = userVaultIds.reduce(
-    (acc, id) => acc + (userPositions[id]?.currentValue || 0),
-    0
+  const userVaultIds = useMemo(() => Object.keys(userPositions).map(Number), [userPositions]);
+  const totalValue = useMemo(
+    () => userVaultIds.reduce((acc, id) => acc + (userPositions[id]?.currentValue || 0), 0),
+    [userVaultIds, userPositions]
   );
-  const totalPace = userVaultIds.reduce(
-    (acc, id) => acc + (userPositions[id]?.paceEquivalent || 0),
-    0
+  const totalPace = useMemo(
+    () => userVaultIds.reduce((acc, id) => acc + (userPositions[id]?.paceEquivalent || 0), 0),
+    [userVaultIds, userPositions]
   );
   const totalGap = totalValue - totalPace;
   const isAheadOverall = totalGap >= 0;
   const gapPercentage = totalPace > 0 ? (totalGap / totalPace) * 100 : 0;
 
-  const totalProtectingBond = userVaultIds.reduce((acc, id) => {
-    const v = vaults.find((vault) => vault.id === id);
-    return acc + (v?.bondAmount || 0);
-  }, 0);
-
-  const totalFeesPaid = userVaultIds.reduce(
-    (acc, id) => acc + (userPositions[id]?.feesPaid || 0),
-    0
+  const totalProtectingBond = useMemo(
+    () =>
+      userVaultIds.reduce((acc, id) => {
+        const v = vaults.find((vault) => vault.id === id);
+        return acc + (v?.bondAmount || 0);
+      }, 0),
+    [userVaultIds, vaults]
   );
 
-  const totalPayoutsReceived = userVaultIds.reduce(
-    (acc, id) => acc + (userPositions[id]?.bondPayoutsReceived || 0),
-    0
+  const totalFeesPaid = useMemo(
+    () => userVaultIds.reduce((acc, id) => acc + (userPositions[id]?.feesPaid || 0), 0),
+    [userVaultIds, userPositions]
+  );
+
+  const totalPayoutsReceived = useMemo(
+    () => userVaultIds.reduce((acc, id) => acc + (userPositions[id]?.bondPayoutsReceived || 0), 0),
+    [userVaultIds, userPositions]
   );
 
   const handleOpenDeposit = (vaultId: number) => {
@@ -283,8 +294,9 @@ export function FollowerDashboard({
 
           <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-white border border-neutral-200/80 text-xs font-mono shadow-2xs">
             <ClockIcon className="w-4 h-4 text-neutral-500" />
-            <span className="font-semibold text-neutral-950">
-              Next Settlement: {String(timeLeft.m).padStart(2, "0")}:{String(timeLeft.s).padStart(2, "0")}
+            <span className="font-semibold text-neutral-950 flex items-center gap-1.5">
+              <span>Next Settlement:</span>
+              <SettlementCountdown />
             </span>
           </div>
         </div>
@@ -404,55 +416,69 @@ export function FollowerDashboard({
 
         {/* Events Stream List */}
         <div className="space-y-3.5">
-          {filteredSafetyFeed.map((action) => {
-            const isRule = action.type === "rule_guard";
-            const isShock = action.type === "shock_guard";
-
-            return (
-              <div
-                key={action.id}
-                className="bg-white border border-neutral-200/80 rounded-[28px] p-6 space-y-4 shadow-[0_1px_3px_rgba(0,0,0,0.03)]"
-              >
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-neutral-100 pb-3">
-                  <div className="flex items-center gap-2.5">
-                    <span className={`w-2.5 h-2.5 rounded-full ${isRule ? "bg-red-500" : isShock ? "bg-amber-500" : "bg-emerald-500"}`} />
-                    <span className="font-bold text-neutral-950 text-[15px]">{action.summary}</span>
-                    <span className="text-xs font-mono text-neutral-400 font-normal">· {action.vaultName}</span>
-                  </div>
-
-                  <div className="flex items-center gap-2 font-mono text-xs text-neutral-500">
-                    <span className="px-2.5 py-0.5 rounded-full bg-neutral-100 font-bold text-neutral-800">
-                      Latency: {action.latencySeconds}s
-                    </span>
-                    <span>{action.timeFormatted}</span>
-                  </div>
-                </div>
-
-                <p className="text-[13px] text-neutral-600 leading-relaxed font-normal">
-                  {action.details}
-                </p>
-
-                {/* 3-Transaction Chain (Proof for Judges) */}
-                <div className="p-3.5 rounded-2xl bg-[#FAFAFA] border border-neutral-200/60 font-mono text-[11px] space-y-1.5">
-                  <div className="text-neutral-400 font-semibold uppercase text-[10px] tracking-wider mb-1">
-                    On-Chain Proof Chain ({action.originChain} -&gt; Reactive Kopli -&gt; Unichain Sepolia)
-                  </div>
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-neutral-600">
-                    <span>1. Origin Event ({action.originChain}):</span>
-                    <span className="text-neutral-900 font-bold break-all sm:break-normal">{action.originTxHash}</span>
-                  </div>
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-neutral-600">
-                    <span>2. Reactive Contract (Kopli Testnet):</span>
-                    <span className="text-neutral-900 font-bold break-all sm:break-normal">{action.reactiveTxHash}</span>
-                  </div>
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-neutral-600">
-                    <span>3. Hook Callback (Unichain Sepolia):</span>
-                    <span className="text-neutral-900 font-bold break-all sm:break-normal">{action.callbackTxHash}</span>
-                  </div>
-                </div>
+          {filteredSafetyFeed.length === 0 ? (
+            <div className="bg-white border border-neutral-200/80 rounded-[28px] p-10 text-center space-y-3 shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
+              <div className="w-12 h-12 rounded-2xl bg-neutral-100 flex items-center justify-center mx-auto text-neutral-400">
+                <ShieldIcon className="w-6 h-6" />
               </div>
-            );
-          })}
+              <div className="space-y-1">
+                <h4 className="text-base font-bold text-neutral-950">No Safety Events Triggered</h4>
+                <p className="text-xs text-neutral-500 max-w-md mx-auto">
+                  CadraReactive is actively listening on Unichain Sepolia & Base Sepolia. Rule breaches and cross-chain volatility shocks will stream here in real time.
+                </p>
+              </div>
+            </div>
+          ) : (
+            filteredSafetyFeed.map((action) => {
+              const isRule = action.type === "rule_guard";
+              const isShock = action.type === "shock_guard";
+
+              return (
+                <div
+                  key={action.id}
+                  className="bg-white border border-neutral-200/80 rounded-[28px] p-6 space-y-4 shadow-[0_1px_3px_rgba(0,0,0,0.03)]"
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-neutral-100 pb-3">
+                    <div className="flex items-center gap-2.5">
+                      <span className={`w-2.5 h-2.5 rounded-full ${isRule ? "bg-red-500" : isShock ? "bg-amber-500" : "bg-emerald-500"}`} />
+                      <span className="font-bold text-neutral-950 text-[15px]">{action.summary}</span>
+                      <span className="text-xs font-mono text-neutral-400 font-normal">· {action.vaultName}</span>
+                    </div>
+
+                    <div className="flex items-center gap-2 font-mono text-xs text-neutral-500">
+                      <span className="px-2.5 py-0.5 rounded-full bg-neutral-100 font-bold text-neutral-800">
+                        Latency: {action.latencySeconds}s
+                      </span>
+                      <span>{action.timeFormatted}</span>
+                    </div>
+                  </div>
+
+                  <p className="text-[13px] text-neutral-600 leading-relaxed font-normal">
+                    {action.details}
+                  </p>
+
+                  {/* 3-Transaction Chain (Proof for Judges) */}
+                  <div className="p-3.5 rounded-2xl bg-[#FAFAFA] border border-neutral-200/60 font-mono text-[11px] space-y-1.5">
+                    <div className="text-neutral-400 font-semibold uppercase text-[10px] tracking-wider mb-1">
+                      On-Chain Proof Chain ({action.originChain} -&gt; Reactive Kopli -&gt; Unichain Sepolia)
+                    </div>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-neutral-600">
+                      <span>1. Origin Event ({action.originChain}):</span>
+                      <span className="text-neutral-900 font-bold break-all sm:break-normal">{action.originTxHash}</span>
+                    </div>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-neutral-600">
+                      <span>2. Reactive Contract (Kopli Testnet):</span>
+                      <span className="text-neutral-900 font-bold break-all sm:break-normal">{action.reactiveTxHash}</span>
+                    </div>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-neutral-600">
+                      <span>3. Hook Callback (Unichain Sepolia):</span>
+                      <span className="text-neutral-900 font-bold break-all sm:break-normal">{action.callbackTxHash}</span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
       </div>
     );
@@ -517,7 +543,7 @@ export function FollowerDashboard({
               <ClockIcon className="w-3.5 h-3.5 text-neutral-500" />
               <span>Next Settlement:</span>
               <span className="font-bold text-neutral-950">
-                {String(timeLeft.m).padStart(2, "0")}:{String(timeLeft.s).padStart(2, "0")}
+                <SettlementCountdown />
               </span>
             </div>
           </div>
@@ -751,4 +777,4 @@ export function FollowerDashboard({
       )}
     </div>
   );
-}
+});

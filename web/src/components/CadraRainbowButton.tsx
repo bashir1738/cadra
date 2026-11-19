@@ -29,11 +29,15 @@ export function CadraRainbowButton({
         if (!ready) {
           if (variant === "sidebar") {
             return (
-              <div className="flex items-center justify-between bg-white border border-neutral-200/80 rounded-xl p-2.5 opacity-60">
+              <div className="flex items-center justify-between bg-white border border-neutral-200/80 rounded-xl p-2.5">
                 <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-neutral-300" />
-                  <span className="text-[12px] font-mono text-neutral-400">Loading...</span>
+                  <span className="w-2 h-2 rounded-full shrink-0 bg-neutral-300" />
+                  <div>
+                    <span className="text-[12px] font-mono font-medium text-neutral-400 block">Connecting...</span>
+                    <span className="text-[11px] text-neutral-300 block">Read-only mode</span>
+                  </div>
                 </div>
+                <div className="h-7 w-16 bg-neutral-100 rounded-lg animate-pulse" />
               </div>
             );
           }

@@ -38,23 +38,21 @@ export function DashboardLayout({
   return (
     <div className="min-h-screen bg-[#FAFAFA] flex text-neutral-950 font-sans antialiased selection:bg-neutral-950 selection:text-white">
       {/* 1. Left Sidebar Navigation (Desktop permanent + Mobile slide-over drawer) */}
-      <Suspense fallback={<div className="w-64 hidden lg:block shrink-0 bg-white border-r border-neutral-200/75" />}>
-        <Sidebar
-          portalMode={portalMode}
-          isOpenMobile={isMobileOpen}
-          onCloseMobile={() => setIsMobileOpen(false)}
-        />
-      </Suspense>
+      <Sidebar
+        portalMode={portalMode}
+        isOpenMobile={isMobileOpen}
+        onCloseMobile={() => setIsMobileOpen(false)}
+      />
 
       {/* 2. Main Dashboard Content Column */}
       <div className="flex-1 flex flex-col min-w-0 bg-[#FAFAFA]">
         {/* Top Sticky Dashboard Navigation Bar */}
-        <header className="sticky top-0 z-30 bg-white/85 backdrop-blur-xl border-b border-neutral-200/70 px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-3">
+        <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-neutral-200/70 px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2.5 sm:gap-3">
             {/* Mobile / Tablet Menu Button to open Sidebar Drawer */}
             <button
               onClick={() => setIsMobileOpen(true)}
-              className="lg:hidden flex items-center gap-2 px-3 py-1.5 rounded-full border border-neutral-200/90 bg-white text-neutral-800 hover:bg-neutral-50 shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-all cursor-pointer text-xs font-semibold"
+              className="lg:hidden flex items-center gap-2 px-3 py-1.5 rounded-full border border-neutral-200/90 bg-white text-neutral-800 hover:bg-neutral-50 shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-colors duration-150 cursor-pointer text-xs font-semibold"
               aria-label="Open Sidebar Menu"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -67,7 +65,8 @@ export function DashboardLayout({
             <div className="flex items-center gap-2 text-[13px] font-medium truncate">
               <Link
                 href={isFollower ? "/follower/portfolio" : "/curator/overview"}
-                className="text-neutral-400 hover:text-neutral-800 transition-colors truncate hidden xs:inline"
+                prefetch={true}
+                className="text-neutral-400 hover:text-neutral-800 transition-colors duration-150 truncate hidden xs:inline"
               >
                 {breadcrumb || (isFollower ? "Follower Portal" : "Curator Studio")}
               </Link>
@@ -87,8 +86,9 @@ export function DashboardLayout({
             <div className="hidden sm:inline-flex lg:hidden items-center bg-neutral-100 p-0.5 rounded-full text-xs font-medium">
               <Link
                 href="/follower/portfolio"
+                prefetch={true}
                 onClick={() => setActiveRole("follower")}
-                className={`px-3 py-1 rounded-full transition-all ${
+                className={`px-3 py-1 rounded-full transition-colors duration-150 ${
                   isFollower ? "bg-white text-neutral-950 font-semibold shadow-2xs" : "text-neutral-500"
                 }`}
               >
@@ -96,8 +96,9 @@ export function DashboardLayout({
               </Link>
               <Link
                 href="/curator/overview"
+                prefetch={true}
                 onClick={() => setActiveRole("curator")}
-                className={`px-3 py-1 rounded-full transition-all ${
+                className={`px-3 py-1 rounded-full transition-colors duration-150 ${
                   !isFollower ? "bg-neutral-950 text-white font-semibold" : "text-neutral-500"
                 }`}
               >

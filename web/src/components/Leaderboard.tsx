@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { VaultData } from "../types/cadra";
 import { ScaleIcon, TrendUpIcon, TrendDownIcon, ArrowRightIcon, ShieldIcon } from "./Icons";
 
@@ -11,13 +11,39 @@ interface LeaderboardProps {
   onOpenCuratorStudio?: () => void;
 }
 
-export function Leaderboard({
+export const Leaderboard = React.memo(function Leaderboard({
   vaults,
   onSelectCurator,
   onFollowCurator,
   onOpenCuratorStudio,
 }: LeaderboardProps) {
   const [sortBy, setSortBy] = useState<"ahead" | "multiplier" | "gap" | "capacity">("ahead");
+
+  // Calculate and sort cumulative stats for each vault
+  const sortedVaults = useMemo(() => {
+    const augmented = vaults.map((vault) => {
+      const aheadEpochs = vault.history.filter((h) => h.outcome === "ahead").length;
+      const behindEpochs = vault.history.filter((h) => h.outcome === "behind").length;
+      const cumulativeGap = vault.history.reduce((acc, h) => acc + h.gap, 0) + (vault.vaultValue - vault.paceValue);
+      const capacityUsagePct = vault.capacity > 0 ? (vault.totalFollowerValue / vault.capacity) * 100 : 0;
+
+      return {
+        ...vault,
+        aheadEpochs,
+        behindEpochs,
+        cumulativeGap,
+        capacityUsagePct,
+      };
+    });
+
+    return [...augmented].sort((a, b) => {
+      if (sortBy === "ahead") return b.aheadEpochs - a.aheadEpochs;
+      if (sortBy === "multiplier") return b.capacityMultiplier - a.capacityMultiplier;
+      if (sortBy === "gap") return b.cumulativeGap - a.cumulativeGap;
+      if (sortBy === "capacity") return b.capacity - a.capacity;
+      return 0;
+    });
+  }, [vaults, sortBy]);
 
   if (vaults.length === 0) {
     return (
@@ -47,31 +73,6 @@ export function Leaderboard({
       </div>
     );
   }
-
-  // Calculate cumulative stats for each vault
-  const augmentedVaults = vaults.map((vault) => {
-    const aheadEpochs = vault.history.filter((h) => h.outcome === "ahead").length;
-    const behindEpochs = vault.history.filter((h) => h.outcome === "behind").length;
-    const cumulativeGap = vault.history.reduce((acc, h) => acc + h.gap, 0) + (vault.vaultValue - vault.paceValue);
-    const capacityUsagePct = vault.capacity > 0 ? (vault.totalFollowerValue / vault.capacity) * 100 : 0;
-
-    return {
-      ...vault,
-      aheadEpochs,
-      behindEpochs,
-      cumulativeGap,
-      capacityUsagePct,
-    };
-  });
-
-  // Sort based on criteria
-  const sortedVaults = [...augmentedVaults].sort((a, b) => {
-    if (sortBy === "ahead") return b.aheadEpochs - a.aheadEpochs;
-    if (sortBy === "multiplier") return b.capacityMultiplier - a.capacityMultiplier;
-    if (sortBy === "gap") return b.cumulativeGap - a.cumulativeGap;
-    if (sortBy === "capacity") return b.capacity - a.capacity;
-    return 0;
-  });
 
   return (
     <div className="space-y-6 font-sans max-w-5xl mx-auto">
@@ -216,4 +217,4 @@ export function Leaderboard({
       </div>
     </div>
   );
-}
+});

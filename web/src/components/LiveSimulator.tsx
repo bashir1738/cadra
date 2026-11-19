@@ -57,14 +57,14 @@ export function LiveSimulator({
   const [logs, setLogs] = useState<BotLogEvent[]>([
     {
       id: "init-1",
-      time: new Date().toLocaleTimeString(),
+      time: "12:00:00",
       bot: "hook",
       type: "info",
       message: "Cadra Autonomous Bot Engine initialized. WETH/USDC (0.05%) pool ready.",
     },
     {
       id: "init-2",
-      time: new Date().toLocaleTimeString(),
+      time: "12:00:00",
       bot: "keeper",
       type: "info",
       message: "Keeper daemon standing by. Monitoring vault price corridors and epoch deadlines.",
@@ -73,13 +73,6 @@ export function LiveSimulator({
   const [activeFilter, setActiveFilter] = useState<"all" | "swapper" | "curator" | "keeper">("all");
   const [autoScroll, setAutoScroll] = useState<boolean>(true);
   const logContainerRef = useRef<HTMLDivElement>(null);
-
-  // Auto-seed archetypes if no vaults are present
-  useEffect(() => {
-    if (vaults.length === 0 && onSeedArchetypes) {
-      onSeedArchetypes();
-    }
-  }, [vaults.length, onSeedArchetypes]);
 
   // Auto-scroll terminal log to bottom
   useEffect(() => {

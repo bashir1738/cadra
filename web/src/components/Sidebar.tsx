@@ -30,7 +30,7 @@ interface NavItem {
   badge?: string;
 }
 
-export function Sidebar({
+export const Sidebar = React.memo(function Sidebar({
   portalMode,
   isOpenMobile,
   onCloseMobile,
@@ -140,7 +140,7 @@ export function Sidebar({
       )}
 
       <aside
-        className={`fixed top-0 bottom-0 left-0 z-50 w-72 max-w-[85vw] bg-white border-r border-neutral-200/75 flex flex-col justify-between transition-transform duration-250 ease-in-out lg:static lg:w-64 lg:translate-x-0 ${
+        className={`fixed top-0 bottom-0 left-0 z-50 w-72 max-w-[85vw] bg-white border-r border-neutral-200/75 flex flex-col justify-between transition-transform duration-200 ease-in-out lg:static lg:w-64 lg:translate-x-0 lg:transition-none ${
           isOpenMobile ? "translate-x-0 shadow-2xl" : "-translate-x-full lg:translate-x-0"
         }`}
       >
@@ -149,6 +149,7 @@ export function Sidebar({
           <div className="flex items-center justify-between">
             <Link
               href="/"
+              prefetch={true}
               aria-label="Cadra Home"
               className="flex items-center group"
               onClick={onCloseMobile}
@@ -177,11 +178,12 @@ export function Sidebar({
           <div className="bg-neutral-100/80 p-1 rounded-xl flex items-center gap-1 text-[12px] font-medium">
             <Link
               href="/follower/portfolio"
+              prefetch={true}
               onClick={() => {
                 setActiveRole("follower");
                 if (onCloseMobile) onCloseMobile();
               }}
-              className={`flex-1 py-1.5 px-3 rounded-lg transition-all text-center cursor-pointer ${
+              className={`flex-1 py-1.5 px-3 rounded-lg transition-colors duration-150 text-center cursor-pointer ${
                 portalMode === "follower"
                   ? "bg-white text-neutral-950 shadow-[0_1px_3px_rgba(0,0,0,0.06)] font-semibold"
                   : "text-neutral-500 hover:text-neutral-900"
@@ -191,11 +193,12 @@ export function Sidebar({
             </Link>
             <Link
               href="/curator/overview"
+              prefetch={true}
               onClick={() => {
                 setActiveRole("curator");
                 if (onCloseMobile) onCloseMobile();
               }}
-              className={`flex-1 py-1.5 px-3 rounded-lg transition-all text-center cursor-pointer ${
+              className={`flex-1 py-1.5 px-3 rounded-lg transition-colors duration-150 text-center cursor-pointer ${
                 portalMode === "curator"
                   ? "bg-neutral-950 text-white font-semibold"
                   : "text-neutral-500 hover:text-neutral-900"
@@ -222,8 +225,9 @@ export function Sidebar({
               <Link
                 key={item.href}
                 href={item.href}
+                prefetch={true}
                 onClick={onCloseMobile}
-                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all ${
+                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-[13px] font-medium transition-colors duration-150 ${
                   isSelected
                     ? "bg-neutral-950 text-white font-semibold"
                     : "text-neutral-600 hover:text-neutral-950 hover:bg-neutral-100/70"
@@ -253,8 +257,9 @@ export function Sidebar({
           <div className="pt-6 px-3">
             <Link
               href="/"
+              prefetch={true}
               onClick={onCloseMobile}
-              className="w-full text-left text-[12px] font-medium text-neutral-400 hover:text-neutral-950 flex items-center gap-1.5 py-2 transition-colors"
+              className="w-full text-left text-[12px] font-medium text-neutral-400 hover:text-neutral-950 flex items-center gap-1.5 py-2 transition-colors duration-150"
             >
               <ChevronLeftIcon className="w-3.5 h-3.5" />
               <span>Back to Website</span>
@@ -268,7 +273,7 @@ export function Sidebar({
           <CadraRainbowButton variant="sidebar" />
 
           <div className="flex items-center justify-between text-[11px] text-neutral-500">
-            <span>{vaults.length} vaults</span>
+            <span suppressHydrationWarning>{vaults.length} vaults</span>
             <div className="flex items-center gap-1.5">
               <button
                 onClick={seedArchetypes}
@@ -292,4 +297,4 @@ export function Sidebar({
       </aside>
     </>
   );
-}
+});

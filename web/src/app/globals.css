@@ -7,8 +7,14 @@
 }
 
 html {
-  scroll-behavior: smooth;
   font-family: var(--font-sans);
+}
+
+/* Enable smooth scrolling only for in-page anchor targets, leaving route navigations instant */
+@media (prefers-reduced-motion: no-preference) {
+  :root:has(:target) {
+    scroll-behavior: smooth;
+  }
 }
 
 body {

@@ -26,20 +26,20 @@ export function CuratorStudio({
 }: CuratorStudioProps) {
   const { openConnectModal } = useCadra();
   // Vault creation form state
-  const [createName, setCreateName] = useState("Alpha Dynamic Corridor");
-  const [createTag, setCreateTag] = useState("Tight Range Active");
-  const [createDesc, setCreateDesc] = useState("Dynamic rebalancing within tight ETH price corridor.");
-  const [createFee, setCreateFee] = useState("20");
-  const [createMinPrice, setCreateMinPrice] = useState("2400");
-  const [createMaxPrice, setCreateMaxPrice] = useState("3600");
-  const [createMaxConc, setCreateMaxConc] = useState("50");
-  const [createMinTicks, setCreateMinTicks] = useState("200");
-  const [createShortfall, setCreateShortfall] = useState("5");
-  const [createBond, setCreateBond] = useState("10000");
+  const [createName, setCreateName] = useState("");
+  const [createTag, setCreateTag] = useState("");
+  const [createDesc, setCreateDesc] = useState("");
+  const [createFee, setCreateFee] = useState("");
+  const [createMinPrice, setCreateMinPrice] = useState("");
+  const [createMaxPrice, setCreateMaxPrice] = useState("");
+  const [createMaxConc, setCreateMaxConc] = useState("");
+  const [createMinTicks, setCreateMinTicks] = useState("");
+  const [createShortfall, setCreateShortfall] = useState("");
+  const [createBond, setCreateBond] = useState("");
 
   // Range editor state for existing vault
   const [ranges, setRanges] = useState<RangePosition[]>(vault?.activeRanges || []);
-  const [bondInput, setBondInput] = useState<string>("5000");
+  const [bondInput, setBondInput] = useState<string>("");
 
   // Propose mandate state
   const [newMinPrice, setNewMinPrice] = useState<number>(vault?.mandate.minPrice || 2400);
@@ -66,9 +66,9 @@ export function CuratorStudio({
 
       const newVault: VaultData = {
         id: Date.now(),
-        name: createName,
-        tag: createTag,
-        description: createDesc,
+        name: createName.trim() || "Alpha Dynamic Corridor",
+        tag: createTag.trim() || "Tight Range Active",
+        description: createDesc.trim() || "Curated concentrated liquidity management.",
         curatorAddress: (connectedAddress as `0x${string}`) || "0x70997970C51812dc3A010C7d01b50e0d17dc79C8",
         perfFeeBps: feeBps,
         bondAmount: bondAmt,
@@ -188,8 +188,9 @@ export function CuratorStudio({
               <input
                 type="text"
                 value={createName}
+                placeholder="e.g. Alpha Dynamic Corridor"
                 onChange={(e) => setCreateName(e.target.value)}
-                className="w-full bg-white border border-neutral-200 rounded-xl px-4 py-2.5 text-neutral-950 focus:outline-none focus:border-neutral-950 focus:ring-1 focus:ring-neutral-950 transition-all"
+                className="w-full bg-white border border-neutral-200 rounded-xl px-4 py-2.5 text-neutral-950 focus:outline-none focus:border-neutral-950 focus:ring-1 focus:ring-neutral-950 transition-all placeholder:text-neutral-400"
               />
             </div>
 
@@ -199,8 +200,9 @@ export function CuratorStudio({
                 <input
                   type="text"
                   value={createTag}
+                  placeholder="e.g. Tight Range Active"
                   onChange={(e) => setCreateTag(e.target.value)}
-                  className="w-full bg-white border border-neutral-200 rounded-xl px-4 py-2.5 text-neutral-950 focus:outline-none focus:border-neutral-950 focus:ring-1 focus:ring-neutral-950 transition-all"
+                  className="w-full bg-white border border-neutral-200 rounded-xl px-4 py-2.5 text-neutral-950 focus:outline-none focus:border-neutral-950 focus:ring-1 focus:ring-neutral-950 transition-all placeholder:text-neutral-400"
                 />
               </div>
               <div className="space-y-1">
@@ -208,8 +210,9 @@ export function CuratorStudio({
                 <input
                   type="number"
                   value={createFee}
+                  placeholder="e.g. 20"
                   onChange={(e) => setCreateFee(e.target.value)}
-                  className="w-full bg-white border border-neutral-200 rounded-xl px-4 py-2.5 text-neutral-950 focus:outline-none focus:border-neutral-950 focus:ring-1 focus:ring-neutral-950 font-mono transition-all"
+                  className="w-full bg-white border border-neutral-200 rounded-xl px-4 py-2.5 text-neutral-950 focus:outline-none focus:border-neutral-950 focus:ring-1 focus:ring-neutral-950 font-mono transition-all placeholder:text-neutral-400"
                 />
               </div>
             </div>
@@ -220,8 +223,9 @@ export function CuratorStudio({
                 <input
                   type="number"
                   value={createMinPrice}
+                  placeholder="e.g. 2400"
                   onChange={(e) => setCreateMinPrice(e.target.value)}
-                  className="w-full bg-white border border-neutral-200 rounded-xl px-4 py-2.5 text-neutral-950 font-mono focus:outline-none focus:border-neutral-950 focus:ring-1 focus:ring-neutral-950 transition-all"
+                  className="w-full bg-white border border-neutral-200 rounded-xl px-4 py-2.5 text-neutral-950 font-mono focus:outline-none focus:border-neutral-950 focus:ring-1 focus:ring-neutral-950 transition-all placeholder:text-neutral-400"
                 />
               </div>
               <div className="space-y-1">
@@ -229,8 +233,9 @@ export function CuratorStudio({
                 <input
                   type="number"
                   value={createMaxPrice}
+                  placeholder="e.g. 3600"
                   onChange={(e) => setCreateMaxPrice(e.target.value)}
-                  className="w-full bg-white border border-neutral-200 rounded-xl px-4 py-2.5 text-neutral-950 font-mono focus:outline-none focus:border-neutral-950 focus:ring-1 focus:ring-neutral-950 transition-all"
+                  className="w-full bg-white border border-neutral-200 rounded-xl px-4 py-2.5 text-neutral-950 font-mono focus:outline-none focus:border-neutral-950 focus:ring-1 focus:ring-neutral-950 transition-all placeholder:text-neutral-400"
                 />
               </div>
             </div>
@@ -241,8 +246,9 @@ export function CuratorStudio({
                 <input
                   type="number"
                   value={createMaxConc}
+                  placeholder="e.g. 50"
                   onChange={(e) => setCreateMaxConc(e.target.value)}
-                  className="w-full bg-white border border-neutral-200 rounded-xl px-3 py-2.5 text-neutral-950 font-mono focus:outline-none focus:border-neutral-950 focus:ring-1 focus:ring-neutral-950 transition-all"
+                  className="w-full bg-white border border-neutral-200 rounded-xl px-3 py-2.5 text-neutral-950 font-mono focus:outline-none focus:border-neutral-950 focus:ring-1 focus:ring-neutral-950 transition-all placeholder:text-neutral-400"
                 />
               </div>
               <div className="space-y-1">
@@ -250,8 +256,9 @@ export function CuratorStudio({
                 <input
                   type="number"
                   value={createMinTicks}
+                  placeholder="e.g. 200"
                   onChange={(e) => setCreateMinTicks(e.target.value)}
-                  className="w-full bg-white border border-neutral-200 rounded-xl px-3 py-2.5 text-neutral-950 font-mono focus:outline-none focus:border-neutral-950 focus:ring-1 focus:ring-neutral-950 transition-all"
+                  className="w-full bg-white border border-neutral-200 rounded-xl px-3 py-2.5 text-neutral-950 font-mono focus:outline-none focus:border-neutral-950 focus:ring-1 focus:ring-neutral-950 transition-all placeholder:text-neutral-400"
                 />
               </div>
               <div className="space-y-1">
@@ -259,8 +266,9 @@ export function CuratorStudio({
                 <input
                   type="number"
                   value={createShortfall}
+                  placeholder="e.g. 5"
                   onChange={(e) => setCreateShortfall(e.target.value)}
-                  className="w-full bg-white border border-neutral-200 rounded-xl px-3 py-2.5 text-neutral-950 font-mono focus:outline-none focus:border-neutral-950 focus:ring-1 focus:ring-neutral-950 transition-all"
+                  className="w-full bg-white border border-neutral-200 rounded-xl px-3 py-2.5 text-neutral-950 font-mono focus:outline-none focus:border-neutral-950 focus:ring-1 focus:ring-neutral-950 transition-all placeholder:text-neutral-400"
                 />
               </div>
             </div>
@@ -270,8 +278,9 @@ export function CuratorStudio({
               <input
                 type="number"
                 value={createBond}
+                placeholder="e.g. 10000"
                 onChange={(e) => setCreateBond(e.target.value)}
-                className="w-full bg-white border border-neutral-200 rounded-xl px-4 py-2.5 text-neutral-950 font-mono focus:outline-none focus:border-neutral-950 focus:ring-1 focus:ring-neutral-950 transition-all"
+                className="w-full bg-white border border-neutral-200 rounded-xl px-4 py-2.5 text-neutral-950 font-mono focus:outline-none focus:border-neutral-950 focus:ring-1 focus:ring-neutral-950 transition-all placeholder:text-neutral-400"
               />
               <span className="text-xs text-neutral-500 font-mono block mt-1">
                 Initial capacity: ${(parseFloat(createBond) || 0) * 5} USDC (5× multiplier).
@@ -447,7 +456,7 @@ export function CuratorStudio({
             {vault.isParked ? "Parked (Curator Frozen)" : "Active & Healthy"}
           </span>
           <span className="text-[11px] text-neutral-500 mt-0.5 block font-normal">
-            {vault.timesShielded > 0 ? `Shielded ${vault.timesShielded}× by Base Guard` : "Epoch #3 in progress"}
+            {vault.timesShielded > 0 ? `Shielded ${vault.timesShielded}× by Base Guard` : `Epoch #${vault.epoch || 1} in progress`}
           </span>
         </div>
       </div>

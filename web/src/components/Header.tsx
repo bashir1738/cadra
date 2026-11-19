@@ -31,18 +31,19 @@ export function Header({
   const router = useRouter();
 
   return (
-    <header className="sticky top-0 z-50 w-full bg-white/90 backdrop-blur-xl border-b border-neutral-100 transition-colors">
+    <header className="sticky top-0 z-50 w-full bg-white/95 backdrop-blur-md border-b border-neutral-100 transition-colors">
       <div className="max-w-7xl mx-auto px-5 sm:px-8 h-16 sm:h-[72px] flex items-center justify-between gap-6">
         {/* Left: Brand Mark (Icon Only) */}
         <Link
           href="/"
+          prefetch={true}
           aria-label="Cadra Home"
           className="flex items-center cursor-pointer select-none shrink-0 group"
           onClick={() => {
             if (onSelectTab) onSelectTab("landing");
           }}
         >
-          <div className="w-8 h-8 rounded-xl bg-neutral-950 flex items-center justify-center p-1.5 transition-transform duration-200 group-hover:scale-105 shadow-sm">
+          <div className="w-8 h-8 rounded-xl bg-neutral-950 flex items-center justify-center p-1.5 transition-transform duration-150 group-hover:scale-105 shadow-sm">
             <img
               src="/cadra/logo/cadra-mark-white.svg"
               alt="Cadra"
@@ -82,6 +83,7 @@ export function Header({
                 <div className="bg-white border border-neutral-200/80 rounded-2xl p-2 shadow-[0_16px_48px_-12px_rgba(0,0,0,0.12)] space-y-1">
                   <Link
                     href="/follower/explore"
+                    prefetch={true}
                     onClick={() => setProductsOpen(false)}
                     className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-neutral-50 transition-colors group"
                   >
@@ -96,6 +98,7 @@ export function Header({
 
                   <Link
                     href="/curator/overview"
+                    prefetch={true}
                     onClick={() => setProductsOpen(false)}
                     className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-neutral-50 transition-colors group"
                   >
@@ -110,6 +113,7 @@ export function Header({
 
                   <Link
                     href="/#strategies"
+                    prefetch={true}
                     onClick={() => setProductsOpen(false)}
                     className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-neutral-50 transition-colors group"
                   >
@@ -128,6 +132,7 @@ export function Header({
 
           <Link
             href="/leaderboard"
+            prefetch={true}
             className={`hover:text-neutral-950 transition-colors ${
               pathname === "/leaderboard" ? "text-neutral-950 font-semibold" : ""
             }`}
@@ -137,6 +142,7 @@ export function Header({
 
           <Link
             href="/simulator"
+            prefetch={true}
             className={`hover:text-neutral-950 transition-colors ${
               pathname === "/simulator" ? "text-neutral-950 font-semibold" : ""
             }`}
@@ -172,29 +178,33 @@ export function Header({
         <div className="md:hidden bg-white border-t border-neutral-100 px-5 py-4 space-y-1 shadow-lg">
           <Link
             href="/follower/explore"
+            prefetch={true}
             onClick={() => setMobileMenuOpen(false)}
-            className="block px-3 py-2.5 rounded-xl text-sm font-medium text-neutral-700 hover:bg-neutral-50 hover:text-neutral-950"
+            className="block px-3 py-2.5 rounded-xl text-sm font-medium text-neutral-700 hover:bg-neutral-50 hover:text-neutral-950 transition-colors"
           >
             Follower Vaults
           </Link>
           <Link
             href="/curator/overview"
+            prefetch={true}
             onClick={() => setMobileMenuOpen(false)}
-            className="block px-3 py-2.5 rounded-xl text-sm font-medium text-neutral-700 hover:bg-neutral-50 hover:text-neutral-950"
+            className="block px-3 py-2.5 rounded-xl text-sm font-medium text-neutral-700 hover:bg-neutral-50 hover:text-neutral-950 transition-colors"
           >
             Curator Studio
           </Link>
           <Link
             href="/leaderboard"
+            prefetch={true}
             onClick={() => setMobileMenuOpen(false)}
-            className="block px-3 py-2.5 rounded-xl text-sm font-medium text-neutral-700 hover:bg-neutral-50 hover:text-neutral-950"
+            className="block px-3 py-2.5 rounded-xl text-sm font-medium text-neutral-700 hover:bg-neutral-50 hover:text-neutral-950 transition-colors"
           >
             Leaderboard
           </Link>
           <Link
             href="/simulator"
+            prefetch={true}
             onClick={() => setMobileMenuOpen(false)}
-            className="block px-3 py-2.5 rounded-xl text-sm font-medium text-neutral-700 hover:bg-neutral-50 hover:text-neutral-950"
+            className="block px-3 py-2.5 rounded-xl text-sm font-medium text-neutral-700 hover:bg-neutral-50 hover:text-neutral-950 transition-colors"
           >
             Simulator
           </Link>
