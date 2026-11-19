@@ -66,6 +66,12 @@ export function Sidebar({
       icon: <ClockIcon className="w-[18px] h-[18px]" />,
     },
     {
+      href: "/follower/safety",
+      label: "Reactive Safety",
+      icon: <ShieldIcon className="w-[18px] h-[18px]" />,
+      badge: "~1s",
+    },
+    {
       href: "/leaderboard",
       label: "Leaderboard",
       icon: <ScaleIcon className="w-[18px] h-[18px]" />,

@@ -27,7 +27,7 @@ export function getConfig(): BotConfig {
     poolManagerAddress: (process.env.POOL_MANAGER_ADDRESS || "0x0000000000000000000000000000000000000000") as `0x${string}`,
     token0: (process.env.TOKEN0 || "0x0000000000000000000000000000000000000000") as `0x${string}`,
     token1: (process.env.TOKEN1 || "0x0000000000000000000000000000000000000000") as `0x${string}`,
-    // Anvil test default accounts (pre-funded on standard local dev chains)
+    // Anvil test default accounts
     swapperPrivateKey: (process.env.SWAPPER_PRIVATE_KEY || "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80") as `0x${string}`,
     keeperPrivateKey: (process.env.KEEPER_PRIVATE_KEY || "0x59c6995e998f97a5a0044966f0945389dc9e86dae88c7a8412f4603b6b78690d") as `0x${string}`,
     curatorPrivateKeys: {

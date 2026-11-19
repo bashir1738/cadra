@@ -9,7 +9,13 @@
     "dev:turbo": "next dev --turbopack",
     "prebuild": "node scripts/build-tailwind.mjs",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "bots": "node scripts/run-bots.mjs",
+    "bots:all": "node scripts/run-bots.mjs --all",
+    "bots:swapper": "node scripts/run-bots.mjs --swapper",
+    "bots:curators": "node scripts/run-bots.mjs --curators",
+    "bots:keeper": "node scripts/run-bots.mjs --keeper",
+    "bots:sharp": "node scripts/run-bots.mjs --sharp"
   },
   "dependencies": {
     "@rainbow-me/rainbowkit": "^2.2.11",

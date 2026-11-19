@@ -31,7 +31,11 @@ export interface VaultData {
   followerShares: number;
   paceValue: number; // Benchmark value in USDC
   vaultValue: number; // Current vault value in USDC
-  carriedDeficit: number;
+  carriedDeficit: number; // Deficit carry D to be recovered before new fees
+  curatorOwnershipBps: number; // Shares held by curator e.g. 1500 = 15%
+  currentShortfallBps: number; // Current gap below pace e.g. 120 = 1.2%
+  timesParked: number; // Number of times rule-guard parked
+  timesShielded: number; // Number of times shock-guard shielded
   epoch: number;
   epochStart: number; // timestamp
   epochDuration: number; // seconds
@@ -46,6 +50,8 @@ export interface VaultData {
     gap: number;
     outcome: "ahead" | "behind";
     feeOrPayout: number;
+    multiplierAfter?: number;
+    carriedDeficitAfter?: number;
   }[];
 }
 
@@ -57,4 +63,22 @@ export interface UserPosition {
   shares: number;
   pendingDeposit: number;
   pendingWithdraw: number;
+  feesPaid?: number; // Total fees paid when curator beat the Pace
+  bondPayoutsReceived?: number; // Total bond compensation received when curator lagged
+}
+
+export interface ReactiveSafetyAction {
+  id: string;
+  timestamp: number;
+  timeFormatted: string;
+  type: "rule_guard" | "shock_guard" | "settlement";
+  vaultId: number;
+  vaultName: string;
+  latencySeconds: number; // e.g. 1.1s for rule guard, 0.8s for shock guard
+  originChain: "Unichain Sepolia" | "Base Sepolia";
+  originTxHash: string;
+  reactiveTxHash: string;
+  callbackTxHash: string;
+  summary: string;
+  details: string;
 }
