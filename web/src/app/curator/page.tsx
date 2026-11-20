@@ -15,12 +15,10 @@ export default function CuratorIndexPage() {
     proposeMandate,
   } = useCadra();
 
-  const currentCuratorVault = vaults[0];
-
   return (
     <DashboardLayout portalMode="curator" pageTitle="Vault Overview">
       <CuratorStudio
-        vault={currentCuratorVault}
+        allVaults={vaults}
         activeSubPage="overview"
         connectedAddress={connectedAddress}
         onCreateVault={createVault}

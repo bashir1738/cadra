@@ -15,12 +15,10 @@ export default function CuratorSettlementsPage() {
     proposeMandate,
   } = useCadra();
 
-  const currentCuratorVault = vaults[0];
-
   return (
     <DashboardLayout portalMode="curator" pageTitle="Settlements & Fees">
       <CuratorStudio
-        vault={currentCuratorVault}
+        allVaults={vaults}
         activeSubPage="settlements"
         connectedAddress={connectedAddress}
         onCreateVault={createVault}

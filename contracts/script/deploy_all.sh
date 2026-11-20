@@ -65,7 +65,7 @@ if [ -n "${LATEST_RUN}" ]; then
     echo "Discovered Hook Address: ${HOOK_ADDR}"
 else
     echo "Could not auto-detect hook address; using fallback from environment."
-    HOOK_ADDR="${HOOK_ADDRESS:-0x8a316B53c5cE57B34Fb1f071Ebe4A6C953c990c0}"
+    HOOK_ADDR="${HOOK_ADDRESS:-0x728D9b5f428B736A26D07879F55C3982Ddf890C0}"
 fi
 
 # Step 2: Deploy CadraReactive on Lasna

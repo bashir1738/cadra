@@ -43,14 +43,24 @@ export function PrivyProviders({ children }: { children: React.ReactNode }) {
         appearance: {
           theme: "light",
           accentColor: "#09090b",
-          logo: "/cadra/logo/cadra-mark-black.svg",
+          walletChainType: "ethereum-only",
           walletList: [
+            "detected_ethereum_wallets",
             "metamask",
             "coinbase_wallet",
             "rainbow",
-            "rabby_wallet",
             "wallet_connect",
           ],
+        },
+        loginMethods: ["wallet"],
+        loginMethodsAndOrder: {
+          primary: [
+            "detected_ethereum_wallets",
+            "metamask",
+            "coinbase_wallet",
+            "rainbow",
+          ],
+          overflow: ["wallet_connect"],
         },
         defaultChain: unichainSepolia,
         supportedChains: [unichainSepolia, sepolia, mainnet, base, arbitrum],

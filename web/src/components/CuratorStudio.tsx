@@ -7,6 +7,7 @@ import { useCadra } from "../context/CadraContext";
 
 interface CuratorStudioProps {
   vault?: VaultData;
+  allVaults?: VaultData[];
   activeSubPage?: "overview" | "rebalance" | "mandate" | "settlements";
   connectedAddress?: string | null;
   onCreateVault?: (newVault: VaultData) => void;
@@ -16,7 +17,8 @@ interface CuratorStudioProps {
 }
 
 export function CuratorStudio({
-  vault,
+  vault: propVault,
+  allVaults,
   activeSubPage = "overview",
   connectedAddress,
   onCreateVault,
@@ -24,7 +26,11 @@ export function CuratorStudio({
   onPostBond,
   onProposeMandate,
 }: CuratorStudioProps) {
-  const { openConnectModal } = useCadra();
+  const { openConnectModal, vaults: contextVaults } = useCadra();
+  const availableVaults = allVaults || contextVaults;
+  const [selectedVaultId, setSelectedVaultId] = useState<number>(propVault?.id || availableVaults[0]?.id || 1);
+  const vault = availableVaults.find((v) => v.id === selectedVaultId) || propVault || availableVaults[0];
+
   // Vault creation form state
   const [createName, setCreateName] = useState("");
   const [createTag, setCreateTag] = useState("");
@@ -39,7 +45,9 @@ export function CuratorStudio({
 
   // Range editor state for existing vault
   const [ranges, setRanges] = useState<RangePosition[]>(vault?.activeRanges || []);
-  const [bondInput, setBondInput] = useState<string>("");
+  const [bondInput, setBondInput] = useState<string>("5000");
+  const [bondSuccessNotice, setBondSuccessNotice] = useState<string | null>(null);
+  const [isDepositingBond, setIsDepositingBond] = useState<boolean>(false);
 
   // Propose mandate state
   const [newMinPrice, setNewMinPrice] = useState<number>(vault?.mandate.minPrice || 2400);
@@ -48,6 +56,32 @@ export function CuratorStudio({
     (vault?.mandate.maxConcentrationBps || 5000) / 100
   );
   const [mandateSuccessNotice, setMandateSuccessNotice] = useState<boolean>(false);
+
+  const handleDepositBond = () => {
+    if (!connectedAddress) {
+      if (openConnectModal) openConnectModal();
+      return;
+    }
+    const val = parseFloat(bondInput) || 5000;
+    if (val <= 0) return;
+
+    setIsDepositingBond(true);
+    onPostBond(vault.id, val);
+
+    setTimeout(() => {
+      setIsDepositingBond(false);
+      setBondSuccessNotice(
+        `Successfully posted $${val.toLocaleString()} USDC bond collateral! Total vault bond is now $${(
+          vault.bondAmount + val
+        ).toLocaleString()} USDC, unlocking $${(
+          (vault.bondAmount + val) *
+          vault.capacityMultiplier
+        ).toLocaleString()} USDC total managing capacity.`
+      );
+      setBondInput("");
+      setTimeout(() => setBondSuccessNotice(null), 6000);
+    }, 300);
+  };
 
   // 1. Vault Deployment Interface (When no vault exists)
   if (!vault) {
@@ -399,48 +433,69 @@ export function CuratorStudio({
             <span className="text-[11px] text-neutral-400 uppercase tracking-[0.08em] font-semibold block">
               Curator Studio
             </span>
-            <h1 className="text-2xl sm:text-[28px] font-bold text-neutral-950 tracking-[-0.03em] mt-0.5">
+            <h1 suppressHydrationWarning className="text-2xl sm:text-[28px] font-bold text-neutral-950 tracking-[-0.03em] mt-0.5">
               {vault.name}
             </h1>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50/80 border border-emerald-200/80 text-xs font-mono">
+        <div suppressHydrationWarning className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50/80 border border-emerald-200/80 text-xs font-mono">
           <span className="text-neutral-500 font-medium">Capacity Multiplier:</span>
-          <span className="font-bold text-emerald-800 px-2 py-0.5 rounded-full bg-white border border-emerald-200 shadow-2xs">
+          <span suppressHydrationWarning className="font-bold text-emerald-800 px-2 py-0.5 rounded-full bg-white border border-emerald-200 shadow-2xs">
             {vault.capacityMultiplier}× (Max ${vault.capacity.toLocaleString()})
           </span>
         </div>
       </div>
 
+      {/* Available Vaults Selector (if multiple vaults available) */}
+      {availableVaults.length > 1 && (
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none border-b border-neutral-100">
+          <span className="text-[11px] font-medium text-neutral-400 uppercase tracking-wider shrink-0">Managing:</span>
+          {availableVaults.map((v) => (
+            <button
+              key={v.id}
+              type="button"
+              onClick={() => setSelectedVaultId(v.id)}
+              className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all shrink-0 cursor-pointer ${
+                vault.id === v.id
+                  ? "bg-neutral-950 text-white shadow-2xs"
+                  : "bg-neutral-50 border border-neutral-200 text-neutral-600 hover:bg-neutral-100"
+              }`}
+            >
+              {v.name}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Primary Metrics Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5 text-xs font-mono">
         <div className="p-4 rounded-2xl bg-[#FAFAFA] border border-neutral-200/70">
           <span className="text-neutral-400 uppercase text-[11px] block font-medium">Curator Bond</span>
-          <span className="text-lg font-bold text-neutral-950 mt-1 block">
+          <span suppressHydrationWarning className="text-lg font-bold text-neutral-950 mt-1 block">
             ${vault.bondAmount.toLocaleString()} USDC
           </span>
-          <span className="text-[11px] text-neutral-500 mt-0.5 block font-normal">
+          <span suppressHydrationWarning className="text-[11px] text-neutral-500 mt-0.5 block font-normal">
             Owns {(vault.curatorOwnershipBps / 100).toFixed(0)}% of vault
           </span>
         </div>
 
         <div className="p-4 rounded-2xl bg-[#FAFAFA] border border-neutral-200/70">
           <span className="text-neutral-400 uppercase text-[11px] block font-medium">Total Managed</span>
-          <span className="text-lg font-bold text-neutral-950 mt-1 block">
+          <span suppressHydrationWarning className="text-lg font-bold text-neutral-950 mt-1 block">
             ${vault.totalFollowerValue.toLocaleString()}
           </span>
-          <span className="text-[11px] text-neutral-500 mt-0.5 block font-normal">
+          <span suppressHydrationWarning className="text-[11px] text-neutral-500 mt-0.5 block font-normal">
             Max Capacity: ${vault.capacity.toLocaleString()}
           </span>
         </div>
 
         <div className="p-4 rounded-2xl bg-[#FAFAFA] border border-neutral-200/70">
           <span className="text-neutral-400 uppercase text-[11px] block font-medium">Carried Deficit (D)</span>
-          <span className={`text-lg font-bold mt-1 block ${vault.carriedDeficit > 0 ? "text-red-700" : "text-neutral-950"}`}>
+          <span suppressHydrationWarning className={`text-lg font-bold mt-1 block ${vault.carriedDeficit > 0 ? "text-red-700" : "text-neutral-950"}`}>
             ${vault.carriedDeficit.toLocaleString()}
           </span>
-          <span className="text-[11px] text-neutral-500 mt-0.5 block font-normal">
+          <span suppressHydrationWarning className="text-[11px] text-neutral-500 mt-0.5 block font-normal">
             {vault.carriedDeficit > 0 ? "Must recover before fees" : "Deficit fully clean"}
           </span>
         </div>
@@ -448,6 +503,7 @@ export function CuratorStudio({
         <div className="p-4 rounded-2xl bg-[#FAFAFA] border border-neutral-200/70">
           <span className="text-neutral-400 uppercase text-[11px] block font-medium">Vault Status</span>
           <span
+            suppressHydrationWarning
             className={`text-[12px] font-bold uppercase mt-1 inline-flex items-center gap-1.5 ${
               vault.isParked ? "text-red-700" : "text-emerald-700"
             }`}
@@ -455,7 +511,7 @@ export function CuratorStudio({
             <span className={`w-2 h-2 rounded-full ${vault.isParked ? "bg-red-500" : "bg-emerald-500 animate-pulse"}`} />
             {vault.isParked ? "Parked (Curator Frozen)" : "Active & Healthy"}
           </span>
-          <span className="text-[11px] text-neutral-500 mt-0.5 block font-normal">
+          <span suppressHydrationWarning className="text-[11px] text-neutral-500 mt-0.5 block font-normal">
             {vault.timesShielded > 0 ? `Shielded ${vault.timesShielded}× by Base Guard` : `Epoch #${vault.epoch || 1} in progress`}
           </span>
         </div>
@@ -822,10 +878,32 @@ export function CuratorStudio({
       {/* Bond Collateral Expansion Panel */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-white border border-neutral-200/80 rounded-[32px] p-6 sm:p-8 space-y-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-          <h3 className="text-base font-bold text-neutral-950">Add Bond Collateral</h3>
+          <div className="flex items-center justify-between">
+            <h3 className="text-base font-bold text-neutral-950">Add Bond Collateral</h3>
+            <span suppressHydrationWarning className="text-xs font-mono font-semibold px-2.5 py-1 rounded-full bg-neutral-100 text-neutral-700">
+              Current: ${vault.bondAmount.toLocaleString()} USDC
+            </span>
+          </div>
           <p className="text-[13px] text-neutral-500 leading-relaxed">
             Deposit USDC bond to expand your managing capacity ({vault.capacityMultiplier}× capacity per USDC).
           </p>
+
+          {bondSuccessNotice && (
+            <div className="flex items-start gap-2.5 p-3 rounded-2xl bg-neutral-950 text-white text-[12px] shadow-sm animate-in fade-in duration-200">
+              <CheckCircleIcon className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="font-semibold text-white">Bond Deposited Successfully</p>
+                <p className="text-neutral-300 text-[11px] mt-0.5 leading-relaxed">{bondSuccessNotice}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setBondSuccessNotice(null)}
+                className="text-neutral-400 hover:text-white transition-colors cursor-pointer text-xs"
+              >
+                ×
+              </button>
+            </div>
+          )}
 
           <div className="space-y-1.5 font-mono text-xs">
             <label className="text-neutral-700 font-semibold block text-xs">Bond Amount (USDC)</label>
@@ -839,16 +917,37 @@ export function CuratorStudio({
               />
               <span className="text-neutral-400 font-bold ml-2">USDC</span>
             </div>
+
+            {/* Quick Amount Presets */}
+            <div className="flex items-center gap-1.5 pt-1.5">
+              <span className="text-[11px] text-neutral-400 font-sans">Quick presets:</span>
+              {[1000, 5000, 10000, 25000].map((preset) => (
+                <button
+                  key={preset}
+                  type="button"
+                  onClick={() => setBondInput(preset.toString())}
+                  className="px-2.5 py-1 rounded-lg bg-neutral-100 hover:bg-neutral-200 text-neutral-800 text-[11px] font-mono font-medium transition-colors cursor-pointer active:scale-95"
+                >
+                  +${preset >= 1000 ? `${preset / 1000}k` : preset}
+                </button>
+              ))}
+            </div>
           </div>
 
           <button
-            onClick={() => {
-              const val = parseFloat(bondInput);
-              if (val > 0) onPostBond(vault.id, val);
-            }}
-            className="w-full h-[44px] rounded-full bg-neutral-950 text-white font-semibold text-[13px] hover:bg-neutral-800 transition-all shadow-xs cursor-pointer active:scale-[0.98]"
+            type="button"
+            disabled={isDepositingBond}
+            onClick={handleDepositBond}
+            className="w-full h-[44px] rounded-full bg-neutral-950 text-white font-semibold text-[13px] hover:bg-neutral-800 transition-all shadow-xs cursor-pointer active:scale-[0.98] disabled:opacity-60 flex items-center justify-center gap-2"
           >
-            Deposit Bond Collateral
+            {isDepositingBond ? (
+              <>
+                <span className="w-3.5 h-3.5 rounded-full border-2 border-white/20 border-t-white animate-spin" />
+                <span>Depositing Bond Collateral...</span>
+              </>
+            ) : (
+              <span>Deposit Bond Collateral</span>
+            )}
           </button>
         </div>
 

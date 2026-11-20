@@ -15,12 +15,10 @@ export default function CuratorRebalancePage() {
     proposeMandate,
   } = useCadra();
 
-  const currentCuratorVault = vaults[0];
-
   return (
     <DashboardLayout portalMode="curator" pageTitle="Range Rebalancer">
       <CuratorStudio
-        vault={currentCuratorVault}
+        allVaults={vaults}
         activeSubPage="rebalance"
         connectedAddress={connectedAddress}
         onCreateVault={createVault}
