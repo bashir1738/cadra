@@ -8,8 +8,10 @@ export const CONTRACT_ADDRESSES = {
   poolManager: (process.env.NEXT_PUBLIC_POOL_MANAGER_ADDRESS || "0x29f2b190eacD76F0cBEC50bA669aab7F4600da4C") as `0x${string}`,
   token0: (process.env.NEXT_PUBLIC_TOKEN0 || "0x688Cfa2501c44CB6B3886f4C5662c55b73f36e8D") as `0x${string}`, // USDC (MockERC20)
   token1: (process.env.NEXT_PUBLIC_TOKEN1 || "0xB4AB6C3Ae39df89bA203F01ef08e39775Fe1F0c6") as `0x${string}`, // WETH (MockERC20)
-  callback: (process.env.NEXT_PUBLIC_CALLBACK_ADDRESS || "0x0000000000000000000000000000000000000000") as `0x${string}`,
+  callback: (process.env.NEXT_PUBLIC_CALLBACK_ADDRESS || "0xAcd2f109b03F5014f1F8A6587a075DfF76C7F941") as `0x${string}`,
+  reactive: (process.env.NEXT_PUBLIC_REACTIVE_ADDRESS || "0x061216db95D483fc0e7e0c43976A62B7E207ba35") as `0x${string}`,
   reactiveProxy: "0x9299472A6399Fd1027ebF067571Eb3e3D7837FC4" as `0x${string}`,
+  reactiveSystem: "0x8888888888888888888888888888888888888888" as `0x${string}`,
 } as const;
 
 export const UNISWAP_V4_POOL_KEY = {
@@ -33,6 +35,6 @@ export const REACTIVE_NETWORK_CONFIG = {
   chainId: REACTIVE_LASNA_CHAIN_ID,
   chainName: "Reactive Lasna",
   rpcUrl: "https://lasna-rpc.rnk.dev/",
-  explorerUrl: "https://lasnascan.rnk.dev/",
+  explorerUrl: "https://lasna.reactscan.net",
   nativeCurrency: { name: "Reactive", symbol: "REACT", decimals: 18 },
 } as const;

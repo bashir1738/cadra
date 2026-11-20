@@ -41,8 +41,8 @@ interface FollowerDashboardProps {
   vaults: VaultData[];
   userPositions: Record<number, UserPosition>;
   activeSubPage?: "portfolio" | "explore" | "queue" | "safety";
-  onDeposit: (vaultId: number, amount: number) => void;
-  onWithdraw: (vaultId: number, shares: number) => void;
+  onDeposit: (vaultId: number, amount: number) => void | Promise<any>;
+  onWithdraw: (vaultId: number, shares: number) => void | Promise<any>;
   onViewCurator: (vaultId: number) => void;
   onNavigateToExplore?: () => void;
   onNavigateToLeaderboard?: () => void;
@@ -65,6 +65,8 @@ export const FollowerDashboard = React.memo(function FollowerDashboard({
   const [selectedVaultId, setSelectedVaultId] = useState<number>(vaults[0]?.id || 1);
   const [amountInput, setAmountInput] = useState<string>("1000");
   const [safetyFilter, setSafetyFilter] = useState<"all" | "rule_guard" | "shock_guard" | "settlement">("all");
+  const [actionNotice, setActionNotice] = useState<string | null>(null);
+  const [isSubmittingAction, setIsSubmittingAction] = useState<boolean>(false);
 
   const userVaultIds = useMemo(() => Object.keys(userPositions).map(Number), [userPositions]);
   const totalValue = useMemo(
@@ -111,25 +113,56 @@ export const FollowerDashboard = React.memo(function FollowerDashboard({
     setActiveModal("withdraw");
   };
 
-  const handleConfirmAction = () => {
+  const handleConfirmAction = async () => {
     if (!connectedAddress) {
       if (openConnectModal) openConnectModal();
       return;
     }
     const val = parseFloat(amountInput);
     if (isNaN(val) || val <= 0) return;
-    if (activeModal === "deposit") {
-      onDeposit(selectedVaultId, val);
-    } else if (activeModal === "withdraw") {
-      onWithdraw(selectedVaultId, val);
+    setIsSubmittingAction(true);
+    setActionNotice(null);
+    try {
+      const targetVault = vaults.find((v) => v.id === selectedVaultId);
+      const vaultName = targetVault?.name || `Vault #${selectedVaultId}`;
+      if (activeModal === "deposit") {
+        await onDeposit(selectedVaultId, val);
+        setActionNotice(`Successfully deposited $${val.toLocaleString()} USDC on-chain into ${vaultName}.`);
+      } else if (activeModal === "withdraw") {
+        await onWithdraw(selectedVaultId, val);
+        setActionNotice(`Successfully queued withdrawal of ${val.toLocaleString()} shares on-chain from ${vaultName}.`);
+      }
+      setActiveModal(null);
+      setTimeout(() => setActionNotice(null), 8000);
+    } catch (err: any) {
+      console.error("Action error:", err);
+      setActionNotice(`Transaction failed: ${err?.shortMessage || err?.message || "Transaction error"}`);
+    } finally {
+      setIsSubmittingAction(false);
     }
-    setActiveModal(null);
   };
 
   const filteredSafetyFeed = reactiveSafetyFeed.filter((item) => {
     if (safetyFilter === "all") return true;
     return item.type === safetyFilter;
   });
+
+  const NotificationBanner = actionNotice ? (
+    <div className="flex items-start gap-2.5 p-3.5 rounded-2xl bg-neutral-950 text-white text-[13px] shadow-sm animate-in fade-in duration-200">
+      <CheckCircleIcon className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+      <div className="flex-1">
+        <p className="font-semibold text-white">Action Confirmed</p>
+        <p className="text-neutral-300 text-[12px] mt-0.5 leading-relaxed">{actionNotice}</p>
+      </div>
+      <button
+        type="button"
+        onClick={() => setActionNotice(null)}
+        className="text-neutral-400 hover:text-white transition-colors cursor-pointer text-sm font-bold"
+      >
+        ×
+      </button>
+    </div>
+  ) : null;
 
   // =========================================================================
   // 1. DISCOVER CURATORS (EXPLORE) SUB-PAGE
@@ -144,6 +177,7 @@ export const FollowerDashboard = React.memo(function FollowerDashboard({
 
     return (
       <div suppressHydrationWarning className="space-y-6 font-sans max-w-5xl mx-auto">
+        {NotificationBanner}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-neutral-950 tracking-tight">
@@ -282,6 +316,7 @@ export const FollowerDashboard = React.memo(function FollowerDashboard({
   if (activeSubPage === "queue") {
     return (
       <div suppressHydrationWarning className="space-y-6 font-sans max-w-5xl mx-auto">
+        {NotificationBanner}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-neutral-950 tracking-tight">
@@ -362,6 +397,7 @@ export const FollowerDashboard = React.memo(function FollowerDashboard({
   if (activeSubPage === "safety") {
     return (
       <div suppressHydrationWarning className="space-y-6 font-sans max-w-5xl mx-auto">
+        {NotificationBanner}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
           <div>
             <div className="flex items-center gap-2">
@@ -489,6 +525,7 @@ export const FollowerDashboard = React.memo(function FollowerDashboard({
   // =========================================================================
   return (
     <div className="space-y-8 font-sans max-w-5xl mx-auto">
+      {NotificationBanner}
       {/* Portfolio Benchmark Hero Card */}
       {userVaultIds.length === 0 ? (
         <section className="relative overflow-hidden rounded-[32px] bg-white border border-neutral-200/80 p-8 sm:p-12 text-center shadow-[0_1px_3px_rgba(0,0,0,0.04)] space-y-5">
@@ -742,6 +779,44 @@ export const FollowerDashboard = React.memo(function FollowerDashboard({
                   className="w-full text-lg font-mono bg-white border border-neutral-200/90 rounded-2xl px-4 py-3 text-neutral-950 focus:outline-none focus:border-neutral-950 focus:ring-1 focus:ring-neutral-950 shadow-2xs transition-all"
                   placeholder="1000"
                 />
+
+                {/* Quick Presets for Deposit */}
+                {activeModal === "deposit" && (
+                  <div className="flex items-center gap-1.5 pt-1">
+                    <span className="text-[11px] text-neutral-400 font-sans">Presets:</span>
+                    {[500, 1000, 5000, 10000].map((preset) => (
+                      <button
+                        key={preset}
+                        type="button"
+                        onClick={() => setAmountInput(preset.toString())}
+                        className="px-2.5 py-1 rounded-lg bg-neutral-100 hover:bg-neutral-200 text-neutral-800 text-[11px] font-mono font-medium transition-colors cursor-pointer active:scale-95"
+                      >
+                        +${preset >= 1000 ? `${preset / 1000}k` : preset}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                {/* Quick Presets for Withdraw */}
+                {activeModal === "withdraw" && (
+                  <div className="flex items-center gap-1.5 pt-1">
+                    <span className="text-[11px] text-neutral-400 font-sans">Quick:</span>
+                    {[0.25, 0.5, 0.75, 1].map((ratio) => {
+                      const maxShares = userPositions[selectedVaultId]?.shares || 0;
+                      const amount = Math.floor(maxShares * ratio);
+                      return (
+                        <button
+                          key={ratio}
+                          type="button"
+                          onClick={() => setAmountInput(amount.toString())}
+                          className="px-2.5 py-1 rounded-lg bg-neutral-100 hover:bg-neutral-200 text-neutral-800 text-[11px] font-mono font-medium transition-colors cursor-pointer active:scale-95"
+                        >
+                          {ratio === 1 ? "Max" : `${ratio * 100}%`}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
               <div className="p-4 rounded-2xl bg-[#FAFAFA] border border-neutral-200/70 text-xs text-neutral-600 space-y-2">
@@ -758,18 +833,28 @@ export const FollowerDashboard = React.memo(function FollowerDashboard({
 
             <div className="flex gap-3">
               <button
+                type="button"
                 onClick={() => setActiveModal(null)}
                 className="flex-1 h-[44px] rounded-full bg-white border border-neutral-200 hover:bg-neutral-50 text-neutral-800 font-semibold text-[13px] transition-all cursor-pointer active:scale-[0.98]"
               >
                 Cancel
               </button>
               <button
+                type="button"
+                disabled={isSubmittingAction}
                 onClick={handleConfirmAction}
-                className="flex-1 h-[44px] rounded-full bg-neutral-950 text-white font-semibold text-[13px] hover:bg-neutral-800 transition-all shadow-[0_1px_3px_rgba(0,0,0,0.06)] cursor-pointer active:scale-[0.98]"
+                className="flex-1 h-[44px] rounded-full bg-neutral-950 text-white font-semibold text-[13px] hover:bg-neutral-800 transition-all shadow-[0_1px_3px_rgba(0,0,0,0.06)] cursor-pointer active:scale-[0.98] disabled:opacity-60 flex items-center justify-center gap-2"
               >
-                {!connectedAddress
-                  ? "Connect Wallet"
-                  : `Confirm ${activeModal === "deposit" ? "Deposit" : "Withdrawal"}`}
+                {isSubmittingAction ? (
+                  <>
+                    <span className="w-3.5 h-3.5 rounded-full border-2 border-white/20 border-t-white animate-spin" />
+                    <span>Processing...</span>
+                  </>
+                ) : !connectedAddress ? (
+                  "Connect Wallet"
+                ) : (
+                  `Confirm ${activeModal === "deposit" ? "Deposit" : "Withdrawal"}`
+                )}
               </button>
             </div>
           </div>

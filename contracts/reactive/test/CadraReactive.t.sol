@@ -17,7 +17,7 @@ contract MockSystemContract is ISystemContract {
     function subscribe(
         uint256,
         address,
-        bytes32,
+        uint256,
         uint256,
         uint256,
         uint256
@@ -28,7 +28,7 @@ contract MockSystemContract is ISystemContract {
     function unsubscribe(
         uint256,
         address,
-        bytes32,
+        uint256,
         uint256,
         uint256,
         uint256
@@ -68,7 +68,7 @@ contract MockHook is ICadraHook {
 }
 
 contract CadraReactiveSubprojectTest is Test {
-    address constant SYSTEM_ADDR = 0x0000000000000000000000000000000000fffFfF;
+    address constant SYSTEM_ADDR = 0x8888888888888888888888888888888888888888;
 
     MockSystemContract mockSystem;
     MockCallbackProxy mockProxy;
@@ -93,7 +93,7 @@ contract CadraReactiveSubprojectTest is Test {
         LogRecord memory logRecord = LogRecord({
             chainId: 1301,
             _contract: address(mockHook),
-            topic0: uint256(reactiveContract.BAND_LEFT_TOPIC()),
+            topic0: reactiveContract.BAND_LEFT_TOPIC(),
             topic1: vaultId,
             topic2: 0,
             topic3: 0,
@@ -109,7 +109,7 @@ contract CadraReactiveSubprojectTest is Test {
         assertEq(chainId, 1301);
         assertEq(recipient, address(callbackContract));
         assertEq(gasLimit, 1_500_000);
-        assertEq(payload, abi.encodeWithSignature("enforce(uint256)", vaultId));
+        assertEq(payload, abi.encodeWithSignature("enforce(address,uint256)", address(0), vaultId));
     }
 
     function test_react_encodes_settle_payload_on_epoch_ready() public {
@@ -117,7 +117,7 @@ contract CadraReactiveSubprojectTest is Test {
         LogRecord memory logRecord = LogRecord({
             chainId: 1301,
             _contract: address(mockHook),
-            topic0: uint256(reactiveContract.EPOCH_READY_TOPIC()),
+            topic0: reactiveContract.EPOCH_READY_TOPIC(),
             topic1: vaultId,
             topic2: 0,
             topic3: 0,
@@ -133,7 +133,7 @@ contract CadraReactiveSubprojectTest is Test {
         assertEq(chainId, 1301);
         assertEq(recipient, address(callbackContract));
         assertEq(gasLimit, 1_500_000);
-        assertEq(payload, abi.encodeWithSignature("settle(uint256)", vaultId));
+        assertEq(payload, abi.encodeWithSignature("settle(address,uint256)", address(0), vaultId));
     }
 
     function test_react_reverts_if_not_system() public {
@@ -175,7 +175,7 @@ contract CadraReactiveSubprojectTest is Test {
         LogRecord memory bandLeftLog = LogRecord({
             chainId: 1301,
             _contract: address(mockHook),
-            topic0: uint256(reactiveContract.BAND_LEFT_TOPIC()),
+            topic0: reactiveContract.BAND_LEFT_TOPIC(),
             topic1: vaultId,
             topic2: 0,
             topic3: 0,
@@ -189,15 +189,16 @@ contract CadraReactiveSubprojectTest is Test {
         reactiveContract.react(bandLeftLog);
 
         // Step 3: Capture emitted callback request from Reactive SYSTEM contract
-        (uint256 destChainId, address callbackDest, uint64 gasBudget, ) = 
+        (uint256 destChainId, address callbackDest, uint64 gasBudget, bytes memory enforcePayload) = 
             MockSystemContract(SYSTEM_ADDR).lastCallback();
 
         assertEq(destChainId, 1301, "Target chain must be Unichain Sepolia");
         assertEq(callbackDest, address(callbackContract), "Target must be CadraCallback");
         assertEq(gasBudget, 1_500_000, "Gas budget must be 1.5M");
+        assertEq(enforcePayload, abi.encodeWithSignature("enforce(address,uint256)", address(0), vaultId));
 
         // Step 4: Callback Proxy executes the cross-chain transaction on Unichain Sepolia
-        // The proxy calls the callback contract with msg.sender = proxy, passing authorized sender as first param
+        // The proxy replaces address(0) placeholder with the actual RSC address
         vm.prank(address(mockProxy));
         callbackContract.enforce(address(reactiveContract), vaultId);
         assertEq(mockHook.lastEnforcedVault(), vaultId, "Hook must be enforced with correct vaultId");
@@ -206,7 +207,7 @@ contract CadraReactiveSubprojectTest is Test {
         LogRecord memory epochReadyLog = LogRecord({
             chainId: 1301,
             _contract: address(mockHook),
-            topic0: uint256(reactiveContract.EPOCH_READY_TOPIC()),
+            topic0: reactiveContract.EPOCH_READY_TOPIC(),
             topic1: vaultId,
             topic2: 0,
             topic3: 0,
@@ -217,6 +218,9 @@ contract CadraReactiveSubprojectTest is Test {
 
         vm.prank(SYSTEM_ADDR);
         reactiveContract.react(epochReadyLog);
+
+        (, , , bytes memory settlePayload) = MockSystemContract(SYSTEM_ADDR).lastCallback();
+        assertEq(settlePayload, abi.encodeWithSignature("settle(address,uint256)", address(0), vaultId));
 
         vm.prank(address(mockProxy));
         callbackContract.settle(address(reactiveContract), vaultId);

@@ -81,7 +81,29 @@ cd reactive && forge test
 
 ---
 
-## 4. Deployment
+## 4. Deployed Contracts (Unichain Sepolia & Reactive Lasna)
+
+| Contract | Network | Address | Explorer Link |
+| :--- | :--- | :--- | :--- |
+| **CadraHook (v2)** | Unichain Sepolia (1301) | `0x728D9b5f428B736A26D07879F55C3982Ddf890C0` | [Uniscan](https://sepolia.uniscan.xyz/address/0x728D9b5f428B736A26D07879F55C3982Ddf890C0) |
+| **Uniswap v4 PoolManager** | Unichain Sepolia (1301) | `0x29f2b190eacD76F0cBEC50bA669aab7F4600da4C` | [Uniscan](https://sepolia.uniscan.xyz/address/0x29f2b190eacD76F0cBEC50bA669aab7F4600da4C) |
+| **Mock USDC (token0 / bondToken)** | Unichain Sepolia (1301) | `0x688Cfa2501c44CB6B3886f4C5662c55b73f36e8D` | [Uniscan](https://sepolia.uniscan.xyz/address/0x688Cfa2501c44CB6B3886f4C5662c55b73f36e8D) |
+| **Mock WETH (token1)** | Unichain Sepolia (1301) | `0xB4AB6C3Ae39df89bA203F01ef08e39775Fe1F0c6` | [Uniscan](https://sepolia.uniscan.xyz/address/0xB4AB6C3Ae39df89bA203F01ef08e39775Fe1F0c6) |
+| **CadraCallback** | Unichain Sepolia (1301) | `0xAcd2f109b03F5014f1F8A6587a075DfF76C7F941` | [Uniscan](https://sepolia.uniscan.xyz/address/0xAcd2f109b03F5014f1F8A6587a075DfF76C7F941) |
+| **Reactive Callback Proxy** | Unichain Sepolia (1301) | `0x9299472A6399Fd1027ebF067571Eb3e3D7837FC4` | [Uniscan](https://sepolia.uniscan.xyz/address/0x9299472A6399Fd1027ebF067571Eb3e3D7837FC4) |
+| **CadraReactive (Omni RSC)** | Reactive Lasna Omni (5318007) | `0x061216db95D483fc0e7e0c43976A62B7E207ba35` | [Reactscan](https://lasna.reactscan.net/address/0x061216db95D483fc0e7e0c43976A62B7E207ba35) |
+
+### On-Chain Transactions:
+- **CadraReactive Deployed on Lasna Omni**: [`0x1dfd4e736099a8f03e2df931f1117f196f2277befbb8c5a504b6f896eda57a62`](https://lasna.reactscan.net/tx/0x1dfd4e736099a8f03e2df931f1117f196f2277befbb8c5a504b6f896eda57a62)
+- **CadraCallback Deployed on Unichain Sepolia**: [`0xa90b00eb928da0c1312e7483823a38dc533ccf6253543a6cc1724e051ff85beb`](https://sepolia.uniscan.xyz/tx/0xa90b00eb928da0c1312e7483823a38dc533ccf6253543a6cc1724e051ff85beb)
+- **Callback Recipient Linked on Lasna**: [`0x965837cecf912af870bb2377f52f67127acf4e16bf64462cdff064e20f6ed05e`](https://lasna.reactscan.net/tx/0x965837cecf912af870bb2377f52f67127acf4e16bf64462cdff064e20f6ed05e)
+- **Omni System Contract Reserve Deposit (0.5 lREACT)**: [`0x807fbb22a6fe24da903482607fd2bb62fc6b4684da223467d6be539a2dce9fe1`](https://lasna.reactscan.net/tx/0x807fbb22a6fe24da903482607fd2bb62fc6b4684da223467d6be539a2dce9fe1)
+- **Vault #1 Created**: [`0xc3d2eb5619198640bfd17ae25bb924d34f8ada1faba475336f7fcbb4c661f0fa`](https://sepolia.uniscan.xyz/tx/0xc3d2eb5619198640bfd17ae25bb924d34f8ada1faba475336f7fcbb4c661f0fa)
+- **Collateral Bond Posted ($5,000 USDC)**: [`0xe6ae92fadf1738ef29416284bb351a91f2e96fd84d690dc9ac11d606f08ffeb7`](https://sepolia.uniscan.xyz/tx/0xe6ae92fadf1738ef29416284bb351a91f2e96fd84d690dc9ac11d606f08ffeb7)
+
+---
+
+## 5. Deployment Guide
 
 ### Automated Multi-Chain Broadcast
 To deploy across both Unichain Sepolia (1301) and Reactive Lasna (5318007) in a single run:

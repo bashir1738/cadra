@@ -14,14 +14,12 @@ export default function Home() {
 
   // Redirect to dashboard once wallet is connected
   useEffect(() => {
-    if (!ready) return;
-
-    if (authenticated && (isConnected || connectedAddress)) {
+    if (isConnected || connectedAddress || authenticated) {
       const targetDashboard =
         activeRole === "curator" ? "/curator/overview" : "/follower/portfolio";
       router.push(targetDashboard);
     }
-  }, [ready, authenticated, isConnected, connectedAddress, activeRole, router]);
+  }, [isConnected, connectedAddress, authenticated, activeRole, router]);
 
   const handleNavigate = (tab: string) => {
     switch (tab) {

@@ -8,8 +8,8 @@ import {ISystemContract} from "@reactive/src/interfaces/ISystemContract.sol";
 contract CadraReactive is AbstractReactive {
     uint256 public constant UNICHAIN_SEPOLIA = 1301;
 
-    bytes32 public constant BAND_LEFT_TOPIC   = keccak256("BandLeft(uint256,int24)");
-    bytes32 public constant EPOCH_READY_TOPIC = keccak256("EpochReady(uint256,uint256)");
+    uint256 public constant BAND_LEFT_TOPIC   = uint256(keccak256("BandLeft(uint256,int24)"));
+    uint256 public constant EPOCH_READY_TOPIC = uint256(keccak256("EpochReady(uint256,uint256)"));
 
     uint64 public constant CALLBACK_GAS = 1_500_000;
 
@@ -20,6 +20,15 @@ contract CadraReactive is AbstractReactive {
 
     constructor(address hook_) payable {
         owner = msg.sender;
+        if (hook_ != address(0)) {
+            SYSTEM.subscribe(UNICHAIN_SEPOLIA, hook_, BAND_LEFT_TOPIC,
+                REACTIVE_IGNORE, REACTIVE_IGNORE, REACTIVE_IGNORE);
+            SYSTEM.subscribe(UNICHAIN_SEPOLIA, hook_, EPOCH_READY_TOPIC,
+                REACTIVE_IGNORE, REACTIVE_IGNORE, REACTIVE_IGNORE);
+        }
+    }
+
+    function subscribeHook(address hook_) external onlyOwner {
         SYSTEM.subscribe(UNICHAIN_SEPOLIA, hook_, BAND_LEFT_TOPIC,
             REACTIVE_IGNORE, REACTIVE_IGNORE, REACTIVE_IGNORE);
         SYSTEM.subscribe(UNICHAIN_SEPOLIA, hook_, EPOCH_READY_TOPIC,
@@ -33,12 +42,14 @@ contract CadraReactive is AbstractReactive {
     function react(LogRecord calldata log_) external onlySystem {
         require(callbackRecipient != address(0), "NoRecipient");
 
-        uint256 vaultId = uint256(log_.topic1);
+        uint256 vaultId = log_.topic1;
 
-        bytes memory payload = log_.topic0 == uint256(BAND_LEFT_TOPIC)
-            ? abi.encodeWithSignature("enforce(uint256)", vaultId)
-            : abi.encodeWithSignature("settle(uint256)", vaultId);
+        // address(0) is placeholder replaced by Reactive Network with RSC identity on destination
+        bytes memory payload = log_.topic0 == BAND_LEFT_TOPIC
+            ? abi.encodeWithSignature("enforce(address,uint256)", address(0), vaultId)
+            : abi.encodeWithSignature("settle(address,uint256)", address(0), vaultId);
 
+        // Native Reactive Omni callback request
         SYSTEM.requestCallbackV_1_0(
             ISystemContract.CallbackConfiguration_V_1_0({
                 chainId:   UNICHAIN_SEPOLIA,
@@ -49,3 +60,5 @@ contract CadraReactive is AbstractReactive {
         );
     }
 }
+
+

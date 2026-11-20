@@ -89,7 +89,31 @@ pnpm run bots:sharp
 
 ---
 
-## 5. Getting Started
+## 5. Live On-Chain Integration (Unichain Sepolia)
+
+The web application interacts directly with deployed contracts on **Unichain Sepolia (Chain ID: 1301)**:
+
+- **Wired via Privy & Wagmi**: Supports MetaMask, Coinbase Wallet, Rainbow, and Privy embedded wallets.
+- **Hook Contract**: `0x728D9b5f428B736A26D07879F55C3982Ddf890C0`
+- **Uniswap v4 PoolManager**: `0x29f2b190eacD76F0cBEC50bA669aab7F4600da4C`
+- **Mock USDC (Token0 / BondToken)**: `0x688Cfa2501c44CB6B3886f4C5662c55b73f36e8D`
+- **Mock WETH (Token1)**: `0xB4AB6C3Ae39df89bA203F01ef08e39775Fe1F0c6`
+- **CadraCallback**: `0xAcd2f109b03F5014f1F8A6587a075DfF76C7F941` (Unichain Sepolia)
+- **CadraReactive (Omni RSC)**: `0x061216db95D483fc0e7e0c43976A62B7E207ba35` (Reactive Lasna Omni 5318007)
+- **Reactive Callback Proxy**: `0x9299472A6399Fd1027ebF067571Eb3e3D7837FC4` (Unichain Sepolia)
+
+### Key On-Chain Features:
+- **No Dummy Data**: All vaults, positions, Pace values, and follower shares are read directly from `CadraHook` via RPC.
+- **On-Chain Vault Creation**: Deploy new curator vaults on-chain with validated mandates (`minTick`, `maxTick`, concentration limits, and shortfall limits).
+- **Collateral Bond Posting**: Post USDC skin-in-the-game collateral directly to `CadraHook.postBond()`.
+- **Follower Deposits & Withdrawals**: Full pro-rata liquidity accounting with automatic token approvals and anti-sandwich share locking.
+- **Range Rebalancer**: Atomic rebalancing with tick-spacing alignment (`tickSpacing = 60`).
+- **Landing Page Direct Routing**: Connecting any wallet on the landing page immediately redirects to the active dashboard.
+- **1-Click Testnet Faucet**: A built-in header button allowing connected wallets to mint 10,000 mock USDC on Unichain Sepolia with 1 click.
+
+---
+
+## 6. Getting Started
 
 ### Installation
 ```bash

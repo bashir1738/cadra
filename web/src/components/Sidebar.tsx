@@ -16,6 +16,7 @@ import {
 } from "./Icons";
 import { CadraPrivyButton } from "./CadraPrivyButton";
 import { useCadra } from "../context/CadraContext";
+import { CONTRACT_ADDRESSES } from "../config/contracts";
 
 export interface SidebarProps {
   portalMode: "follower" | "curator";
@@ -300,12 +301,12 @@ export const Sidebar = React.memo(function Sidebar({
               Unichain Sepolia
             </span>
             <a
-              href="https://sepolia.uniscan.xyz/address/0x8a316B53c5cE57B34Fb1f071Ebe4A6C953c990c0"
+              href={`https://sepolia.uniscan.xyz/address/${CONTRACT_ADDRESSES.hook}`}
               target="_blank"
               rel="noopener noreferrer"
               className="text-neutral-500 hover:text-neutral-950 underline text-[10px]"
             >
-              Hook 0x8a31...90c0
+              Hook {CONTRACT_ADDRESSES.hook.slice(0, 6)}...{CONTRACT_ADDRESSES.hook.slice(-4)}
             </a>
           </div>
         </div>

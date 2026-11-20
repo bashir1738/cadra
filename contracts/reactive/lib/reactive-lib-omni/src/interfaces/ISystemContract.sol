@@ -12,7 +12,7 @@ interface ISystemContract {
     function subscribe(
         uint256 chainId,
         address _contract,
-        bytes32 topic0,
+        uint256 topic0,
         uint256 topic1,
         uint256 topic2,
         uint256 topic3
@@ -21,7 +21,7 @@ interface ISystemContract {
     function unsubscribe(
         uint256 chainId,
         address _contract,
-        bytes32 topic0,
+        uint256 topic0,
         uint256 topic1,
         uint256 topic2,
         uint256 topic3
@@ -29,3 +29,5 @@ interface ISystemContract {
 
     function requestCallbackV_1_0(CallbackConfiguration_V_1_0 calldata config) external;
 }
+
+

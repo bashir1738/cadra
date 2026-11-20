@@ -32,8 +32,8 @@ contract DeployReactiveScript is Script {
 
         address proxy = callbackProxy == address(0) ? DEFAULT_CALLBACK_PROXY : callbackProxy;
 
-        // Step 2: Deploy CadraCallback on Unichain Sepolia
-        callback = new CadraCallback{value: 0.05 ether}(
+        // Step 2: Deploy CadraCallback on Unichain Sepolia with 0.003 ETH gas reserve
+        callback = new CadraCallback{value: 0.003 ether}(
             IPayable(proxy),
             reactiveAddr,
             hookAddress

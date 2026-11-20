@@ -53,15 +53,6 @@ export function PrivyProviders({ children }: { children: React.ReactNode }) {
           ],
         },
         loginMethods: ["wallet"],
-        loginMethodsAndOrder: {
-          primary: [
-            "detected_ethereum_wallets",
-            "metamask",
-            "coinbase_wallet",
-            "rainbow",
-          ],
-          overflow: ["wallet_connect"],
-        },
         defaultChain: unichainSepolia,
         supportedChains: [unichainSepolia, sepolia, mainnet, base, arbitrum],
         embeddedWallets: {

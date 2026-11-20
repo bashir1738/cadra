@@ -10,10 +10,10 @@ interface CuratorStudioProps {
   allVaults?: VaultData[];
   activeSubPage?: "overview" | "rebalance" | "mandate" | "settlements";
   connectedAddress?: string | null;
-  onCreateVault?: (newVault: VaultData) => void;
-  onUpdateRanges: (vaultId: number, newRanges: RangePosition[]) => void;
-  onPostBond: (vaultId: number, amount: number) => void;
-  onProposeMandate: (vaultId: number, mandate: VaultData["mandate"]) => void;
+  onCreateVault?: (newVault: VaultData) => void | Promise<any>;
+  onUpdateRanges: (vaultId: number, newRanges: RangePosition[]) => void | Promise<any>;
+  onPostBond: (vaultId: number, amount: number) => void | Promise<any>;
+  onProposeMandate: (vaultId: number, mandate: VaultData["mandate"]) => void | Promise<any>;
 }
 
 export function CuratorStudio({
@@ -48,6 +48,8 @@ export function CuratorStudio({
   const [bondInput, setBondInput] = useState<string>("5000");
   const [bondSuccessNotice, setBondSuccessNotice] = useState<string | null>(null);
   const [isDepositingBond, setIsDepositingBond] = useState<boolean>(false);
+  const [rebalanceSuccessNotice, setRebalanceSuccessNotice] = useState<string | null>(null);
+  const [isRebalancing, setIsRebalancing] = useState<boolean>(false);
 
   // Propose mandate state
   const [newMinPrice, setNewMinPrice] = useState<number>(vault?.mandate.minPrice || 2400);
@@ -57,7 +59,7 @@ export function CuratorStudio({
   );
   const [mandateSuccessNotice, setMandateSuccessNotice] = useState<boolean>(false);
 
-  const handleDepositBond = () => {
+  const handleDepositBond = async () => {
     if (!connectedAddress) {
       if (openConnectModal) openConnectModal();
       return;
@@ -66,26 +68,31 @@ export function CuratorStudio({
     if (val <= 0) return;
 
     setIsDepositingBond(true);
-    onPostBond(vault.id, val);
-
-    setTimeout(() => {
-      setIsDepositingBond(false);
+    setBondSuccessNotice(null);
+    try {
+      await onPostBond(vault.id, val);
       setBondSuccessNotice(
-        `Successfully posted $${val.toLocaleString()} USDC bond collateral! Total vault bond is now $${(
+        `Successfully posted $${val.toLocaleString()} USDC collateral on-chain! Total vault bond is now $${(
           vault.bondAmount + val
         ).toLocaleString()} USDC, unlocking $${(
-          (vault.bondAmount + val) *
-          vault.capacityMultiplier
+          (vault.bondAmount + val) * vault.capacityMultiplier
         ).toLocaleString()} USDC total managing capacity.`
       );
       setBondInput("");
-      setTimeout(() => setBondSuccessNotice(null), 6000);
-    }, 300);
+      setTimeout(() => setBondSuccessNotice(null), 8000);
+    } catch (err: any) {
+      console.error("Bond deposit error:", err);
+      setBondSuccessNotice(
+        `Failed to post bond on-chain: ${err?.shortMessage || err?.message || "Transaction rejected"}`
+      );
+    } finally {
+      setIsDepositingBond(false);
+    }
   };
 
   // 1. Vault Deployment Interface (When no vault exists)
   if (!vault) {
-    const handleDeploy = () => {
+    const handleDeploy = async () => {
       if (!connectedAddress) {
         if (openConnectModal) openConnectModal();
         return;
@@ -96,7 +103,7 @@ export function CuratorStudio({
       const bondAmt = parseFloat(createBond) || 5000;
       const concBps = (parseFloat(createMaxConc) || 50) * 100;
       const shortfallBps = (parseFloat(createShortfall) || 5) * 100;
-      const minWidth = parseInt(createMinTicks, 10) || 200;
+      const minWidth = parseInt(createMinTicks, 10) || 120;
 
       const newVault: VaultData = {
         id: Date.now(),
@@ -136,7 +143,14 @@ export function CuratorStudio({
       };
 
       if (onCreateVault) {
-        onCreateVault(newVault);
+        try {
+          const createdId = await onCreateVault(newVault);
+          if (createdId) {
+            setSelectedVaultId(createdId);
+          }
+        } catch (err: any) {
+          console.error("Vault deployment failed:", err);
+        }
       }
     };
 
@@ -398,20 +412,39 @@ export function CuratorStudio({
     setRanges(updated);
   };
 
-  const handleApplyRebalance = () => {
+  const handleApplyRebalance = async () => {
     if (!isValidRebalance) return;
-    onUpdateRanges(vault.id, ranges);
+    setIsRebalancing(true);
+    setRebalanceSuccessNotice(null);
+    try {
+      await onUpdateRanges(vault.id, ranges);
+      setRebalanceSuccessNotice(
+        `Rebalance applied successfully on-chain! Active ranges updated across Uniswap v4 pool.`
+      );
+      setTimeout(() => setRebalanceSuccessNotice(null), 6000);
+    } catch (err: any) {
+      console.error("Rebalance error:", err);
+      setRebalanceSuccessNotice(
+        `Rebalance failed on-chain: ${err?.shortMessage || err?.message || "Transaction error"}`
+      );
+    } finally {
+      setIsRebalancing(false);
+    }
   };
 
-  const handleProposeMandate = () => {
-    onProposeMandate(vault.id, {
-      ...vault.mandate,
-      minPrice: newMinPrice,
-      maxPrice: newMaxPrice,
-      maxConcentrationBps: newMaxConcentration * 100,
-    });
-    setMandateSuccessNotice(true);
-    setTimeout(() => setMandateSuccessNotice(false), 4000);
+  const handleProposeMandate = async () => {
+    try {
+      await onProposeMandate(vault.id, {
+        ...vault.mandate,
+        minPrice: newMinPrice,
+        maxPrice: newMaxPrice,
+        maxConcentrationBps: newMaxConcentration * 100,
+      });
+      setMandateSuccessNotice(true);
+      setTimeout(() => setMandateSuccessNotice(false), 5000);
+    } catch (err: any) {
+      console.error("Propose mandate error:", err);
+    }
   };
 
   // Shortfall calculations for the Parking Limit Gauge
@@ -707,6 +740,23 @@ export function CuratorStudio({
             )}
           </div>
 
+          {rebalanceSuccessNotice && (
+            <div className="flex items-start gap-2.5 p-3.5 rounded-2xl bg-neutral-950 text-white text-[13px] shadow-sm animate-in fade-in duration-200">
+              <CheckCircleIcon className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="font-semibold text-white">Rebalance Confirmed</p>
+                <p className="text-neutral-300 text-[12px] mt-0.5 leading-relaxed">{rebalanceSuccessNotice}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setRebalanceSuccessNotice(null)}
+                className="text-neutral-400 hover:text-white transition-colors cursor-pointer text-sm font-bold"
+              >
+                ×
+              </button>
+            </div>
+          )}
+
           <button
             onClick={() => {
               if (!connectedAddress) {
@@ -715,8 +765,8 @@ export function CuratorStudio({
               }
               handleApplyRebalance();
             }}
-            disabled={connectedAddress ? !isValidRebalance : false}
-            className={`w-full h-[46px] rounded-full font-semibold text-[13px] transition-all shadow-[0_1px_3px_rgba(0,0,0,0.06)] ${
+            disabled={connectedAddress ? !isValidRebalance || isRebalancing : false}
+            className={`w-full h-[46px] rounded-full font-semibold text-[13px] transition-all shadow-[0_1px_3px_rgba(0,0,0,0.06)] flex items-center justify-center gap-2 ${
               !connectedAddress
                 ? "bg-neutral-950 text-white hover:bg-neutral-800 cursor-pointer active:scale-[0.98]"
                 : isValidRebalance
@@ -724,7 +774,16 @@ export function CuratorStudio({
                 : "bg-neutral-100 border border-neutral-200 text-neutral-400 cursor-not-allowed"
             }`}
           >
-            {!connectedAddress ? "Connect Wallet to Rebalance" : "Apply Rebalance On-Chain"}
+            {isRebalancing ? (
+              <>
+                <span className="w-3.5 h-3.5 rounded-full border-2 border-white/20 border-t-white animate-spin" />
+                <span>Applying Rebalance On-Chain...</span>
+              </>
+            ) : !connectedAddress ? (
+              "Connect Wallet to Rebalance"
+            ) : (
+              "Apply Rebalance On-Chain"
+            )}
           </button>
         </div>
       </div>
