@@ -30,6 +30,25 @@ export function CadraPrivyButton({
 
   const isConnected = mounted && ready && authenticated && Boolean(address);
 
+  // Detect whether wallet is on correct testnet (Unichain Sepolia: 1301)
+  const walletChainId = (activeWallet as any)?.chainId;
+  const isWrongNetwork =
+    isConnected &&
+    Boolean(walletChainId) &&
+    walletChainId !== "eip155:1301" &&
+    walletChainId !== 1301 &&
+    walletChainId !== "1301";
+
+  const handleSwitchNetwork = async () => {
+    if (activeWallet && "switchChain" in activeWallet && typeof (activeWallet as any).switchChain === "function") {
+      try {
+        await (activeWallet as any).switchChain(1301);
+      } catch (e) {
+        console.warn("Switch chain failed or cancelled:", e);
+      }
+    }
+  };
+
   // ========================================================
   // 1. SIDEBAR VARIANT
   // ========================================================
@@ -77,9 +96,22 @@ export function CadraPrivyButton({
             <span className="text-[12px] font-mono font-bold text-neutral-950 block truncate">
               {shortAddress}
             </span>
-            <span className="text-[10px] text-neutral-500 font-mono block">
-              Unichain Sepolia
-            </span>
+            {isWrongNetwork ? (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleSwitchNetwork();
+                }}
+                className="text-[10px] text-amber-600 font-mono font-semibold block hover:underline cursor-pointer"
+              >
+                Switch to Unichain Sepolia
+              </button>
+            ) : (
+              <span className="text-[10px] text-neutral-500 font-mono block">
+                Unichain Sepolia (1301)
+              </span>
+            )}
           </div>
         </div>
         <button
@@ -191,10 +223,22 @@ export function CadraPrivyButton({
 
   return (
     <div suppressHydrationWarning className="flex items-center gap-2">
-      <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-neutral-100 border border-neutral-200 text-xs font-mono font-semibold text-neutral-800">
-        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-        <span>Unichain Sepolia</span>
-      </div>
+      {isWrongNetwork ? (
+        <button
+          type="button"
+          onClick={handleSwitchNetwork}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-50 border border-amber-300 text-xs font-mono font-semibold text-amber-900 hover:bg-amber-100 transition-colors cursor-pointer"
+          title="Click to switch to Unichain Sepolia"
+        >
+          <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping" />
+          <span>Switch to Unichain Sepolia</span>
+        </button>
+      ) : (
+        <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-neutral-100 border border-neutral-200 text-xs font-mono font-semibold text-neutral-800">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          <span>Unichain Sepolia</span>
+        </div>
+      )}
       <button
         type="button"
         onClick={logout}

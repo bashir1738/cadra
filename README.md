@@ -55,12 +55,20 @@ Cadra contracts are deployed and verified live across **Unichain Sepolia (1301)*
 3. **Contract Funding & Reserves**:
    - **`CadraReactive` (Lasna)**:
      - Contract balance: **`0.1 lREACT`** (funded at deployment).
-     - System Contract gas reserve: **`0.5 lREACT`** deposited via `SYSTEM.depositTo(rscAddress)` (Tx: [`0x807fbb22a6fe24da903482607fd2bb62fc6b4684da223467d6be539a2dce9fe1`](https://lasna.reactscan.net/tx/0x807fbb22a6fe24da903482607fd2bb62fc6b4684da223467d6be539a2dce9fe1)).
+     - System Contract gas reserve: **`1.3 lREACT`** deposited via `SYSTEM.depositTo(rscAddress)`:
+       - Initial deposit (0.5 lREACT): [`0x807fbb22a6fe24da903482607fd2bb62fc6b4684da223467d6be539a2dce9fe1`](https://lasna.reactscan.net/tx/0x807fbb22a6fe24da903482607fd2bb62fc6b4684da223467d6be539a2dce9fe1)
+       - Top-up deposit (0.8 lREACT): [`0xd2e519fac1102c5e967a46033e54af5ef2f89fa99f4870e2d5b6162c03b689e1`](https://lasna.reactscan.net/tx/0xd2e519fac1102c5e967a46033e54af5ef2f89fa99f4870e2d5b6162c03b689e1)
    - **`CadraCallback` (Unichain Sepolia)**:
      - Funded with **`0.003 ETH`** gas reserve in contract balance to cover any execution debt on the callback proxy via `_coverDebt()`.
 
 ### Live Reactive Cross-Chain Safety Transactions
 
+- **Live Uniswap v4 Swap Emitting `BandLeft` (Unichain Sepolia)**:
+  - **Pool Liquidity Seeding Tx**: [`0x1f752a2dcfae5c09d4b4316b6b28e7a296b51a938132a7554f3429943c646a40`](https://sepolia.uniscan.xyz/tx/0x1f752a2dcfae5c09d4b4316b6b28e7a296b51a938132a7554f3429943c646a40)
+  - **Live Swap Execution Tx**: [`0xbd90334f32e57cec739b548f9f7e5d3cb29acaaac1cb6f23373d26c3ffd24825`](https://sepolia.uniscan.xyz/tx/0xbd90334f32e57cec739b548f9f7e5d3cb29acaaac1cb6f23373d26c3ffd24825)
+  - **Block**: `68360030`
+  - **Emitted Event**: `BandLeft(vaultId: 1, tick: -198080)` (Topic0: `0x6c356a6957ccf065fc59d3c74724e228c51994b9e42ae4c08e230a1918e8ddd0`)
+  - **Result**: Hook immediately updated `Vault 1` (`bandLeft = true`), cleared active band mask, and notified Reactive Network via subscription.
 - **Omni `CadraReactive` Deployment on Lasna (5318007)**:
   - **Transaction Hash**: [`0x1dfd4e736099a8f03e2df931f1117f196f2277befbb8c5a504b6f896eda57a62`](https://lasna.reactscan.net/tx/0x1dfd4e736099a8f03e2df931f1117f196f2277befbb8c5a504b6f896eda57a62)
   - **Contract Address**: `0x061216db95D483fc0e7e0c43976A62B7E207ba35`
@@ -104,6 +112,14 @@ Followers pay fees for market luck, and when a curator makes bad concentrated be
 4. **Autonomous Cross-Chain Safety Loop**: Powered by Reactive Network, when pool spot price breaches a mandate band, `BandLeft` triggers cross-chain execution from Reactive Lasna to Unichain Sepolia via `CadraCallback`, automatically parking the vault into the full-range Pace without human keepers.
 5. **Anti-Sandwich Share Locking**: Follower shares are locked at deposit time based on TWAP sqrt price (`depositWithSlippage`), preventing front-running and settle-time sandwich attacks.
 6. **Skin in the Game & Dynamic Capacity**: Curators post a USDC bond. If an epoch ends behind the Pace, the bond reimburses followers for the shortfall. A curator's capacity multiplier ($m \times \text{Bond}$) rises when they beat the Pace and drops when they fall behind.
+
+### Why Reactive Network is Essential (Autonomous Execution vs. Keepers)
+
+A natural question arises: *If `CadraHook.enforce()` is permissionless and callable by anyone, why is Reactive Network required?*
+
+1. **Zero Off-Chain Keeper Dependencies**: Traditional keeper networks (e.g., Gelato, Chainlink Automation, custom bots) require continuous off-chain infrastructure, RPC subscriptions, relayer key management, balance monitoring, and economic profit incentives (paying keepers extra bounty fees). If keeper servers stall, gas spikes, or bounty margins disappear, vaults remain unprotected.
+2. **Sub-Second Deterministic Latency**: Reactive Network operates with CometBFT consensus on Reactive Lasna (~0.7s–1.0s block times) with direct validator event ingestion. As soon as a toxic swap pushes price outside the curator's mandate band, Reactive processes `react()` and dispatches the callback proxy on Unichain Sepolia within ~1 second—preventing toxic orderflow from exploiting unhedged liquidity.
+3. **Guaranteed Execution without MEV Extortion**: Keepers only execute when profitable. In market crashes, keeper gas auctions can delay critical parking transactions by blocks or minutes. Reactive Network guarantees autonomous callback delivery directly through the protocol's system contract and authorized callback proxy (`0x9299472A6399Fd1027ebF067571Eb3e3D7837FC4`).
 
 ---
 

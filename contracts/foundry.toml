@@ -16,3 +16,7 @@ invariant = { runs = 16, depth = 32 }
 [profile.ci]
 fuzz = { runs = 256 }
 invariant = { runs = 64, depth = 64 }
+
+[rpc_endpoints]
+unichain_sepolia = "https://sepolia.unichain.org"
+reactive_lasna = "https://lasna-rpc.rnk.dev/"

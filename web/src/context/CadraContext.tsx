@@ -209,6 +209,14 @@ export function CadraProvider({ children }: { children: React.ReactNode }) {
     }
     if (wallets && wallets.length > 0) {
       const activeWallet = wallets[0];
+      const currentChain = (activeWallet as any)?.chainId;
+      if (currentChain && currentChain !== "eip155:1301" && currentChain !== 1301 && typeof (activeWallet as any).switchChain === "function") {
+        try {
+          await (activeWallet as any).switchChain(1301);
+        } catch (err) {
+          console.warn("Auto switch chain to Unichain Sepolia (1301) failed or rejected:", err);
+        }
+      }
       const provider = await activeWallet.getEthereumProvider();
       return createWalletClient({
         chain: unichainSepolia,

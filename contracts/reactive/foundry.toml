@@ -9,3 +9,7 @@ remappings = [
     "@reactive/=lib/reactive-lib-omni/",
     "forge-std/=../lib/forge-std/src/"
 ]
+
+[rpc_endpoints]
+unichain_sepolia = "https://sepolia.unichain.org"
+reactive_lasna = "https://lasna-rpc.rnk.dev/"

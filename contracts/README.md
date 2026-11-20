@@ -51,7 +51,7 @@ contracts/
 - **Runtime Size**: **23,476 B** (**+1,100 Bytes** of headroom under the EIP-170 hard limit of 24,576 B).
 - **Anti-Sandwich Deposits**: Follower shares are calculated and locked at deposit time via `depositWithSlippage()`, referencing TWAP price and `minSharesOut`.
 - **Pro-Rata Dual-Token Redemptions**: Queued withdrawals unwind proportional liquidity and pay out both `token0` and `token1` from idle balances.
-- **Autonomous Enforcement**: When pool price breaches a mandate band, `BandLeft` is emitted. Keepers or the Reactive Network callback invoke `enforce(vaultId)`, which returns `false` cleanly if already ahead, and otherwise freezes the curator and deploys 100% of funds into full-range benchmark LP.
+- **Autonomous Enforcement**: When pool price breaches a mandate band, `BandLeft` is emitted. While `enforce(vaultId)` is permissionless, Reactive Network eliminates reliance on off-chain keeper infrastructure or profit incentives, autonomously guaranteeing execution via `CadraCallback` in ~1 second. It checks if the vault is behind the Pace (`vaultVal < paceVal` and `shortfallBps >= maxShortfallBps`), freezing the curator (`isFrozen = true`, `timesParked++`) and parking 100% of funds into full-range benchmark LP. If already ahead or within tolerance, it returns `false` cleanly without reverting.
 - **Liveness-Guaranteed Settlement**: `settle(vaultId)` concludes the epoch. If spot price is temporarily volatile, it reverts to prevent manipulation. If deviation persists beyond `SETTLEMENT_GRACE_PERIOD` (1 hour), it falls back to TWAP valuation, guaranteeing liveness.
 
 ---
@@ -97,7 +97,10 @@ cd reactive && forge test
 - **CadraReactive Deployed on Lasna Omni**: [`0x1dfd4e736099a8f03e2df931f1117f196f2277befbb8c5a504b6f896eda57a62`](https://lasna.reactscan.net/tx/0x1dfd4e736099a8f03e2df931f1117f196f2277befbb8c5a504b6f896eda57a62)
 - **CadraCallback Deployed on Unichain Sepolia**: [`0xa90b00eb928da0c1312e7483823a38dc533ccf6253543a6cc1724e051ff85beb`](https://sepolia.uniscan.xyz/tx/0xa90b00eb928da0c1312e7483823a38dc533ccf6253543a6cc1724e051ff85beb)
 - **Callback Recipient Linked on Lasna**: [`0x965837cecf912af870bb2377f52f67127acf4e16bf64462cdff064e20f6ed05e`](https://lasna.reactscan.net/tx/0x965837cecf912af870bb2377f52f67127acf4e16bf64462cdff064e20f6ed05e)
-- **Omni System Contract Reserve Deposit (0.5 lREACT)**: [`0x807fbb22a6fe24da903482607fd2bb62fc6b4684da223467d6be539a2dce9fe1`](https://lasna.reactscan.net/tx/0x807fbb22a6fe24da903482607fd2bb62fc6b4684da223467d6be539a2dce9fe1)
+- **Omni System Contract Reserve Initial Deposit (0.5 lREACT)**: [`0x807fbb22a6fe24da903482607fd2bb62fc6b4684da223467d6be539a2dce9fe1`](https://lasna.reactscan.net/tx/0x807fbb22a6fe24da903482607fd2bb62fc6b4684da223467d6be539a2dce9fe1)
+- **Omni System Contract Reserve Top-Up (0.8 lREACT, Total 1.3 lREACT)**: [`0xd2e519fac1102c5e967a46033e54af5ef2f89fa99f4870e2d5b6162c03b689e1`](https://lasna.reactscan.net/tx/0xd2e519fac1102c5e967a46033e54af5ef2f89fa99f4870e2d5b6162c03b689e1)
+- **Pool Liquidity Seeding on Unichain Sepolia**: [`0x1f752a2dcfae5c09d4b4316b6b28e7a296b51a938132a7554f3429943c646a40`](https://sepolia.uniscan.xyz/tx/0x1f752a2dcfae5c09d4b4316b6b28e7a296b51a938132a7554f3429943c646a40)
+- **Live Uniswap v4 Swap Emitting `BandLeft`**: [`0xbd90334f32e57cec739b548f9f7e5d3cb29acaaac1cb6f23373d26c3ffd24825`](https://sepolia.uniscan.xyz/tx/0xbd90334f32e57cec739b548f9f7e5d3cb29acaaac1cb6f23373d26c3ffd24825)
 - **Vault #1 Created**: [`0xc3d2eb5619198640bfd17ae25bb924d34f8ada1faba475336f7fcbb4c661f0fa`](https://sepolia.uniscan.xyz/tx/0xc3d2eb5619198640bfd17ae25bb924d34f8ada1faba475336f7fcbb4c661f0fa)
 - **Collateral Bond Posted ($5,000 USDC)**: [`0xe6ae92fadf1738ef29416284bb351a91f2e96fd84d690dc9ac11d606f08ffeb7`](https://sepolia.uniscan.xyz/tx/0xe6ae92fadf1738ef29416284bb351a91f2e96fd84d690dc9ac11d606f08ffeb7)
 
