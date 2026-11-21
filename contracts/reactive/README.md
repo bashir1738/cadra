@@ -30,8 +30,8 @@ Unichain Sepolia (Chain ID: 1301)                Reactive Lasna (Chain ID: 53180
 ### `CadraReactive.sol` (Deploy on Reactive Lasna)
 * **Chain ID**: `5318007` (Reactive Lasna Testnet)
 * Subscribes to two origin events from `CadraHook` on Unichain Sepolia:
-  * `BandLeft(uint256,int24)`: keccak256 topic `0x...`
-  * `EpochReady(uint256,uint256)`: keccak256 topic `0x...`
+  * `BandLeft(uint256,int24)`: topic `0x6c356a6957ccf065fc59d3c74724e228c51994b9e42ae4c08e230a1918e8ddd0`
+  * `EpochReady(uint256,uint256)`: topic `0x7b1263dc6ed177a3419ec2537a03364b6c7fd870ff1e4d4d83c06591b5534a02`
 * In `react(LogRecord calldata log)`, constructs callback configuration with:
   * Destination Chain ID: `1301` (Unichain Sepolia)
   * Recipient: `CadraCallback` address
@@ -85,3 +85,15 @@ Follow the strict 4-step sequence in [DeployReactive.s.sol](file:///home/bash/Do
    forge script script/DeployReactive.s.sol --sig "linkCallback(address,address)" <REACTIVE_ADDR> <CALLBACK_ADDR> --rpc-url https://lasna-rpc.rnk.dev/ --broadcast
    ```
 4. **Fund Gas Balances**: Maintain native ETH on Unichain Sepolia for callback billing, and REACT on Lasna for subscription state.
+
+---
+
+## 5. Deployed Testnet Addresses
+
+| Contract | Network | Address |
+| :--- | :--- | :--- |
+| **CadraReactive (Omni RSC)** | Reactive Lasna Omni (5318007) | `0x061216db95D483fc0e7e0c43976A62B7E207ba35` |
+| **CadraCallback** | Unichain Sepolia (1301) | `0xb4Df1810374AFdE05F9D429eF1f0c3ED2ABdF2C6` |
+| **Callback Proxy** | Unichain Sepolia (1301) | `0x9299472A6399Fd1027ebF067571Eb3e3D7837FC4` |
+| **System Contract** | Reactive Lasna Omni (5318007) | `0x8888888888888888888888888888888888888888` |
+| **CadraHook** | Unichain Sepolia (1301) | `0x728D9b5f428B736A26D07879F55C3982Ddf890C0` |

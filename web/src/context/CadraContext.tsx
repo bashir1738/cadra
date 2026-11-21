@@ -799,15 +799,37 @@ export function CadraProvider({ children }: { children: React.ReactNode }) {
       const client = await getAsyncWalletClient();
       const account = (connectedAddress || client.account?.address) as `0x${string}`;
 
+      // Query vault's idle balances
+      let idle0 = BigInt(0);
+      let idle1 = BigInt(0);
+      try {
+        idle0 = (await publicClient.readContract({
+          address: CONTRACT_ADDRESSES.hook,
+          abi: CADRA_HOOK_ABI,
+          functionName: "vaultIdle0",
+          args: [BigInt(vaultId)],
+        })) as bigint;
+        idle1 = (await publicClient.readContract({
+          address: CONTRACT_ADDRESSES.hook,
+          abi: CADRA_HOOK_ABI,
+          functionName: "vaultIdle1",
+          args: [BigInt(vaultId)],
+        })) as bigint;
+      } catch {}
+
       // Format and align ranges to tickSpacing 60
       const formattedRanges = newRanges.map((r) => {
         let lower = Math.round(r.lowerTick / 60) * 60;
         let upper = Math.round(r.upperTick / 60) * 60;
         if (upper <= lower) upper = lower + 60;
+        // If vault has no idle tokens deployed yet, set liquidity to 0 to safely arm the corridor without reverting InsufficientIdle()
+        const liq = (idle0 === BigInt(0) && idle1 === BigInt(0))
+          ? BigInt(0)
+          : BigInt(Math.min(1000000000, Math.floor(Number(idle0 > idle1 ? idle0 : idle1) * (r.liquidityPercent || 100) / 100)));
         return {
           tickLower: lower,
           tickUpper: upper,
-          liquidity: BigInt("1000000000000"),
+          liquidity: liq,
         };
       });
 
@@ -842,6 +864,9 @@ export function CadraProvider({ children }: { children: React.ReactNode }) {
         maxTick = -46080;
       }
       const minRangeWidth = Math.max(60, Math.round(Number(mandate.minRangeWidth || 120) / 60) * 60);
+      if (maxTick - minTick < minRangeWidth) {
+        maxTick = minTick + minRangeWidth;
+      }
 
       const mandateTuple = {
         minTick,
