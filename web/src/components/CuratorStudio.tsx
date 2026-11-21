@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import { VaultData, RangePosition } from "../types/cadra";
 import { ShieldIcon, CheckCircleIcon, AlertTriangleIcon, PlusIcon, TrashIcon, TrendUpIcon, ActivityIcon, ClockIcon, ZapIcon } from "./Icons";
-import { useCadra } from "../context/CadraContext";
+import { useCadra, tickToPrice, priceToTick } from "../context/CadraContext";
 
 interface CuratorStudioProps {
   vault?: VaultData;
@@ -64,8 +64,8 @@ export function CuratorStudio({
       if (openConnectModal) openConnectModal();
       return;
     }
-    const val = parseFloat(bondInput) || 5000;
-    if (val <= 0) return;
+    const val = parseFloat(bondInput);
+    if (isNaN(val) || val <= 0) return;
 
     setIsDepositingBond(true);
     setBondSuccessNotice(null);
@@ -385,14 +385,22 @@ export function CuratorStudio({
 
   const handleAddRange = () => {
     const newId = `r_${Date.now()}`;
+    const minW = Math.max(mandate.minRangeWidth || 120, 120);
+    const alignedWidth = Math.ceil(minW / 60) * 60;
+    let lTick = Math.round(mandate.minTick / 60) * 60;
+    let uTick = lTick + alignedWidth;
+    if (uTick > mandate.maxTick) {
+      uTick = Math.round(mandate.maxTick / 60) * 60;
+      lTick = Math.max(Math.round(mandate.minTick / 60) * 60, uTick - alignedWidth);
+    }
     setRanges([
       ...ranges,
       {
         id: newId,
-        lowerTick: -60000,
-        upperTick: -58000,
-        lowerPrice: mandate.minPrice + 100,
-        upperPrice: mandate.minPrice + 500,
+        lowerTick: lTick,
+        upperTick: uTick,
+        lowerPrice: tickToPrice(lTick),
+        upperPrice: tickToPrice(uTick),
         liquidityPercent: ranges.length === 0 ? 100 : 20,
       },
     ]);
@@ -408,7 +416,31 @@ export function CuratorStudio({
     val: number
   ) => {
     const updated = [...ranges];
-    updated[idx] = { ...updated[idx], [field]: val };
+    if (field === "lowerPrice") {
+      const derivedTick = priceToTick(val);
+      const boundedTick = Math.max(
+        Math.round(mandate.minTick / 60) * 60,
+        Math.min(updated[idx].upperTick - 60, derivedTick)
+      );
+      updated[idx] = {
+        ...updated[idx],
+        lowerPrice: val,
+        lowerTick: boundedTick,
+      };
+    } else if (field === "upperPrice") {
+      const derivedTick = priceToTick(val);
+      const boundedTick = Math.min(
+        Math.round(mandate.maxTick / 60) * 60,
+        Math.max(updated[idx].lowerTick + 60, derivedTick)
+      );
+      updated[idx] = {
+        ...updated[idx],
+        upperPrice: val,
+        upperTick: boundedTick,
+      };
+    } else {
+      updated[idx] = { ...updated[idx], [field]: val };
+    }
     setRanges(updated);
   };
 
@@ -677,6 +709,7 @@ export function CuratorStudio({
                       onChange={(e) => handleUpdateRangeField(idx, "lowerPrice", parseFloat(e.target.value) || 0)}
                       className="w-full bg-white border border-neutral-200 rounded-xl px-3 py-2 text-neutral-950 font-mono mt-1 focus:border-neutral-950 focus:outline-none focus:ring-1 focus:ring-neutral-950 transition-all"
                     />
+                    <span className="text-[10px] text-neutral-400 font-mono block mt-1">Tick: {r.lowerTick}</span>
                   </div>
                   <div className="sm:col-span-3">
                     <span className="text-[11px] text-neutral-400 uppercase block font-medium">Max Price ($)</span>
@@ -686,6 +719,7 @@ export function CuratorStudio({
                       onChange={(e) => handleUpdateRangeField(idx, "upperPrice", parseFloat(e.target.value) || 0)}
                       className="w-full bg-white border border-neutral-200 rounded-xl px-3 py-2 text-neutral-950 font-mono mt-1 focus:border-neutral-950 focus:outline-none focus:ring-1 focus:ring-neutral-950 transition-all"
                     />
+                    <span className="text-[10px] text-neutral-400 font-mono block mt-1">Tick: {r.upperTick}</span>
                   </div>
                   <div className="sm:col-span-3">
                     <span className="text-[11px] text-neutral-400 uppercase block font-medium">Allocation (%)</span>

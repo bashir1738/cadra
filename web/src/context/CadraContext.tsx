@@ -166,7 +166,7 @@ export const TESTNET_ARCHETYPES: VaultData[] = [
 
 export const DEFAULT_VAULTS: VaultData[] = TESTNET_ARCHETYPES;
 
-function tickToPrice(tick: number): number {
+export function tickToPrice(tick: number): number {
   try {
     const raw = Math.pow(1.0001, tick);
     if (raw === 0) return 3000;
@@ -174,6 +174,16 @@ function tickToPrice(tick: number): number {
     return price > 100 && price < 100000 ? price : 3000;
   } catch {
     return 3000;
+  }
+}
+
+export function priceToTick(price: number): number {
+  try {
+    if (price <= 0) return 0;
+    const tick = Math.round(-Math.log(price) / Math.log(1.0001));
+    return Math.round(tick / 60) * 60;
+  } catch {
+    return 0;
   }
 }
 
@@ -666,6 +676,9 @@ export function CadraProvider({ children }: { children: React.ReactNode }) {
         maxTick = -46080;
       }
       const minRangeWidth = Math.max(60, Math.round(Number(newVault.mandate.minRangeWidth || 120) / 60) * 60);
+      if (maxTick - minTick < minRangeWidth) {
+        maxTick = minTick + minRangeWidth;
+      }
 
       const mandate = {
         minTick,
