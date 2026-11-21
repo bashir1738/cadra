@@ -51,6 +51,22 @@ contract MockCallbackProxy is IPayable {
     }
 
     function coverDebt(address) external payable override {}
+
+    /// @notice Simulates real Reactive Omni proxy: replaces address(0) placeholder in payload with RSC address
+    function executeCallback(address target, address rsc, bytes memory rawPayload) external returns (bool, bytes memory) {
+        bytes memory modifiedPayload = new bytes(rawPayload.length);
+        for (uint256 i = 0; i < rawPayload.length; i++) {
+            modifiedPayload[i] = rawPayload[i];
+        }
+        bytes32 rscWord = bytes32(uint256(uint160(rsc)));
+        // Replace bytes 4..35 (the first 32-byte argument)
+        assembly {
+            mstore(add(modifiedPayload, 36), rscWord)
+        }
+        (bool success, bytes memory ret) = target.call(modifiedPayload);
+        require(success, "CallbackExecutionFailed");
+        return (success, ret);
+    }
 }
 
 contract MockHook is ICadraHook {
@@ -75,6 +91,9 @@ contract CadraReactiveSubprojectTest is Test {
     MockHook mockHook;
     CadraReactive reactiveContract;
     CadraCallback callbackContract;
+
+    event EnforceExecuted(uint256 indexed vaultId, bool success, uint256 timestamp);
+    event SettleExecuted(uint256 indexed vaultId, uint256 timestamp);
 
     function setUp() public {
         mockSystem = new MockSystemContract();
@@ -137,22 +156,75 @@ contract CadraReactiveSubprojectTest is Test {
     }
 
     function test_react_reverts_if_not_system() public {
-        LogRecord memory logRecord;
+        LogRecord memory logRecord = LogRecord({
+            chainId: 1301,
+            _contract: address(mockHook),
+            topic0: reactiveContract.BAND_LEFT_TOPIC(),
+            topic1: 1,
+            topic2: 0,
+            topic3: 0,
+            data: "",
+            blockNumber: 100,
+            opCode: 0
+        });
         vm.prank(address(0x1234));
         vm.expectRevert(AbstractReactive.NotAuthorized.selector);
         reactiveContract.react(logRecord);
     }
 
-    function test_callback_enforce_executes_when_authorized() public {
+    function test_react_reverts_if_invalid_chain() public {
+        LogRecord memory logRecord = LogRecord({
+            chainId: 9999, // not 1301
+            _contract: address(mockHook),
+            topic0: reactiveContract.BAND_LEFT_TOPIC(),
+            topic1: 1,
+            topic2: 0,
+            topic3: 0,
+            data: "",
+            blockNumber: 100,
+            opCode: 0
+        });
+        vm.prank(SYSTEM_ADDR);
+        vm.expectRevert("InvalidChain");
+        reactiveContract.react(logRecord);
+    }
+
+    function test_react_reverts_if_invalid_hook() public {
+        LogRecord memory logRecord = LogRecord({
+            chainId: 1301,
+            _contract: address(0xDEADBEEF), // not registered hook
+            topic0: reactiveContract.BAND_LEFT_TOPIC(),
+            topic1: 1,
+            topic2: 0,
+            topic3: 0,
+            data: "",
+            blockNumber: 100,
+            opCode: 0
+        });
+        vm.prank(SYSTEM_ADDR);
+        vm.expectRevert("InvalidHook");
+        reactiveContract.react(logRecord);
+    }
+
+    function test_callback_enforce_executes_when_authorized_and_emits_event() public {
+        vm.expectEmit(true, false, false, true);
+        emit EnforceExecuted(7, true, block.timestamp);
+
         vm.prank(address(mockProxy), address(reactiveContract));
         callbackContract.enforce(address(reactiveContract), 7);
         assertEq(mockHook.lastEnforcedVault(), 7);
+        assertTrue(callbackContract.lastEnforceResult(7));
+        assertEq(callbackContract.lastEnforceTimestamp(7), block.timestamp);
     }
 
-    function test_callback_settle_executes_when_authorized() public {
+    function test_callback_settle_executes_when_authorized_and_emits_event() public {
+        vm.expectEmit(true, false, false, true);
+        emit SettleExecuted(13, block.timestamp);
+
         vm.prank(address(mockProxy), address(reactiveContract));
         callbackContract.settle(address(reactiveContract), 13);
         assertEq(mockHook.lastSettledVault(), 13);
+        assertEq(callbackContract.lastSettleTimestamp(13), block.timestamp);
     }
 
     function test_callback_rejects_unauthorized_proxy() public {
@@ -165,6 +237,19 @@ contract CadraReactiveSubprojectTest is Test {
         vm.prank(address(mockProxy));
         vm.expectRevert(AbstractCallback.CallbackNotAuthorized.selector);
         callbackContract.enforce(address(0xDEAD), 7);
+    }
+
+    /// @notice Simulates exact Reactive Omni proxy behavior: overwriting the address(0) placeholder slot
+    function test_mock_proxy_overwrites_address_zero_and_executes_enforce() public {
+        uint256 vaultId = 42;
+        bytes memory rawPayload = abi.encodeWithSignature("enforce(address,uint256)", address(0), vaultId);
+
+        // Mock proxy executes callback by overwriting address(0) slot with reactiveContract address
+        vm.prank(address(this));
+        mockProxy.executeCallback(address(callbackContract), address(reactiveContract), rawPayload);
+
+        assertEq(mockHook.lastEnforcedVault(), vaultId);
+        assertTrue(callbackContract.lastEnforceResult(vaultId));
     }
 
     /// @notice End-to-end cross-chain simulation (Unichain Sepolia -> Reactive Lasna -> Unichain Sepolia Callback)
@@ -198,10 +283,10 @@ contract CadraReactiveSubprojectTest is Test {
         assertEq(enforcePayload, abi.encodeWithSignature("enforce(address,uint256)", address(0), vaultId));
 
         // Step 4: Callback Proxy executes the cross-chain transaction on Unichain Sepolia
-        // The proxy replaces address(0) placeholder with the actual RSC address
-        vm.prank(address(mockProxy));
-        callbackContract.enforce(address(reactiveContract), vaultId);
+        // using the real overwrite mechanism
+        mockProxy.executeCallback(address(callbackContract), address(reactiveContract), enforcePayload);
         assertEq(mockHook.lastEnforcedVault(), vaultId, "Hook must be enforced with correct vaultId");
+        assertTrue(callbackContract.lastEnforceResult(vaultId));
 
         // Step 5: Test EpochReady event triggering settlement
         LogRecord memory epochReadyLog = LogRecord({
@@ -222,8 +307,7 @@ contract CadraReactiveSubprojectTest is Test {
         (, , , bytes memory settlePayload) = MockSystemContract(SYSTEM_ADDR).lastCallback();
         assertEq(settlePayload, abi.encodeWithSignature("settle(address,uint256)", address(0), vaultId));
 
-        vm.prank(address(mockProxy));
-        callbackContract.settle(address(reactiveContract), vaultId);
+        mockProxy.executeCallback(address(callbackContract), address(reactiveContract), settlePayload);
         assertEq(mockHook.lastSettledVault(), vaultId, "Hook must be settled with correct vaultId");
     }
 }

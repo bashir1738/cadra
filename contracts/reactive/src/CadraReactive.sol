@@ -14,12 +14,14 @@ contract CadraReactive is AbstractReactive {
     uint64 public constant CALLBACK_GAS = 1_500_000;
 
     address public owner;
+    address public hook;
     address public callbackRecipient;
 
     modifier onlyOwner() { require(msg.sender == owner, "NotOwner"); _; }
 
     constructor(address hook_) payable {
         owner = msg.sender;
+        hook = hook_;
         if (hook_ != address(0)) {
             SYSTEM.subscribe(UNICHAIN_SEPOLIA, hook_, BAND_LEFT_TOPIC,
                 REACTIVE_IGNORE, REACTIVE_IGNORE, REACTIVE_IGNORE);
@@ -29,6 +31,7 @@ contract CadraReactive is AbstractReactive {
     }
 
     function subscribeHook(address hook_) external onlyOwner {
+        hook = hook_;
         SYSTEM.subscribe(UNICHAIN_SEPOLIA, hook_, BAND_LEFT_TOPIC,
             REACTIVE_IGNORE, REACTIVE_IGNORE, REACTIVE_IGNORE);
         SYSTEM.subscribe(UNICHAIN_SEPOLIA, hook_, EPOCH_READY_TOPIC,
@@ -40,6 +43,8 @@ contract CadraReactive is AbstractReactive {
     }
 
     function react(LogRecord calldata log_) external onlySystem {
+        require(log_.chainId == UNICHAIN_SEPOLIA, "InvalidChain");
+        require(log_._contract == hook, "InvalidHook");
         require(callbackRecipient != address(0), "NoRecipient");
 
         uint256 vaultId = log_.topic1;
@@ -60,5 +65,3 @@ contract CadraReactive is AbstractReactive {
         );
     }
 }
-
-
