@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React from "react";
 import { useRouter } from "next/navigation";
 import { usePrivy } from "@privy-io/react-auth";
 import { Header } from "../components/Header";
@@ -11,15 +11,6 @@ export default function Home() {
   const router = useRouter();
   const { ready, authenticated } = usePrivy();
   const { isConnected, connectedAddress, activeRole } = useCadra();
-
-  // Redirect to dashboard once wallet is connected
-  useEffect(() => {
-    if (isConnected || connectedAddress || authenticated) {
-      const targetDashboard =
-        activeRole === "curator" ? "/curator/overview" : "/follower/portfolio";
-      router.push(targetDashboard);
-    }
-  }, [isConnected, connectedAddress, authenticated, activeRole, router]);
 
   const handleNavigate = (tab: string) => {
     switch (tab) {

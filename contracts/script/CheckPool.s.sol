@@ -9,15 +9,14 @@ import {IHooks} from "@uniswap/v4-core/src/interfaces/IHooks.sol";
 import {StateLibrary} from "@uniswap/v4-core/src/libraries/StateLibrary.sol";
 import {PoolId, PoolIdLibrary} from "@uniswap/v4-core/src/types/PoolId.sol";
 import {CadraHook} from "../src/CadraHook.sol";
-import {Vault} from "../src/types/Vault.sol";
 
 contract CheckPoolScript is Script {
     using PoolIdLibrary for PoolKey;
 
-    address constant HOOK = 0x728D9b5f428B736A26D07879F55C3982Ddf890C0;
+    address constant HOOK = 0x6974BEEfCD6B8Bf30ee2838d830eEbFb892f50c0;
     address constant POOL_MANAGER = 0x29f2b190eacD76F0cBEC50bA669aab7F4600da4C;
-    address constant TOKEN0 = 0x688Cfa2501c44CB6B3886f4C5662c55b73f36e8D;
-    address constant TOKEN1 = 0xB4AB6C3Ae39df89bA203F01ef08e39775Fe1F0c6;
+    address constant TOKEN0 = 0x31d0220469e10c4E71834a79b1f276d740d3768F; // Circle USDC
+    address constant TOKEN1 = 0xB4AB6C3Ae39df89bA203F01ef08e39775Fe1F0c6; // WETH
 
     function run() external view {
         PoolKey memory key = PoolKey({
@@ -38,19 +37,7 @@ contract CheckPoolScript is Script {
         console.log("Slot0 sqrtPriceX96:", sqrtPriceX96);
         console.log("Slot0 tick:", tick);
 
-        uint128 liquidity = StateLibrary.getLiquidity(IPoolManager(POOL_MANAGER), poolId);
-        console.log("Pool Liquidity:", liquidity);
-
         CadraHook hook = CadraHook(HOOK);
-        Vault memory v = hook.getVault(1);
-        console.log("Vault 1 Curator:", v.curator);
-        console.log("Vault 1 Mandate minTick:", v.mandate.minTick);
-        console.log("Vault 1 Mandate maxTick:", v.mandate.maxTick);
-        console.log("Vault 1 isFrozen:", v.isFrozen);
-        console.log("Vault 1 bandLeft:", v.bandLeft);
-        console.log("Vault 1 Bond:", v.bond);
-
-        uint32 activeMask = hook.poolActiveBandMask(poolId);
-        console.log("Pool activeBandMask:", activeMask);
+        console.log("Next Vault ID:", hook.nextVaultId());
     }
 }

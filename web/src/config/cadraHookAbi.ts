@@ -1533,6 +1533,19 @@ export const CADRA_HOOK_ABI = [
   },
   {
     "type": "function",
+    "name": "owner",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "poolActiveBandMask",
     "inputs": [
       {
@@ -1709,6 +1722,32 @@ export const CADRA_HOOK_ABI = [
   },
   {
     "type": "function",
+    "name": "protocolFeeBps",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint16",
+        "internalType": "uint16"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "protocolTreasury",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "rebalance",
     "inputs": [
       {
@@ -1762,6 +1801,32 @@ export const CADRA_HOOK_ABI = [
   },
   {
     "type": "function",
+    "name": "setProtocolFeeBps",
+    "inputs": [
+      {
+        "name": "_newFeeBps",
+        "type": "uint16",
+        "internalType": "uint16"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "setProtocolTreasury",
+    "inputs": [
+      {
+        "name": "_newTreasury",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
     "name": "settle",
     "inputs": [
       {
@@ -1781,6 +1846,19 @@ export const CADRA_HOOK_ABI = [
         "name": "vaultId",
         "type": "uint256",
         "internalType": "uint256"
+      }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
+    "type": "function",
+    "name": "transferOwnership",
+    "inputs": [
+      {
+        "name": "_newOwner",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "outputs": [],
@@ -2338,6 +2416,44 @@ export const CADRA_HOOK_ABI = [
   },
   {
     "type": "event",
+    "name": "ProtocolFeeBpsUpdated",
+    "inputs": [
+      {
+        "name": "oldBps",
+        "type": "uint16",
+        "indexed": false,
+        "internalType": "uint16"
+      },
+      {
+        "name": "newBps",
+        "type": "uint16",
+        "indexed": false,
+        "internalType": "uint16"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
+    "name": "ProtocolTreasuryUpdated",
+    "inputs": [
+      {
+        "name": "oldTreasury",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      },
+      {
+        "name": "newTreasury",
+        "type": "address",
+        "indexed": true,
+        "internalType": "address"
+      }
+    ],
+    "anonymous": false
+  },
+  {
+    "type": "event",
     "name": "Rebalanced",
     "inputs": [
       {
@@ -2414,6 +2530,12 @@ export const CADRA_HOOK_ABI = [
       },
       {
         "name": "deficit",
+        "type": "uint256",
+        "indexed": false,
+        "internalType": "uint256"
+      },
+      {
+        "name": "protocolFee",
         "type": "uint256",
         "indexed": false,
         "internalType": "uint256"
@@ -2642,7 +2764,17 @@ export const CADRA_HOOK_ABI = [
   },
   {
     "type": "error",
+    "name": "OnlyOwner",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "PerfFeeTooHigh",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ProtocolFeeTooHigh",
     "inputs": []
   },
   {

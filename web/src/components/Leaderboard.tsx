@@ -115,10 +115,8 @@ export const Leaderboard = React.memo(function Leaderboard({
                 <th className="py-4 px-5">#</th>
                 <th className="py-4 px-5">Curator Vault</th>
                 <th className="py-4 px-5">Alpha vs Pace</th>
-                <th className="py-4 px-5">Bond Collateral</th>
-                <th className="py-4 px-5">Curator Owns</th>
-                <th className="py-4 px-5">Multiplier</th>
-                <th className="py-4 px-5">Fee</th>
+                <th className="py-4 px-5">Bond & Capacity</th>
+                <th className="py-4 px-5">Fee on Beat</th>
                 <th className="py-4 px-5">Status</th>
                 <th className="py-4 px-5 text-right">Action</th>
               </tr>
@@ -140,7 +138,7 @@ export const Leaderboard = React.memo(function Leaderboard({
                       <div className="flex flex-col">
                         <span className="font-bold text-neutral-950 text-sm font-sans">{vault.name}</span>
                         <span className="text-[11px] text-neutral-400 font-mono mt-0.5">
-                          {vault.curatorAddress.slice(0, 6)}...{vault.curatorAddress.slice(-4)} · {vault.tag}
+                          {vault.tag} · {curatorSharePct}% curator share
                         </span>
                       </div>
                     </td>
@@ -161,23 +159,14 @@ export const Leaderboard = React.memo(function Leaderboard({
 
                     <td className="py-4 px-5">
                       <span className="text-neutral-950 font-bold text-xs">${vault.bondAmount.toLocaleString()} USDC</span>
-                      <span className="text-[10px] text-neutral-400 block font-normal mt-0.5">Max ${vault.capacity.toLocaleString()}</span>
-                    </td>
-
-                    <td className="py-4 px-5">
-                      <span className="text-neutral-950 font-bold text-xs">{curatorSharePct}%</span>
-                      <span className="text-[10px] text-neutral-400 block font-normal mt-0.5">Skin in game</span>
-                    </td>
-
-                    <td className="py-4 px-5">
-                      <span className="font-bold text-emerald-800 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-xs">
-                        {vault.capacityMultiplier}×
+                      <span className="text-[11px] text-emerald-800 font-semibold block mt-0.5">
+                        {vault.capacityMultiplier}× (Max ${vault.capacity.toLocaleString()})
                       </span>
                     </td>
 
                     <td className="py-4 px-5">
                       <span className="text-neutral-900 font-bold text-xs">{vault.perfFeeBps / 100}%</span>
-                      <span className="text-[10px] text-neutral-400 block font-normal mt-0.5">on beat</span>
+                      <span className="text-[10px] text-neutral-400 block font-normal mt-0.5">on outperformance</span>
                     </td>
 
                     <td className="py-4 px-5">

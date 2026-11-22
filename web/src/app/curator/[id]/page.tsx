@@ -9,14 +9,13 @@ import { useCadra } from "../../../context/CadraContext";
 function CuratorDetailContent() {
   const params = useParams();
   const router = useRouter();
-  const { vaults, deposit } = useCadra();
+  const { vaults } = useCadra();
 
   const vaultId = params?.id ? parseInt(params.id as string, 10) : NaN;
   const vault = vaults.find((v) => v.id === vaultId);
 
   const handleFollow = (id: number) => {
-    deposit(id, 1000);
-    router.push("/follower/portfolio");
+    router.push("/follower/explore");
   };
 
   if (!vault) {

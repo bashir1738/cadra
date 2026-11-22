@@ -7,8 +7,8 @@ import {IPayable} from "@reactive/src/interfaces/IPayable.sol";
 
 contract DeployCallback is Script {
     address constant CALLBACK_PROXY = 0x9299472A6399Fd1027ebF067571Eb3e3D7837FC4;
-    address constant CADRA_REACTIVE = 0x061216db95D483fc0e7e0c43976A62B7E207ba35;
-    address constant CADRA_HOOK     = 0x728D9b5f428B736A26D07879F55C3982Ddf890C0;
+    address constant CADRA_REACTIVE = 0x29f2b190eacD76F0cBEC50bA669aab7F4600da4C;
+    address constant CADRA_HOOK     = 0x6974BEEfCD6B8Bf30ee2838d830eEbFb892f50c0;
 
     function run() external returns (address newCallback) {
         uint256 deployerKey = vm.envUint("DEPLOYER_PRIVATE_KEY");

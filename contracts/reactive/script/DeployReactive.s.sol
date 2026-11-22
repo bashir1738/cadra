@@ -51,4 +51,14 @@ contract DeployReactiveScript is Script {
 
         vm.stopBroadcast();
     }
+
+    function updateReactive(address payable reactiveAddr, address hookAddr, address callbackAddr) external {
+        uint256 deployerKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
+        vm.startBroadcast(deployerKey);
+
+        CadraReactive(reactiveAddr).subscribeHook(hookAddr);
+        CadraReactive(reactiveAddr).setCallbackRecipient(callbackAddr);
+
+        vm.stopBroadcast();
+    }
 }

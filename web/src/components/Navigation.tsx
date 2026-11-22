@@ -52,7 +52,7 @@ export function Navigation({ activeTab, onSelectTab, isCuratorRole }: Navigation
     },
     {
       key: "simulator",
-      label: "Playground Demo",
+      label: "Demo Sandbox",
       icon: <ActivityIcon className="w-4 h-4" />,
     },
   ];

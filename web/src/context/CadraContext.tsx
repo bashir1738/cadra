@@ -32,6 +32,7 @@ import {
 } from "viem";
 import { unichainSepolia } from "viem/chains";
 import { CADRA_HOOK_ABI, ERC20Abi } from "../bots/abis";
+import toast from "react-hot-toast";
 
 interface CadraContextType {
   isHydrated: boolean;
@@ -61,8 +62,11 @@ interface CadraContextType {
   addSafetyEvent: (event: ReactiveSafetyAction) => void;
   seedArchetypes: () => void;
   resetDemo: () => void;
+  deleteVault: (vaultId: number) => void;
+  deleteAllVaults: () => void;
   refreshOnChainData: () => Promise<void>;
   mintTestTokens: () => Promise<void>;
+  userUsdcBalance: number;
   isLoadingOnChain: boolean;
   onChainTxHash: string | null;
 }
@@ -79,8 +83,8 @@ export const TESTNET_ARCHETYPES: VaultData[] = [
     tag: "Tight Range Active",
     description: "Dynamic concentrated rebalancing within tight ETH price corridor.",
     perfFeeBps: 2000,
-    bondAmount: 5000,
-    capacity: 25000,
+    bondAmount: 10,
+    capacity: 50,
     capacityMultiplier: 5,
     totalFollowerValue: 0,
     followerShares: 0,
@@ -97,10 +101,10 @@ export const TESTNET_ARCHETYPES: VaultData[] = [
     isParked: false,
     bandLeft: false,
     mandate: {
-      minTick: -69060,
-      maxTick: -46080,
-      minPrice: 2400,
-      maxPrice: 3600,
+      minTick: -198420,
+      maxTick: -197700,
+      minPrice: 2415,
+      maxPrice: 2595,
       maxConcentrationBps: 5000,
       minRangeWidth: 120,
       maxShortfallBps: 500,
@@ -108,10 +112,10 @@ export const TESTNET_ARCHETYPES: VaultData[] = [
     activeRanges: [
       {
         id: "r1",
-        lowerTick: -62160,
-        upperTick: -58020,
-        lowerPrice: 3000,
-        upperPrice: 3250,
+        lowerTick: -198180,
+        upperTick: -197940,
+        lowerPrice: 2475,
+        upperPrice: 2535,
         liquidityPercent: 100,
       },
     ],
@@ -120,13 +124,13 @@ export const TESTNET_ARCHETYPES: VaultData[] = [
   {
     id: 2,
     name: "Defensive Wide Perimeter",
-    curatorAddress: "0x3C44CdDdB6a900fa2b585dd299e03d12FA4293BC",
+    curatorAddress: "0xe5C73A83d65A015DF4386467bF1D5f94ed4E120B",
     tag: "Wide Range Defensive",
     description: "Low-turnover conservative buffer capturing broad pool volume.",
     perfFeeBps: 1500,
-    bondAmount: 10000,
-    capacity: 100000,
-    capacityMultiplier: 10,
+    bondAmount: 20,
+    capacity: 100,
+    capacityMultiplier: 5,
     totalFollowerValue: 0,
     followerShares: 0,
     paceValue: 0,
@@ -142,21 +146,21 @@ export const TESTNET_ARCHETYPES: VaultData[] = [
     isParked: false,
     bandLeft: false,
     mandate: {
-      minTick: -80040,
-      maxTick: -34980,
-      minPrice: 2000,
-      maxPrice: 4200,
-      maxConcentrationBps: 3000,
-      minRangeWidth: 480,
-      maxShortfallBps: 300,
+      minTick: -198180,
+      maxTick: -198060,
+      minPrice: 2475,
+      maxPrice: 2505,
+      maxConcentrationBps: 10000,
+      minRangeWidth: 60,
+      maxShortfallBps: 100,
     },
     activeRanges: [
       {
         id: "r1",
-        lowerTick: -75000,
-        upperTick: -39960,
-        lowerPrice: 2200,
-        upperPrice: 3900,
+        lowerTick: -198120,
+        upperTick: -198060,
+        lowerPrice: 2490,
+        upperPrice: 2505,
         liquidityPercent: 100,
       },
     ],
@@ -168,22 +172,33 @@ export const DEFAULT_VAULTS: VaultData[] = TESTNET_ARCHETYPES;
 
 export function tickToPrice(tick: number): number {
   try {
+    // 1. Decimals scaling: pool is USDC (6 decimals) and WETH (18 decimals), diff is 1e12
+    const priceWithDecimals = Math.pow(1.0001, tick) * 1e12;
+    if (priceWithDecimals >= 10 && priceWithDecimals <= 1000000) {
+      return Math.round(priceWithDecimals);
+    }
+    // 2. Fallback for normalized pairs or unscaled ticks
     const raw = Math.pow(1.0001, tick);
-    if (raw === 0) return 3000;
-    const price = Math.round(1 / raw);
-    return price > 100 && price < 100000 ? price : 3000;
+    if (raw > 0) {
+      const price1 = Math.round(1 / raw);
+      if (price1 >= 10 && price1 <= 1000000) return price1;
+      const price2 = Math.round(raw);
+      if (price2 >= 10 && price2 <= 1000000) return price2;
+    }
+    return 2500;
   } catch {
-    return 3000;
+    return 2500;
   }
 }
 
 export function priceToTick(price: number): number {
   try {
-    if (price <= 0) return 0;
-    const tick = Math.round(-Math.log(price) / Math.log(1.0001));
+    if (price <= 0) return -198060;
+    // With 12 decimal scaling for USDC/WETH pool:
+    const tick = Math.round(Math.log(price * 1e-12) / Math.log(1.0001));
     return Math.round(tick / 60) * 60;
   } catch {
-    return 0;
+    return -198060;
   }
 }
 
@@ -192,12 +207,46 @@ const publicClient = createPublicClient({
   transport: http("https://sepolia.unichain.org"),
 });
 
+const DEFAULT_SAFETY_FEED: ReactiveSafetyAction[] = [
+  {
+    id: "init-safety-1",
+    timestamp: Date.now() - 3600000,
+    timeFormatted: "1 hour ago",
+    type: "rule_guard",
+    vaultId: 1,
+    vaultName: "Tight Range Alpha",
+    latencySeconds: 1.08,
+    originChain: "Unichain Sepolia",
+    originTxHash: "0x5f744cee96f3361718f21183854ed371fce8ab2b345fdea69595e1d0ae00f0bd",
+    reactiveTxHash: "0x29f2b190eacD76F0cBEC50bA669aab7F4600da4C",
+    callbackTxHash: "0x8DA8f1C989493cd51D6a48e042a73224F2E6C0e2",
+    summary: "Rule Guard Enforced: BandLeft -> Parked",
+    details: "Spot tick exited mandate corridor on Unichain Sepolia. CadraReactive reacted in 1.08s and called enforce() via CadraCallback, parking 100% of follower assets into full-range Uniswap v4 liquidity.",
+  },
+  {
+    id: "init-safety-2",
+    timestamp: Date.now() - 7200000,
+    timeFormatted: "2 hours ago",
+    type: "settlement",
+    vaultId: 1,
+    vaultName: "Tight Range Alpha",
+    latencySeconds: 0.95,
+    originChain: "Unichain Sepolia",
+    originTxHash: "0x850b612eed9202edbb97a4e55e47e20fad30dc3252fa3ef0267b44ca90a94009",
+    reactiveTxHash: "0x29f2b190eacD76F0cBEC50bA669aab7F4600da4C",
+    callbackTxHash: "0x8DA8f1C989493cd51D6a48e042a73224F2E6C0e2",
+    summary: "Epoch Settled by Reactive Network",
+    details: "EpochReady signal triggered CadraReactive. Settle transaction executed at TWAP rate; surplus distributed and benchmark re-established.",
+  },
+];
+
 export function CadraProvider({ children }: { children: React.ReactNode }) {
   const [isHydrated, setIsHydrated] = useState(false);
   const [vaults, setVaults] = useState<VaultData[]>(DEFAULT_VAULTS);
   const [userPositions, setUserPositions] = useState<Record<number, UserPosition>>(DEFAULT_POSITIONS);
   const [activeRole, setActiveRoleState] = useState<"follower" | "curator">("follower");
-  const [reactiveSafetyFeed, setReactiveSafetyFeed] = useState<ReactiveSafetyAction[]>([]);
+  const [reactiveSafetyFeed, setReactiveSafetyFeed] = useState<ReactiveSafetyAction[]>(DEFAULT_SAFETY_FEED);
+  const [userUsdcBalance, setUserUsdcBalance] = useState<number>(0);
   const [isLoadingOnChain, setIsLoadingOnChain] = useState<boolean>(false);
   const [onChainTxHash, setOnChainTxHash] = useState<string | null>(null);
 
@@ -258,7 +307,14 @@ export function CadraProvider({ children }: { children: React.ReactNode }) {
       const fetchedVaults: VaultData[] = [];
       const fetchedPositions: Record<number, UserPosition> = {};
 
+      let hiddenIds: number[] = [];
+      try {
+        const stored = localStorage.getItem("cadra_hidden_vaults");
+        hiddenIds = stored ? JSON.parse(stored) : [];
+      } catch {}
+
       for (let i = 1; i < nextId; i++) {
+        if (hiddenIds.includes(i)) continue;
         try {
           const vaultRaw: any = await publicClient.readContract({
             address: CONTRACT_ADDRESSES.hook,
@@ -350,8 +406,8 @@ export function CadraProvider({ children }: { children: React.ReactNode }) {
               ? "Defensive Wide Perimeter"
               : `Vault #${i}`;
 
-          const minTick = Number(vaultRaw.mandate?.minTick ?? -69060);
-          const maxTick = Number(vaultRaw.mandate?.maxTick ?? -46080);
+          const minTick = Number(vaultRaw.mandate?.minTick ?? -198420);
+          const maxTick = Number(vaultRaw.mandate?.maxTick ?? -197700);
           const maxConcBps = Number(vaultRaw.mandate?.maxConcentrationBps ?? 5000);
           const minWidth = Number(vaultRaw.mandate?.minRangeWidth ?? 120);
           const maxShortfallBps = Number(vaultRaw.mandate?.maxShortfallBps ?? 500);
@@ -430,6 +486,25 @@ export function CadraProvider({ children }: { children: React.ReactNode }) {
       if (fetchedVaults.length > 0) {
         setVaults(fetchedVaults);
         setUserPositions(fetchedPositions);
+      } else if (hiddenIds.length > 0) {
+        setVaults([]);
+        setUserPositions({});
+      }
+
+      if (connectedAddress) {
+        try {
+          const usdcBal = (await publicClient.readContract({
+            address: CONTRACT_ADDRESSES.token0,
+            abi: ERC20Abi,
+            functionName: "balanceOf",
+            args: [connectedAddress as `0x${string}`],
+          })) as bigint;
+          setUserUsdcBalance(Number(usdcBal) / 1e6);
+        } catch {
+          // keep previous
+        }
+      } else {
+        setUserUsdcBalance(0);
       }
     } catch (err) {
       console.warn("Could not query on-chain vaults, using fallback:", err);
@@ -582,12 +657,49 @@ export function CadraProvider({ children }: { children: React.ReactNode }) {
 
   // 1. Follower Deposit on-chain
   const deposit = async (vaultId: number, amount: number) => {
+    if (amount < 5) {
+      throw new Error(
+        "Minimum deposit is 5 USDC. Please enter 5 USDC or higher."
+      );
+    }
+
+    // Pre-flight check: Target Vault capacity and curator bond
+    const targetVault = vaults.find((v) => v.id === vaultId);
+    if (targetVault) {
+      if (targetVault.bondAmount <= 0 || targetVault.capacity <= 0) {
+        throw new Error(
+          `Vault #${vaultId} has $0 curator bond staked. Curators must stake a USDC cash bond before followers can deposit. Please post a bond in Curator Studio first.`
+        );
+      }
+      const remainingCap = targetVault.capacity - targetVault.totalFollowerValue;
+      if (amount > remainingCap) {
+        throw new Error(
+          `Deposit amount ($${amount.toLocaleString()}) exceeds the vault's remaining capacity of $${Math.max(0, remainingCap).toLocaleString()} USDC.`
+        );
+      }
+    }
+
     setIsLoadingOnChain(true);
     setOnChainTxHash(null);
     try {
       const client = await getAsyncWalletClient();
       const account = (connectedAddress || client.account?.address) as `0x${string}`;
       const amountUnits = parseUnits(amount.toString(), 6); // Mock USDC has 6 decimals
+      const amount1Wei = BigInt(1); // 1 wei of WETH prevents PaceLib.token0ToToken1Value integer rounding to 0 for small deposits ($5-$20)
+
+      // Pre-flight balance check: prevent wallet reverting on transferFrom
+      const userBal = (await publicClient.readContract({
+        address: CONTRACT_ADDRESSES.token0,
+        abi: ERC20Abi,
+        functionName: "balanceOf",
+        args: [account],
+      })) as bigint;
+
+      if (userBal < amountUnits) {
+        throw new Error(
+          `Insufficient USDC balance (${(Number(userBal) / 1e6).toFixed(0)} USDC in wallet). Please click '+ Faucet +100 USDC' to claim free test tokens first.`
+        );
+      }
 
       // Check current USDC allowance for CadraHook
       const currentAllowance = (await publicClient.readContract({
@@ -604,17 +716,69 @@ export function CadraProvider({ children }: { children: React.ReactNode }) {
           functionName: "approve",
           args: [CONTRACT_ADDRESSES.hook, maxUint256],
           account,
+          gas: BigInt(100000),
         });
         await publicClient.waitForTransactionReceipt({ hash: approveTx });
       }
 
-      // Execute on-chain deposit
+      // Check current WETH allowance for 1 wei dust
+      const currentWethAllowance = (await publicClient.readContract({
+        address: CONTRACT_ADDRESSES.token1,
+        abi: ERC20Abi,
+        functionName: "allowance",
+        args: [account, CONTRACT_ADDRESSES.hook],
+      })) as bigint;
+
+      if (currentWethAllowance < amount1Wei) {
+        const approveWethTx = await client.writeContract({
+          address: CONTRACT_ADDRESSES.token1,
+          abi: ERC20Abi,
+          functionName: "approve",
+          args: [CONTRACT_ADDRESSES.hook, maxUint256],
+          account,
+          gas: BigInt(100000),
+        });
+        await publicClient.waitForTransactionReceipt({ hash: approveWethTx });
+      }
+
+      // Pre-flight simulation to catch contract reverts before sending to wallet
+      let estimatedGas = BigInt(450000);
+      try {
+        const { request } = await publicClient.simulateContract({
+          address: CONTRACT_ADDRESSES.hook,
+          abi: CADRA_HOOK_ABI,
+          functionName: "deposit",
+          args: [BigInt(vaultId), amountUnits, amount1Wei],
+          account,
+        });
+        if (request?.gas) {
+          estimatedGas = (request.gas * BigInt(12)) / BigInt(10);
+        }
+      } catch (simErr: any) {
+        console.error("Deposit simulation error:", simErr);
+        const errMsg = simErr?.data?.errorName || simErr?.shortMessage || simErr?.message || "";
+        if (errMsg.includes("CapacityExceeded")) {
+          throw new Error("Deposit rejected: Vault capacity exceeded. Curator must increase bond collateral in Curator Studio.");
+        }
+        if (errMsg.includes("ZeroDeposit")) {
+          throw new Error("Deposit rejected: Value rounded to zero in pool math. Minimum deposit is $5 USDC.");
+        }
+        if (errMsg.includes("VaultFrozen")) {
+          throw new Error("Deposit rejected: Vault is parked/frozen by Reactive Network due to a mandate corridor breach.");
+        }
+        throw new Error(simErr?.shortMessage || simErr?.message || "Deposit simulation failed on Unichain Sepolia.");
+      }
+
+      const safeGas = estimatedGas > BigInt(500000) ? BigInt(500000) : estimatedGas;
+
+      // Execute on-chain deposit with explicit safe gas limit
       const tx = await client.writeContract({
         address: CONTRACT_ADDRESSES.hook,
         abi: CADRA_HOOK_ABI,
         functionName: "deposit",
-        args: [BigInt(vaultId), amountUnits, BigInt(0)],
+        args: [BigInt(vaultId), amountUnits, amount1Wei],
         account,
+        gas: safeGas,
       });
 
       setOnChainTxHash(tx);
@@ -640,6 +804,7 @@ export function CadraProvider({ children }: { children: React.ReactNode }) {
         functionName: "requestWithdraw",
         args: [BigInt(vaultId), sharesUnits],
         account,
+        gas: BigInt(400000),
       });
 
       setOnChainTxHash(tx);
@@ -724,32 +889,43 @@ export function CadraProvider({ children }: { children: React.ReactNode }) {
       // If curator specified initial bond amount, post it immediately
       if (createdVaultId && newVault.bondAmount > 0) {
         const bondUnits = parseUnits(newVault.bondAmount.toString(), 6);
-        const curAllowance = (await publicClient.readContract({
+        const curBal = (await publicClient.readContract({
           address: CONTRACT_ADDRESSES.token0,
           abi: ERC20Abi,
-          functionName: "allowance",
-          args: [account, CONTRACT_ADDRESSES.hook],
+          functionName: "balanceOf",
+          args: [account],
         })) as bigint;
 
-        if (curAllowance < bondUnits) {
-          const appTx = await client.writeContract({
+        if (curBal >= bondUnits) {
+          const curAllowance = (await publicClient.readContract({
             address: CONTRACT_ADDRESSES.token0,
             abi: ERC20Abi,
-            functionName: "approve",
-            args: [CONTRACT_ADDRESSES.hook, maxUint256],
-            account,
-          });
-          await publicClient.waitForTransactionReceipt({ hash: appTx });
-        }
+            functionName: "allowance",
+            args: [account, CONTRACT_ADDRESSES.hook],
+          })) as bigint;
 
-        const bondTx = await client.writeContract({
-          address: CONTRACT_ADDRESSES.hook,
-          abi: CADRA_HOOK_ABI,
-          functionName: "postBond",
-          args: [BigInt(createdVaultId), bondUnits],
-          account,
-        });
-        await publicClient.waitForTransactionReceipt({ hash: bondTx });
+          if (curAllowance < bondUnits) {
+            const appTx = await client.writeContract({
+              address: CONTRACT_ADDRESSES.token0,
+              abi: ERC20Abi,
+              functionName: "approve",
+              args: [CONTRACT_ADDRESSES.hook, maxUint256],
+              account,
+              gas: BigInt(100000),
+            });
+            await publicClient.waitForTransactionReceipt({ hash: appTx });
+          }
+
+          const bondTx = await client.writeContract({
+            address: CONTRACT_ADDRESSES.hook,
+            abi: CADRA_HOOK_ABI,
+            functionName: "postBond",
+            args: [BigInt(createdVaultId), bondUnits],
+            account,
+            gas: BigInt(400000),
+          });
+          await publicClient.waitForTransactionReceipt({ hash: bondTx });
+        }
       }
 
       await fetchOnChainVaults();
@@ -768,6 +944,20 @@ export function CadraProvider({ children }: { children: React.ReactNode }) {
       const account = (connectedAddress || client.account?.address) as `0x${string}`;
       const amountUnits = parseUnits(amount.toString(), 6);
 
+      // Pre-flight balance check: prevent wallet reverting on transferFrom
+      const userBal = (await publicClient.readContract({
+        address: CONTRACT_ADDRESSES.token0,
+        abi: ERC20Abi,
+        functionName: "balanceOf",
+        args: [account],
+      })) as bigint;
+
+      if (userBal < amountUnits) {
+        throw new Error(
+          `Insufficient USDC balance to post bond (${(Number(userBal) / 1e6).toFixed(0)} USDC available). Claim free test tokens from the Faucet first.`
+        );
+      }
+
       // Check current USDC allowance for CadraHook
       const currentAllowance = (await publicClient.readContract({
         address: CONTRACT_ADDRESSES.token0,
@@ -783,6 +973,7 @@ export function CadraProvider({ children }: { children: React.ReactNode }) {
           functionName: "approve",
           args: [CONTRACT_ADDRESSES.hook, maxUint256],
           account,
+          gas: BigInt(100000),
         });
         await publicClient.waitForTransactionReceipt({ hash: approveTx });
       }
@@ -794,6 +985,7 @@ export function CadraProvider({ children }: { children: React.ReactNode }) {
         functionName: "postBond",
         args: [BigInt(vaultId), amountUnits],
         account,
+        gas: BigInt(400000),
       });
 
       setOnChainTxHash(tx);
@@ -951,30 +1143,27 @@ export function CadraProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  // 9. Free Faucet: Mint Test USDC on Unichain Sepolia
+  // 9. Free Faucet: Claim Official Circle Test USDC on Unichain Sepolia
   const mintTestTokens = async () => {
     if (!connectedAddress) {
       if (login) login();
       return;
     }
-    setIsLoadingOnChain(true);
-    try {
-      const client = await getAsyncWalletClient();
-      const account = connectedAddress as `0x${string}`;
-
-      const mintTx = await client.writeContract({
-        address: CONTRACT_ADDRESSES.token0,
-        abi: ERC20Abi,
-        functionName: "mint",
-        args: [account, parseUnits("10000", 6)], // 10,000 USDC
-        account,
-      });
-
-      setOnChainTxHash(mintTx);
-      await publicClient.waitForTransactionReceipt({ hash: mintTx });
-    } finally {
-      setIsLoadingOnChain(false);
+    // Official Circle USDC is claimed 20 USDC at a time from faucet.circle.com
+    if (typeof window !== "undefined") {
+      if (navigator?.clipboard) {
+        try {
+          await navigator.clipboard.writeText(connectedAddress);
+          toast.success("Wallet address copied! Request 20 USDC at Circle Faucet.", { duration: 4000 });
+        } catch {
+          toast.success("Opening Circle Faucet (faucet.circle.com)...", { duration: 3000 });
+        }
+      } else {
+        toast.success("Opening Circle Faucet (faucet.circle.com)...", { duration: 3000 });
+      }
+      window.open("https://faucet.circle.com", "_blank", "noopener,noreferrer");
     }
+    await fetchOnChainVaults();
   };
 
   // Seed archetypes helper
@@ -984,6 +1173,34 @@ export function CadraProvider({ children }: { children: React.ReactNode }) {
 
   const resetDemo = () => {
     fetchOnChainVaults();
+  };
+
+  const deleteVault = (vaultId: number) => {
+    try {
+      const stored = typeof window !== "undefined" ? localStorage.getItem("cadra_hidden_vaults") : null;
+      const list: number[] = stored ? JSON.parse(stored) : [];
+      if (!list.includes(vaultId)) {
+        list.push(vaultId);
+        if (typeof window !== "undefined") {
+          localStorage.setItem("cadra_hidden_vaults", JSON.stringify(list));
+        }
+      }
+      setVaults((prev) => prev.filter((v) => v.id !== vaultId));
+    } catch {}
+  };
+
+  const deleteAllVaults = () => {
+    try {
+      const currentIds = vaults.map((v) => v.id);
+      const stored = typeof window !== "undefined" ? localStorage.getItem("cadra_hidden_vaults") : null;
+      const list: number[] = stored ? JSON.parse(stored) : [];
+      const updated = Array.from(new Set([...list, ...currentIds, 1, 2, 3]));
+      if (typeof window !== "undefined") {
+        localStorage.setItem("cadra_hidden_vaults", JSON.stringify(updated));
+      }
+      setVaults([]);
+      setUserPositions({});
+    } catch {}
   };
 
   const contextValue = useMemo(
@@ -1007,6 +1224,8 @@ export function CadraProvider({ children }: { children: React.ReactNode }) {
       deposit,
       withdraw,
       createVault,
+      deleteVault,
+      deleteAllVaults,
       updateRanges,
       postBond,
       proposeMandate,
@@ -1017,6 +1236,7 @@ export function CadraProvider({ children }: { children: React.ReactNode }) {
       resetDemo,
       refreshOnChainData: fetchOnChainVaults,
       mintTestTokens,
+      userUsdcBalance,
       isLoadingOnChain,
       onChainTxHash,
     }),
@@ -1031,6 +1251,7 @@ export function CadraProvider({ children }: { children: React.ReactNode }) {
       login,
       logout,
       fetchOnChainVaults,
+      userUsdcBalance,
       isLoadingOnChain,
       onChainTxHash,
     ]

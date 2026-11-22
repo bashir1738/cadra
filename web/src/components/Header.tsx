@@ -30,26 +30,8 @@ export function Header({
   const pathname = usePathname();
   const router = useRouter();
 
-  const { connectedAddress: cadraAddress, mintTestTokens, isLoadingOnChain } = useCadra();
+  const { connectedAddress: cadraAddress } = useCadra();
   const activeConnectedAddress = propAddress || cadraAddress;
-  const [isMinting, setIsMinting] = useState(false);
-  const [faucetNotice, setFaucetNotice] = useState<string | null>(null);
-
-  const handleMintFaucet = async () => {
-    setIsMinting(true);
-    setFaucetNotice(null);
-    try {
-      await mintTestTokens();
-      setFaucetNotice("Minted 10,000 USDC!");
-      setTimeout(() => setFaucetNotice(null), 4000);
-    } catch (e: any) {
-      console.error(e);
-      setFaucetNotice("Mint failed");
-      setTimeout(() => setFaucetNotice(null), 4000);
-    } finally {
-      setIsMinting(false);
-    }
-  };
 
   return (
     <header className="sticky top-0 z-50 w-full bg-white/95 backdrop-blur-md border-b border-neutral-100 transition-colors">
@@ -168,24 +150,12 @@ export function Header({
               pathname === "/simulator" ? "text-neutral-950 font-semibold" : ""
             }`}
           >
-            Simulator
+            Demo Sandbox
           </Link>
         </nav>
 
-        {/* Right: Wallet & Faucet Actions */}
+        {/* Right: Wallet Actions */}
         <div className="flex items-center gap-2.5 shrink-0">
-          {activeConnectedAddress && (
-            <button
-              type="button"
-              onClick={handleMintFaucet}
-              disabled={isMinting || isLoadingOnChain}
-              className="hidden sm:inline-flex items-center gap-1.5 h-9 px-3 rounded-full border border-neutral-200/90 bg-neutral-50 hover:bg-neutral-100 text-[12px] font-semibold text-neutral-800 transition-all active:scale-95 cursor-pointer disabled:opacity-50"
-              title="Mint 10,000 testnet Mock USDC on Unichain Sepolia"
-            >
-              <span>{isMinting ? "Minting..." : faucetNotice || "Faucet +10k USDC"}</span>
-            </button>
-          )}
-
           {/* RainbowKit / Privy Wallet Connect */}
           <CadraPrivyButton variant="header" />
 
@@ -239,7 +209,7 @@ export function Header({
             onClick={() => setMobileMenuOpen(false)}
             className="block px-3 py-2.5 rounded-xl text-sm font-medium text-neutral-700 hover:bg-neutral-50 hover:text-neutral-950 transition-colors"
           >
-            Simulator
+            Demo Sandbox
           </Link>
           <div className="pt-3 mt-2 border-t border-neutral-100 flex flex-col gap-2">
             <button

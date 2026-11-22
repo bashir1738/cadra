@@ -19,8 +19,8 @@ export default function SimulatorPage() {
   return (
     <DashboardLayout
       portalMode={activeRole}
-      pageTitle="Autonomous Bots & Simulator"
-      breadcrumb="Simulate"
+      pageTitle="Demo Sandbox"
+      breadcrumb="Hackathon Playground"
     >
       <LiveSimulator
         vaults={vaults}

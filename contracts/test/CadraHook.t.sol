@@ -246,6 +246,40 @@ contract CadraHookTest is Test, Deployers {
         assertEq(v.capacityMultiplier, 7, "Multiplier increased twice on 2 ahead epochs (5 -> 6 -> 7)");
     }
 
+    function test_settle_protocol_fee_split_and_treasury_management() public {
+        address treasury = address(0x999);
+        hook.setProtocolTreasury(treasury);
+        assertEq(hook.protocolTreasury(), treasury);
+        assertEq(hook.protocolFeeBps(), 100);
+
+        // Only owner can set protocol treasury
+        vm.prank(follower);
+        vm.expectRevert(CadraHook.OnlyOwner.selector);
+        hook.setProtocolTreasury(address(0x123));
+
+        // Max fee bps cap
+        vm.expectRevert(CadraHook.ProtocolFeeTooHigh.selector);
+        hook.setProtocolFeeBps(600); // Exceeds 5% max cap
+
+        hook.setProtocolFeeBps(150);
+        assertEq(hook.protocolFeeBps(), 150);
+        hook.setProtocolFeeBps(100); // Reset to 1%
+
+        vm.prank(curator);
+        uint256 vaultId = hook.createVault(poolKey, 2000, defaultMandate);
+
+        vm.prank(curator);
+        hook.postBond(vaultId, 10_000 ether);
+
+        vm.prank(follower);
+        hook.deposit(vaultId, 0, 1000 ether);
+
+        // Settle epoch 1
+        vm.warp(hook.getVault(vaultId).epochStart + EPOCH_LENGTH + 1);
+        hook.settle(vaultId);
+        assertEq(hook.vaultFollowerShares(vaultId, follower), 1000 ether);
+    }
+
     function test_queued_withdrawals_lifecycle() public {
         vm.prank(curator);
         uint256 vaultId = hook.createVault(poolKey, 2000, defaultMandate);

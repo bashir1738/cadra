@@ -7,6 +7,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { http } from "wagmi";
 import { unichainSepolia } from "viem/chains";
 import { sepolia, mainnet, base, arbitrum } from "wagmi/chains";
+import { Toaster } from "react-hot-toast";
 
 export const wagmiConfig = createConfig({
   chains: [unichainSepolia, sepolia, mainnet, base, arbitrum],
@@ -65,6 +66,40 @@ export function PrivyProviders({ children }: { children: React.ReactNode }) {
       <QueryClientProvider client={queryClient}>
         <WagmiProvider config={wagmiConfig}>
           {children}
+          <Toaster
+            position="top-right"
+            toastOptions={{
+              duration: 5000,
+              style: {
+                background: "#0a0a0a",
+                color: "#f5f5f5",
+                border: "1px solid #262626",
+                borderRadius: "14px",
+                fontSize: "13px",
+                fontWeight: 500,
+                padding: "12px 16px",
+                boxShadow: "0 10px 25px -5px rgba(0, 0, 0, 0.3), 0 8px 10px -6px rgba(0, 0, 0, 0.3)",
+              },
+              success: {
+                iconTheme: {
+                  primary: "#10b981",
+                  secondary: "#ffffff",
+                },
+              },
+              error: {
+                iconTheme: {
+                  primary: "#ef4444",
+                  secondary: "#ffffff",
+                },
+              },
+              loading: {
+                iconTheme: {
+                  primary: "#3b82f6",
+                  secondary: "#ffffff",
+                },
+              },
+            }}
+          />
         </WagmiProvider>
       </QueryClientProvider>
     </PrivyProvider>

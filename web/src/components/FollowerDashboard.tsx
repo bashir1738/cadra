@@ -1,12 +1,14 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
+import toast from "react-hot-toast";
 import { VaultData, UserPosition, ReactiveSafetyAction } from "../types/cadra";
 import {
   ShieldIcon,
   TrendUpIcon,
   ClockIcon,
   ArrowRightIcon,
+  ArrowUpRightIcon,
   AlertTriangleIcon,
   CheckCircleIcon,
   ActivityIcon,
@@ -60,12 +62,20 @@ export const FollowerDashboard = React.memo(function FollowerDashboard({
   onNavigateToLeaderboard,
   onNavigateToStudio,
 }: FollowerDashboardProps) {
-  const { connectedAddress, openConnectModal, reactiveSafetyFeed } = useCadra();
+  const {
+    connectedAddress,
+    openConnectModal,
+    reactiveSafetyFeed,
+    userUsdcBalance = 0,
+    mintTestTokens,
+    isLoadingOnChain,
+  } = useCadra();
   const [activeModal, setActiveModal] = useState<"deposit" | "withdraw" | null>(null);
   const [selectedVaultId, setSelectedVaultId] = useState<number>(vaults[0]?.id || 1);
-  const [amountInput, setAmountInput] = useState<string>("1000");
+  const [amountInput, setAmountInput] = useState<string>("10");
   const [safetyFilter, setSafetyFilter] = useState<"all" | "rule_guard" | "shock_guard" | "settlement">("all");
   const [actionNotice, setActionNotice] = useState<string | null>(null);
+  const [modalError, setModalError] = useState<string | null>(null);
   const [isSubmittingAction, setIsSubmittingAction] = useState<boolean>(false);
 
   const userVaultIds = useMemo(() => Object.keys(userPositions).map(Number), [userPositions]);
@@ -102,7 +112,8 @@ export const FollowerDashboard = React.memo(function FollowerDashboard({
 
   const handleOpenDeposit = (vaultId: number) => {
     setSelectedVaultId(vaultId);
-    setAmountInput("1000");
+    setAmountInput("10");
+    setModalError(null);
     setActiveModal("deposit");
   };
 
@@ -110,6 +121,7 @@ export const FollowerDashboard = React.memo(function FollowerDashboard({
     setSelectedVaultId(vaultId);
     const pos = userPositions[vaultId];
     setAmountInput(pos ? (pos.shares / 2).toString() : "0");
+    setModalError(null);
     setActiveModal("withdraw");
   };
 
@@ -120,23 +132,66 @@ export const FollowerDashboard = React.memo(function FollowerDashboard({
     }
     const val = parseFloat(amountInput);
     if (isNaN(val) || val <= 0) return;
-    setIsSubmittingAction(true);
-    setActionNotice(null);
-    try {
+
+    if (activeModal === "deposit") {
+      if (val < 5) {
+        setModalError("Minimum deposit is $5 USDC.");
+        return;
+      }
+      if (userUsdcBalance < val) {
+        setModalError(`Insufficient USDC balance ($${userUsdcBalance.toLocaleString()} available). Please claim testnet USDC from the Circle Faucet.`);
+        return;
+      }
       const targetVault = vaults.find((v) => v.id === selectedVaultId);
-      const vaultName = targetVault?.name || `Vault #${selectedVaultId}`;
+      if (targetVault && (targetVault.bondAmount <= 0 || targetVault.capacity <= 0)) {
+        setModalError(`Vault #${selectedVaultId} currently has $0 curator bond staked. Under Cadra's protocol rules, curators must stake cash bond collateral in Curator Studio before followers can deposit.`);
+        return;
+      }
+      if (targetVault) {
+        const remainingCap = targetVault.capacity - targetVault.totalFollowerValue;
+        if (val > remainingCap) {
+          setModalError(`Deposit amount ($${val.toLocaleString()}) exceeds the vault's remaining capacity of $${Math.max(0, remainingCap).toLocaleString()} USDC.`);
+          return;
+        }
+      }
+    }
+
+    setIsSubmittingAction(true);
+    setModalError(null);
+    setActionNotice(null);
+    const targetVault = vaults.find((v) => v.id === selectedVaultId);
+    const vaultName = targetVault?.name || `Vault #${selectedVaultId}`;
+    const actionLabel = activeModal === "deposit" ? `Depositing $${val.toLocaleString()} USDC` : `Withdrawing ${val.toLocaleString()} shares`;
+    const toastId = toast.loading(`${actionLabel} on Unichain Sepolia...`);
+
+    try {
       if (activeModal === "deposit") {
         await onDeposit(selectedVaultId, val);
+        toast.success(`Successfully deposited $${val.toLocaleString()} USDC into ${vaultName}!`, { id: toastId });
         setActionNotice(`Successfully deposited $${val.toLocaleString()} USDC on-chain into ${vaultName}.`);
       } else if (activeModal === "withdraw") {
         await onWithdraw(selectedVaultId, val);
+        toast.success(`Withdrawal queued for ${val.toLocaleString()} shares from ${vaultName}!`, { id: toastId });
         setActionNotice(`Successfully queued withdrawal of ${val.toLocaleString()} shares on-chain from ${vaultName}.`);
       }
       setActiveModal(null);
       setTimeout(() => setActionNotice(null), 8000);
     } catch (err: any) {
-      console.error("Action error:", err);
-      setActionNotice(`Transaction failed: ${err?.shortMessage || err?.message || "Transaction error"}`);
+      const isRejected =
+        err?.message?.includes("denied") ||
+        err?.message?.includes("rejected") ||
+        err?.shortMessage?.includes("rejected") ||
+        err?.shortMessage?.includes("denied");
+
+      if (isRejected) {
+        toast.error("Transaction cancelled in wallet", { id: toastId });
+        setModalError("Transaction was cancelled in your wallet.");
+      } else {
+        console.error("Action error:", err);
+        const msg = err?.shortMessage || err?.message || "Transaction error";
+        toast.error(`Transaction failed: ${msg}`, { id: toastId });
+        setModalError(msg);
+      }
     } finally {
       setIsSubmittingAction(false);
     }
@@ -396,8 +451,10 @@ export const FollowerDashboard = React.memo(function FollowerDashboard({
   // =========================================================================
   if (activeSubPage === "safety") {
     return (
-      <div suppressHydrationWarning className="space-y-6 font-sans max-w-5xl mx-auto">
+      <div suppressHydrationWarning className="space-y-5 font-sans max-w-5xl mx-auto">
         {NotificationBanner}
+
+        {/* Header & Filter Controls */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
           <div>
             <div className="flex items-center gap-2">
@@ -408,52 +465,49 @@ export const FollowerDashboard = React.memo(function FollowerDashboard({
             <h1 className="text-2xl sm:text-3xl font-bold text-neutral-950 tracking-tight mt-1">
               Reactive Safety Feed
             </h1>
-            <p className="text-[14px] text-neutral-500 mt-1">
-              If your curator breaks the rules, your money is pulled to safety in about a second, with nothing off-chain.
+            <p className="text-[13px] text-neutral-500 mt-0.5">
+              Autonomous cross-chain guardian pulling assets to safety in ~1s with zero off-chain keeper bots.
             </p>
           </div>
 
           {/* Filter Pills */}
-          <div className="flex flex-wrap items-center gap-1.5 p-1 rounded-full bg-neutral-100 border border-neutral-200 text-xs font-mono">
+          <div className="flex flex-wrap items-center gap-1 p-1 rounded-full bg-neutral-100 border border-neutral-200 text-xs font-mono">
             {(["all", "rule_guard", "shock_guard", "settlement"] as const).map((cat) => (
               <button
                 key={cat}
                 onClick={() => setSafetyFilter(cat)}
-                className={`px-3 py-1.5 rounded-full capitalize transition-all cursor-pointer font-semibold ${
+                className={`px-3 py-1 rounded-full capitalize transition-all cursor-pointer font-semibold ${
                   safetyFilter === cat
-                    ? "bg-white text-neutral-950 shadow-xs"
+                    ? "bg-white text-neutral-950 shadow-2xs"
                     : "text-neutral-500 hover:text-neutral-900"
                 }`}
               >
-                {cat === "all" ? "All Safety Events" : cat.replace("_", " ")}
+                {cat === "all" ? "All" : cat.replace("_", " ")}
               </button>
             ))}
           </div>
         </div>
 
-        {/* Highlights Banner */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
-          <div className="p-5 rounded-[24px] bg-white border border-neutral-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.03)] space-y-1">
-            <span className="text-[11px] font-mono text-neutral-400 uppercase block font-semibold">Rule Guard Latency</span>
-            <span className="text-2xl font-bold text-neutral-950 font-mono tracking-tight block">~1.1s</span>
-            <span className="text-[12px] text-neutral-500">Breach on Unichain to automated parking</span>
+        {/* Compact Telemetry Strip */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 p-2 rounded-2xl bg-neutral-50/80 border border-neutral-200/80 text-xs font-mono">
+          <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-white border border-neutral-200/60 shadow-2xs">
+            <span className="text-neutral-500">Rule Guard</span>
+            <span className="font-bold text-neutral-900 bg-neutral-100 px-2 py-0.5 rounded">~1.1s Latency</span>
           </div>
-          <div className="p-5 rounded-[24px] bg-white border border-neutral-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.03)] space-y-1">
-            <span className="text-[11px] font-mono text-neutral-400 uppercase block font-semibold">Base Shock Guard</span>
-            <span className="text-2xl font-bold text-neutral-950 font-mono tracking-tight block">~0.8s</span>
-            <span className="text-[12px] text-neutral-500">Cross-chain shield before arbitrage reaches pool</span>
+          <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-white border border-neutral-200/60 shadow-2xs">
+            <span className="text-neutral-500">Shock Guard</span>
+            <span className="font-bold text-neutral-900 bg-neutral-100 px-2 py-0.5 rounded">~0.8s Shield</span>
           </div>
-          <div className="p-5 rounded-[24px] bg-white border border-neutral-200/80 shadow-[0_1px_3px_rgba(0,0,0,0.03)] space-y-1">
-            <span className="text-[11px] font-mono text-neutral-400 uppercase block font-semibold">Off-Chain Reliances</span>
-            <span className="text-2xl font-bold text-emerald-700 font-mono tracking-tight block">Zero</span>
-            <span className="text-[12px] text-neutral-500">Autonomous Reactive contract replaces keeper bots</span>
+          <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-white border border-neutral-200/60 shadow-2xs">
+            <span className="text-neutral-500">Keepers / Bots</span>
+            <span className="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200/60">0 (Autonomous)</span>
           </div>
         </div>
 
         {/* Events Stream List */}
-        <div className="space-y-3.5">
+        <div className="space-y-3">
           {filteredSafetyFeed.length === 0 ? (
-            <div className="bg-white border border-neutral-200/80 rounded-[28px] p-10 text-center space-y-3 shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
+            <div className="bg-white border border-neutral-200/80 rounded-2xl p-10 text-center space-y-3 shadow-2xs">
               <div className="w-12 h-12 rounded-2xl bg-neutral-100 flex items-center justify-center mx-auto text-neutral-400">
                 <ShieldIcon className="w-6 h-6" />
               </div>
@@ -472,43 +526,108 @@ export const FollowerDashboard = React.memo(function FollowerDashboard({
               return (
                 <div
                   key={action.id}
-                  className="bg-white border border-neutral-200/80 rounded-[28px] p-6 space-y-4 shadow-[0_1px_3px_rgba(0,0,0,0.03)]"
+                  className="bg-white border border-neutral-200/80 rounded-2xl p-6 space-y-4 shadow-2xs hover:border-neutral-300 transition-colors"
                 >
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-neutral-100 pb-3">
-                    <div className="flex items-center gap-2.5">
-                      <span className={`w-2.5 h-2.5 rounded-full ${isRule ? "bg-red-500" : isShock ? "bg-amber-500" : "bg-emerald-500"}`} />
-                      <span className="font-bold text-neutral-950 text-[15px]">{action.summary}</span>
-                      <span className="text-xs font-mono text-neutral-400 font-normal">· {action.vaultName}</span>
+                  {/* Top Bar: Event Type, Summary & Timing */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                    <div className="flex items-center gap-2.5 flex-wrap">
+                      <span
+                        className={`px-2.5 py-1 rounded-md text-xs font-semibold font-mono tracking-wide ${
+                          isRule
+                            ? "bg-red-50 text-red-700 border border-red-200/60"
+                            : isShock
+                            ? "bg-amber-50 text-amber-700 border border-amber-200/60"
+                            : "bg-emerald-50 text-emerald-700 border border-emerald-200/60"
+                        }`}
+                      >
+                        {isRule ? "Rule Guard" : isShock ? "Shock Guard" : "Settlement"}
+                      </span>
+                      <span className="font-bold text-neutral-950 text-base sm:text-[17px] tracking-tight">{action.summary}</span>
+                      <span className="text-sm text-neutral-500 font-medium">· {action.vaultName}</span>
                     </div>
 
-                    <div className="flex items-center gap-2 font-mono text-xs text-neutral-500">
-                      <span className="px-2.5 py-0.5 rounded-full bg-neutral-100 font-bold text-neutral-800">
-                        Latency: {action.latencySeconds}s
+                    <div className="flex items-center gap-2 text-xs sm:text-[13px] font-mono text-neutral-500 shrink-0">
+                      <span className="font-bold text-neutral-900 bg-neutral-100 px-3 py-1 rounded-md">
+                        {action.latencySeconds}s
                       </span>
                       <span>{action.timeFormatted}</span>
                     </div>
                   </div>
 
-                  <p className="text-[13px] text-neutral-600 leading-relaxed font-normal">
+                  {/* Description */}
+                  <p className="text-sm sm:text-[15px] text-neutral-700 leading-relaxed font-normal">
                     {action.details}
                   </p>
 
-                  {/* 3-Transaction Chain (Proof for Judges) */}
-                  <div className="p-3.5 rounded-2xl bg-[#FAFAFA] border border-neutral-200/60 font-mono text-[11px] space-y-1.5">
-                    <div className="text-neutral-400 font-semibold uppercase text-[10px] tracking-wider mb-1">
-                      On-Chain Proof Chain ({action.originChain} -&gt; Reactive Lasna -&gt; Unichain Sepolia)
-                    </div>
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-neutral-600">
-                      <span>1. Origin Event ({action.originChain}):</span>
-                      <span className="text-neutral-900 font-bold break-all sm:break-normal">{action.originTxHash}</span>
-                    </div>
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-neutral-600">
-                      <span>2. Reactive Contract (Lasna Testnet):</span>
-                      <span className="text-neutral-900 font-bold break-all sm:break-normal">{action.reactiveTxHash}</span>
-                    </div>
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 text-neutral-600">
-                      <span>3. Hook Callback (Unichain Sepolia):</span>
-                      <span className="text-neutral-900 font-bold break-all sm:break-normal">{action.callbackTxHash}</span>
+                  {/* Proof Chain (Strictly on a Single Straight Horizontal Line) */}
+                  <div className="pt-3 border-t border-neutral-100 flex items-center gap-3 overflow-x-auto no-scrollbar whitespace-nowrap text-xs sm:text-[13px] font-mono">
+                    <span className="text-xs uppercase font-bold tracking-wider text-neutral-400 shrink-0">
+                      Proof Chain
+                    </span>
+                    <div className="flex items-center flex-nowrap gap-2 shrink-0">
+                      {/* Step 1: Origin */}
+                      <a
+                        href={
+                          action.originChain.includes("Base")
+                            ? `https://sepolia.basescan.org/tx/${action.originTxHash}`
+                            : `https://sepolia.uniscan.xyz/tx/${action.originTxHash}`
+                        }
+                        target="_blank"
+                        rel="noreferrer"
+                        className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-neutral-50 hover:bg-neutral-100 border border-neutral-200 text-neutral-700 hover:text-neutral-950 transition-colors whitespace-nowrap"
+                        title={`Origin Event on ${action.originChain}`}
+                      >
+                        <span className="text-neutral-400 font-normal">Origin:</span>
+                        <span className="font-semibold">{action.originChain.includes("Base") ? "Base" : "Unichain"}</span>
+                        <span className="text-neutral-400 font-mono">
+                          ({action.originTxHash.length > 12 ? `${action.originTxHash.slice(0, 6)}...${action.originTxHash.slice(-4)}` : action.originTxHash})
+                        </span>
+                        <ArrowUpRightIcon className="w-3.5 h-3.5 text-neutral-400 shrink-0" />
+                      </a>
+
+                      <span className="shrink-0 text-neutral-400 font-bold px-0.5 select-none">&rarr;</span>
+
+                      {/* Step 2: Reactive Lasna */}
+                      <a
+                        href={
+                          action.reactiveTxHash.startsWith("0x0612")
+                            ? `https://lasna-omni.reactscan.net/address/${action.reactiveTxHash}`
+                            : `https://lasna-omni.reactscan.net/tx/${action.reactiveTxHash}`
+                        }
+                        target="_blank"
+                        rel="noreferrer"
+                        className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-purple-50/70 hover:bg-purple-100/70 border border-purple-200/60 text-purple-900 transition-colors whitespace-nowrap"
+                        title="Reactive Lasna RSC Reaction"
+                      >
+                        <span className="text-purple-400 font-normal">Reactive:</span>
+                        <span className="font-semibold">Lasna</span>
+                        <span className="text-purple-500 font-mono">
+                          ({action.reactiveTxHash.length > 12 ? `${action.reactiveTxHash.slice(0, 6)}...${action.reactiveTxHash.slice(-4)}` : action.reactiveTxHash})
+                        </span>
+                        <ArrowUpRightIcon className="w-3.5 h-3.5 text-purple-400 shrink-0" />
+                      </a>
+
+                      <span className="shrink-0 text-neutral-400 font-bold px-0.5 select-none">&rarr;</span>
+
+                      {/* Step 3: Callback */}
+                      <a
+                        href={
+                          action.callbackTxHash.startsWith("0xb4Df")
+                            ? `https://sepolia.uniscan.xyz/address/${action.callbackTxHash}`
+                            : `https://sepolia.uniscan.xyz/tx/${action.callbackTxHash}`
+                        }
+                        target="_blank"
+                        rel="noreferrer"
+                        className="shrink-0 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50/70 hover:bg-emerald-100/70 border border-emerald-200/60 text-emerald-900 transition-colors whitespace-nowrap"
+                        title="Unichain Sepolia Hook Callback"
+                      >
+                        <span className="text-emerald-500 font-normal">Callback:</span>
+                        <span className="font-semibold">Unichain</span>
+                        <span className="text-emerald-600 font-mono">
+                          ({action.callbackTxHash.length > 12 ? `${action.callbackTxHash.slice(0, 6)}...${action.callbackTxHash.slice(-4)}` : action.callbackTxHash})
+                        </span>
+                        <ArrowUpRightIcon className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                      </a>
                     </div>
                   </div>
                 </div>
@@ -749,7 +868,7 @@ export const FollowerDashboard = React.memo(function FollowerDashboard({
       {/* Deposit / Withdraw Action Modal */}
       {activeModal && (
         <div className="fixed inset-0 bg-neutral-950/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-[32px] max-w-md w-full p-6 sm:p-8 space-y-6 shadow-[0_20px_50px_rgba(0,0,0,0.14)] border border-neutral-200/80">
+          <div className="bg-white rounded-[32px] max-w-md w-full p-6 sm:p-8 space-y-5 shadow-[0_20px_50px_rgba(0,0,0,0.14)] border border-neutral-200/80">
             <div className="flex justify-between items-center border-b border-neutral-100 pb-4">
               <div>
                 <h3 className="text-xl font-bold text-neutral-950 tracking-tight">
@@ -760,38 +879,73 @@ export const FollowerDashboard = React.memo(function FollowerDashboard({
                 </p>
               </div>
               <button
-                onClick={() => setActiveModal(null)}
+                onClick={() => {
+                  setActiveModal(null);
+                  setModalError(null);
+                }}
                 className="w-8 h-8 rounded-full hover:bg-neutral-100 flex items-center justify-center text-neutral-400 hover:text-neutral-950 transition-colors cursor-pointer"
               >
                 <XIcon className="w-4 h-4" />
               </button>
             </div>
 
+            {modalError && (
+              <div className="p-3.5 rounded-2xl bg-red-50 border border-red-200 text-red-900 text-xs flex items-start gap-2 animate-in fade-in duration-200">
+                <AlertTriangleIcon className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+                <div className="flex-1 leading-relaxed text-[12px]">{modalError}</div>
+              </div>
+            )}
+
             <div className="space-y-4">
               <div className="space-y-1.5">
-                <label className="text-[12px] font-semibold text-neutral-700 block">
-                  {activeModal === "deposit" ? "Amount in USDC" : "Shares to Redeem"}
-                </label>
+                <div className="flex justify-between items-center">
+                  <label className="text-[12px] font-semibold text-neutral-700 block">
+                    {activeModal === "deposit" ? "Amount in USDC (Min $5)" : "Shares to Redeem"}
+                  </label>
+                  {activeModal === "deposit" && (
+                    <div className="flex items-center gap-2 text-xs">
+                      <span className="text-neutral-500 font-mono">
+                        Balance: <strong className="text-neutral-900">${userUsdcBalance.toLocaleString()}</strong>
+                      </span>
+                      {userUsdcBalance < 5 && (
+                        <button
+                          type="button"
+                          onClick={mintTestTokens}
+                          className="text-emerald-700 hover:text-emerald-800 font-semibold underline text-[11px] cursor-pointer"
+                        >
+                          + Circle Faucet (+20 USDC) ↗
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+
                 <input
                   type="number"
                   value={amountInput}
-                  onChange={(e) => setAmountInput(e.target.value)}
+                  onChange={(e) => {
+                    setAmountInput(e.target.value);
+                    setModalError(null);
+                  }}
                   className="w-full text-lg font-mono bg-white border border-neutral-200/90 rounded-2xl px-4 py-3 text-neutral-950 focus:outline-none focus:border-neutral-950 focus:ring-1 focus:ring-neutral-950 shadow-2xs transition-all"
-                  placeholder="1000"
+                  placeholder="10"
                 />
 
                 {/* Quick Presets for Deposit */}
                 {activeModal === "deposit" && (
                   <div className="flex items-center gap-1.5 pt-1">
                     <span className="text-[11px] text-neutral-400 font-sans">Presets:</span>
-                    {[500, 1000, 5000, 10000].map((preset) => (
+                    {[5, 10, 15, 20].map((preset) => (
                       <button
                         key={preset}
                         type="button"
-                        onClick={() => setAmountInput(preset.toString())}
+                        onClick={() => {
+                          setAmountInput(preset.toString());
+                          setModalError(null);
+                        }}
                         className="px-2.5 py-1 rounded-lg bg-neutral-100 hover:bg-neutral-200 text-neutral-800 text-[11px] font-mono font-medium transition-colors cursor-pointer active:scale-95"
                       >
-                        +${preset >= 1000 ? `${preset / 1000}k` : preset}
+                        +${preset}
                       </button>
                     ))}
                   </div>
@@ -808,7 +962,10 @@ export const FollowerDashboard = React.memo(function FollowerDashboard({
                         <button
                           key={ratio}
                           type="button"
-                          onClick={() => setAmountInput(amount.toString())}
+                          onClick={() => {
+                            setAmountInput(amount.toString());
+                            setModalError(null);
+                          }}
                           className="px-2.5 py-1 rounded-lg bg-neutral-100 hover:bg-neutral-200 text-neutral-800 text-[11px] font-mono font-medium transition-colors cursor-pointer active:scale-95"
                         >
                           {ratio === 1 ? "Max" : `${ratio * 100}%`}
@@ -817,12 +974,93 @@ export const FollowerDashboard = React.memo(function FollowerDashboard({
                     })}
                   </div>
                 )}
+
+                {/* Insufficient balance helper with Circle Faucet */}
+                {activeModal === "deposit" && userUsdcBalance < (parseFloat(amountInput) || 0) && (
+                  <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200/90 text-amber-950 text-xs space-y-2 mt-2">
+                    <div className="flex items-start gap-2">
+                      <AlertTriangleIcon className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-semibold text-amber-950">Insufficient USDC Balance</p>
+                        <p className="text-[11px] text-amber-800 mt-0.5 leading-relaxed">
+                          Your wallet has ${userUsdcBalance.toLocaleString()} USDC on Unichain Sepolia. Claim 20 testnet USDC from the official Circle Faucet to complete your deposit.
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={mintTestTokens}
+                      className="w-full h-8.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                    >
+                      <span>Claim 20 USDC from Circle Faucet ↗</span>
+                    </button>
+                  </div>
+                )}
+
+                {/* Small deposit warning */}
+                {activeModal === "deposit" &&
+                  (parseFloat(amountInput) || 0) > 0 &&
+                  (parseFloat(amountInput) || 0) < 5 && (
+                    <div className="p-3 rounded-xl bg-neutral-100 text-neutral-700 text-xs flex items-center gap-2 mt-2">
+                      <AlertTriangleIcon className="w-4 h-4 text-amber-600 shrink-0" />
+                      <span className="text-[11px]">
+                        Minimum deposit is $5 USDC. Please use $5 or higher.
+                      </span>
+                    </div>
+                  )}
+
+                {/* Zero curator bond warning */}
+                {activeModal === "deposit" && (() => {
+                  const targetV = vaults.find((v) => v.id === selectedVaultId);
+                  if (targetV && targetV.bondAmount <= 0) {
+                    return (
+                      <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-950 text-xs space-y-1 mt-2">
+                        <div className="flex items-start gap-2">
+                          <AlertTriangleIcon className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                          <div>
+                            <p className="font-semibold text-rose-950">Curator Cash Bond Required ($0 Capacity)</p>
+                            <p className="text-[11px] text-rose-800 mt-0.5 leading-relaxed">
+                              This vault has $0 curator cash bond posted. In Cadra, curators must stake a USDC cash bond to guarantee shortfall coverage before followers can deposit.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
+
+                {/* Exceeded capacity warning */}
+                {activeModal === "deposit" && (() => {
+                  const targetV = vaults.find((v) => v.id === selectedVaultId);
+                  if (targetV && targetV.bondAmount > 0) {
+                    const remCap = Math.max(0, targetV.capacity - targetV.totalFollowerValue);
+                    if ((parseFloat(amountInput) || 0) > remCap) {
+                      return (
+                        <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-950 text-xs flex items-start gap-2 mt-2">
+                          <AlertTriangleIcon className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                          <div>
+                            <p className="font-semibold text-amber-950">Vault Capacity Exceeded</p>
+                            <p className="text-[11px] text-amber-800 mt-0.5 leading-relaxed">
+                              Remaining capacity is ${remCap.toLocaleString()} USDC based on curator&apos;s ${targetV.bondAmount.toLocaleString()} USDC bond ({targetV.capacityMultiplier}× multiplier).
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    }
+                  }
+                  return null;
+                })()}
               </div>
 
               <div className="p-4 rounded-2xl bg-[#FAFAFA] border border-neutral-200/70 text-xs text-neutral-600 space-y-2">
                 <div className="flex items-center gap-2">
                   <CheckCircleIcon className="w-4 h-4 text-emerald-600 shrink-0" />
                   <span>Curator cash bond guarantees shortfall coverage.</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <CheckCircleIcon className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>$0 deposit &amp; withdrawal fee. Platform fee is 1% only on profit.</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <ClockIcon className="w-4 h-4 text-neutral-500 shrink-0" />
@@ -834,28 +1072,63 @@ export const FollowerDashboard = React.memo(function FollowerDashboard({
             <div className="flex gap-3">
               <button
                 type="button"
-                onClick={() => setActiveModal(null)}
+                onClick={() => {
+                  setActiveModal(null);
+                  setModalError(null);
+                }}
                 className="flex-1 h-[44px] rounded-full bg-white border border-neutral-200 hover:bg-neutral-50 text-neutral-800 font-semibold text-[13px] transition-all cursor-pointer active:scale-[0.98]"
               >
                 Cancel
               </button>
-              <button
-                type="button"
-                disabled={isSubmittingAction}
-                onClick={handleConfirmAction}
-                className="flex-1 h-[44px] rounded-full bg-neutral-950 text-white font-semibold text-[13px] hover:bg-neutral-800 transition-all shadow-[0_1px_3px_rgba(0,0,0,0.06)] cursor-pointer active:scale-[0.98] disabled:opacity-60 flex items-center justify-center gap-2"
-              >
-                {isSubmittingAction ? (
-                  <>
-                    <span className="w-3.5 h-3.5 rounded-full border-2 border-white/20 border-t-white animate-spin" />
-                    <span>Processing...</span>
-                  </>
-                ) : !connectedAddress ? (
-                  "Connect Wallet"
-                ) : (
-                  `Confirm ${activeModal === "deposit" ? "Deposit" : "Withdrawal"}`
-                )}
-              </button>
+
+              {activeModal === "deposit" && userUsdcBalance < (parseFloat(amountInput) || 0) ? (
+                <button
+                  type="button"
+                  onClick={mintTestTokens}
+                  className="flex-1 h-[44px] rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-[13px] transition-all shadow-[0_1px_3px_rgba(0,0,0,0.06)] cursor-pointer active:scale-[0.98] flex items-center justify-center gap-2"
+                >
+                  <span>Claim 20 USDC at Circle Faucet ↗</span>
+                </button>
+              ) : (() => {
+                const targetV = vaults.find((v) => v.id === selectedVaultId);
+                const isZeroBond = Boolean(targetV && targetV.bondAmount <= 0);
+                const remCap = targetV ? Math.max(0, targetV.capacity - targetV.totalFollowerValue) : 0;
+                const isCapExceeded = Boolean(targetV && !isZeroBond && (parseFloat(amountInput) || 0) > remCap);
+
+                return (
+                  <button
+                    type="button"
+                    disabled={
+                      isSubmittingAction ||
+                      (Boolean(connectedAddress) &&
+                        activeModal === "deposit" && (
+                          (parseFloat(amountInput) || 0) < 5 ||
+                          isZeroBond ||
+                          isCapExceeded
+                        ))
+                    }
+                    onClick={handleConfirmAction}
+                    className="flex-1 h-[44px] rounded-full bg-neutral-950 text-white font-semibold text-[13px] hover:bg-neutral-800 transition-all shadow-[0_1px_3px_rgba(0,0,0,0.06)] cursor-pointer active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  >
+                    {isSubmittingAction ? (
+                      <>
+                        <span className="w-3.5 h-3.5 rounded-full border-2 border-white/20 border-t-white animate-spin" />
+                        <span>Processing...</span>
+                      </>
+                    ) : !connectedAddress ? (
+                      "Connect Wallet"
+                    ) : activeModal === "deposit" && isZeroBond ? (
+                      "Curator Bond Required"
+                    ) : activeModal === "deposit" && isCapExceeded ? (
+                      "Capacity Exceeded"
+                    ) : activeModal === "deposit" && (parseFloat(amountInput) || 0) < 5 ? (
+                      "Min Deposit $5"
+                    ) : (
+                      `Confirm ${activeModal === "deposit" ? "Deposit" : "Withdrawal"}`
+                    )}
+                  </button>
+                );
+              })()}
             </div>
           </div>
         </div>

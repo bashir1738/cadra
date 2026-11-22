@@ -45,6 +45,10 @@ contract CadraHook is BaseHook, IUnlockCallback {
 
     uint256 public nextVaultId = 1;
 
+    address public owner;
+    address public protocolTreasury;
+    uint16 public protocolFeeBps = 100; // 100 bps = 1.00% of excess profit
+
     mapping(uint256 => Vault) public vaults;
     mapping(uint256 => Range[]) internal vaultPositions;
     mapping(uint256 => mapping(address => uint256)) public vaultFollowerShares;
@@ -95,11 +99,16 @@ contract CadraHook is BaseHook, IUnlockCallback {
         uint256 paceValue,
         uint256 fee,
         uint256 bondPaid,
-        uint256 deficit
+        uint256 deficit,
+        uint256 protocolFee
     );
     event EpochReady(uint256 indexed vaultId, uint256 epoch);
+    event ProtocolTreasuryUpdated(address indexed oldTreasury, address indexed newTreasury);
+    event ProtocolFeeBpsUpdated(uint16 oldBps, uint16 newBps);
 
     // Errors
+    error OnlyOwner();
+    error ProtocolFeeTooHigh();
     error OnlyCurator();
     error VaultFrozen();
     error EpochNotEnded();
@@ -134,6 +143,8 @@ contract CadraHook is BaseHook, IUnlockCallback {
         epochLength = _epochLength;
         twapWindow = _twapWindow;
         maxSpotDeviationTicks = _maxSpotDeviationTicks;
+        owner = msg.sender;
+        protocolTreasury = msg.sender;
     }
 
     function getHookPermissions() public pure override returns (Hooks.Permissions memory) {
@@ -220,6 +231,32 @@ contract CadraHook is BaseHook, IUnlockCallback {
         poolActiveBandMask[poolId] = activeMask;
 
         return (this.afterSwap.selector, 0);
+    }
+
+    // ==========================================
+    //            PROTOCOL ADMIN & FEES
+    // ==========================================
+
+    function setProtocolTreasury(address _newTreasury) external {
+        if (msg.sender != owner) revert OnlyOwner();
+        require(_newTreasury != address(0), "ZeroAddress");
+        address oldTreasury = protocolTreasury;
+        protocolTreasury = _newTreasury;
+        emit ProtocolTreasuryUpdated(oldTreasury, _newTreasury);
+    }
+
+    function setProtocolFeeBps(uint16 _newFeeBps) external {
+        if (msg.sender != owner) revert OnlyOwner();
+        if (_newFeeBps > 500) revert ProtocolFeeTooHigh(); // Maximum 5% safety cap
+        uint16 oldBps = protocolFeeBps;
+        protocolFeeBps = _newFeeBps;
+        emit ProtocolFeeBpsUpdated(oldBps, _newFeeBps);
+    }
+
+    function transferOwnership(address _newOwner) external {
+        if (msg.sender != owner) revert OnlyOwner();
+        require(_newOwner != address(0), "ZeroAddress");
+        owner = _newOwner;
     }
 
     // ==========================================
@@ -483,6 +520,7 @@ contract CadraHook is BaseHook, IUnlockCallback {
             v.bond,
             v.deficit,
             v.perfFeeBps,
+            protocolFeeBps,
             v.capacityMultiplier,
             v.totalShares
         );
@@ -501,9 +539,14 @@ contract CadraHook is BaseHook, IUnlockCallback {
         v.deficit = res.newDeficit;
         v.capacityMultiplier = res.newMultiplier;
 
-        // Mint fee shares to curator
+        // Mint fee shares to curator and protocol treasury
+        if (res.curatorShares > 0) {
+            vaultFollowerShares[vaultId][v.curator] += res.curatorShares;
+        }
+        if (res.protocolShares > 0 && protocolTreasury != address(0)) {
+            vaultFollowerShares[vaultId][protocolTreasury] += res.protocolShares;
+        }
         if (res.feeShares > 0) {
-            vaultFollowerShares[vaultId][v.curator] += res.feeShares;
             v.totalShares += res.feeShares;
         }
 
@@ -594,7 +637,7 @@ contract CadraHook is BaseHook, IUnlockCallback {
         v.paceLiquidity = PaceLib.computePaceLiquidity(v.startValue, twapSqrtPrice);
         (v.feeGrowthGlobal0X128Snapshot, v.feeGrowthGlobal1X128Snapshot) = StateLibrary.getFeeGrowthGlobals(poolManager, poolId);
 
-        emit Settled(vaultId, v.epoch, vaultVal, paceVal, res.fee, res.bondPayout, res.newDeficit);
+        emit Settled(vaultId, v.epoch, vaultVal, paceVal, res.curatorFee, res.bondPayout, res.newDeficit, res.protocolFee);
 
         v.epochStart = block.timestamp;
         v.epoch++;

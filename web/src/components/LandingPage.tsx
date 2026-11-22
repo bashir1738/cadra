@@ -188,19 +188,27 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
               Curated Uniswap v4 liquidity backed by real USDC bonds.
             </p>
 
-            {/* Primary Actions */}
-            <div className="flex flex-wrap items-center justify-center gap-3 mt-6 sm:mt-7">
+            {/* Primary Actions: Two-Tone Medicine Pill Capsule */}
+            <div className="relative inline-flex items-stretch rounded-full overflow-hidden border border-neutral-300 shadow-[0_4px_20px_-2px_rgba(0,0,0,0.12),0_1px_3px_rgba(0,0,0,0.06)] mt-6 sm:mt-7 hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.18)] transition-all active:scale-[0.99] group/pill">
+              {/* Subtle Pill Shell Specular Sheen */}
+              <div className="pointer-events-none absolute inset-x-3 top-0.5 h-[40%] rounded-t-full bg-gradient-to-b from-white/25 to-transparent z-20" />
+
+              {/* Left Capsule Half: Dark */}
               <button
                 onClick={handleLaunchFollower}
-                className="h-[46px] px-6 rounded-full bg-neutral-950 text-white hover:bg-neutral-800 transition-all active:scale-[0.98] inline-flex items-center gap-2 text-[14px] font-semibold cursor-pointer shadow-[0_2px_10px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_16px_rgba(0,0,0,0.14)]"
+                className="relative z-10 h-11 sm:h-12 pl-6 sm:pl-7 pr-5 sm:pr-6 bg-neutral-950 text-white hover:bg-neutral-900 active:bg-black transition-colors inline-flex items-center justify-center gap-2 text-[13px] sm:text-[14px] font-semibold cursor-pointer group/btn"
               >
                 <span>Launch App</span>
-                <ArrowRightIcon className="w-4 h-4" />
+                <ArrowRightIcon className="w-4 h-4 text-white/80 group-hover/btn:text-white group-hover/btn:translate-x-0.5 transition-transform" />
               </button>
 
+              {/* Pill Center Seam / Interlocking Joint */}
+              <div className="w-[1.5px] bg-neutral-300 self-stretch relative z-20 shadow-[inset_0_0_1px_rgba(0,0,0,0.1)]" />
+
+              {/* Right Capsule Half: White */}
               <button
                 onClick={handleLaunchCurator}
-                className="h-[46px] px-6 rounded-full bg-white text-neutral-950 border border-neutral-200 hover:border-neutral-300 hover:bg-neutral-50 transition-all active:scale-[0.98] inline-flex items-center gap-2 text-[14px] font-semibold cursor-pointer shadow-[0_1px_3px_rgba(0,0,0,0.03)]"
+                className="relative z-10 h-11 sm:h-12 pl-5 sm:pl-6 pr-6 sm:pr-7 bg-white text-neutral-900 hover:bg-neutral-50 active:bg-neutral-100 transition-colors inline-flex items-center justify-center gap-1.5 text-[13px] sm:text-[14px] font-semibold cursor-pointer"
               >
                 <span>Curator Studio</span>
               </button>

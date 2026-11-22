@@ -242,11 +242,13 @@ export function LiveSimulator({
       setTotalSettlements((prev) => prev + 1);
 
       if (simulatedGapUsdc >= 0) {
-        const fee = (simulatedGapUsdc * (settleCandidate.perfFeeBps / 10000)).toFixed(2);
+        const totalFee = simulatedGapUsdc * (settleCandidate.perfFeeBps / 10000);
+        const protocolFee = simulatedGapUsdc * 0.01;
+        const curatorFee = Math.max(0, totalFee - protocolFee);
         addLog(
           "keeper",
           "success",
-          `[Keeper] [SETTLED] Epoch settlement complete for ${settleCandidate.name}: Outperformed Pace by +$${simulatedGapUsdc}. Curator earned $${fee} fee. Capacity expanded.`
+          `[Keeper] [SETTLED] Epoch settlement complete for ${settleCandidate.name}: Outperformed Pace by +$${simulatedGapUsdc}. Curator: $${curatorFee.toFixed(2)} · Cadra Platform: $${protocolFee.toFixed(2)} (1%). Capacity expanded.`
         );
       } else {
         addLog(
@@ -366,6 +368,44 @@ export function LiveSimulator({
   return (
     <div className="space-y-6 sm:space-y-8 font-sans max-w-5xl mx-auto">
       {/* =========================================================================
+          HACKATHON EVALUATION SANDBOX NOTICE BANNER
+         ========================================================================= */}
+      <div className="rounded-2xl border border-neutral-200/90 bg-neutral-900 text-white p-5 sm:p-6 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="space-y-1.5">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[11px] font-mono font-semibold uppercase tracking-wide border border-emerald-500/30">
+              Hackathon Judge Sandbox
+            </span>
+            <span className="text-neutral-400 text-xs font-mono">Unichain Sepolia · Reactive Lasna</span>
+          </div>
+          <h2 className="text-base sm:text-lg font-semibold text-white tracking-tight">
+            Interactive Testbench for Uniswap v4 Hook & Reactive Network
+          </h2>
+          <p className="text-xs sm:text-[13px] text-neutral-300 max-w-2xl leading-relaxed">
+            Because testnets lack continuous 24/7 retail trading, use this sandbox to simulate Uniswap v4 tick movements, trigger price shocks, and verify Reactive Network cross-chain TWAP parking live.
+          </p>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <a
+            href="https://sepolia.uniscan.xyz/address/0x728D9b5f428B736A26D07879F55C3982Ddf890C0"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-mono font-medium transition-colors border border-white/15"
+          >
+            Hook on Uniscan
+          </a>
+          <a
+            href="https://lasna-omni.reactscan.net/address/0x061216db95D483fc0e7e0c43976A62B7E207ba35"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-mono font-medium transition-colors border border-white/15"
+          >
+            Reactive Contract
+          </a>
+        </div>
+      </div>
+
+      {/* =========================================================================
           1. MASTER CONTROL & BOT STATUS HERO CARD
          ========================================================================= */}
       <section className="bg-white border border-neutral-200/80 rounded-[32px] p-6 sm:p-10 shadow-[0_1px_3px_rgba(0,0,0,0.04)] space-y-6">
@@ -382,10 +422,10 @@ export function LiveSimulator({
               </span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-bold text-neutral-950 tracking-tight">
-              Bot Control Center
+              Demo Control Center
             </h1>
             <p className="text-[14px] text-neutral-500 max-w-lg leading-relaxed font-normal">
-              Run the Swapper, Curator Swarm, and Keeper daemon simultaneously in the browser. Watch trades shift the tick, curators rebalance corridors, and keepers enforce TWAP parking live.
+              Execute live trades to shift the tick, simulate curator corridor rebalancing, and trigger emergency keeper parking on demand.
             </p>
           </div>
 

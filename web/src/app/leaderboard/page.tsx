@@ -8,11 +8,10 @@ import { useCadra } from "../../context/CadraContext";
 
 export default function LeaderboardPage() {
   const router = useRouter();
-  const { vaults, deposit, activeRole } = useCadra();
+  const { vaults, activeRole } = useCadra();
 
   const handleFollow = (vaultId: number) => {
-    deposit(vaultId, 1000);
-    router.push("/follower/portfolio");
+    router.push("/follower/explore");
   };
 
   return (

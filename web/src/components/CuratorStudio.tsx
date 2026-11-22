@@ -1,8 +1,21 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import Link from "next/link";
+import toast from "react-hot-toast";
 import { VaultData, RangePosition } from "../types/cadra";
-import { ShieldIcon, CheckCircleIcon, AlertTriangleIcon, PlusIcon, TrashIcon, TrendUpIcon, ActivityIcon, ClockIcon, ZapIcon } from "./Icons";
+import {
+  ShieldIcon,
+  CheckCircleIcon,
+  AlertTriangleIcon,
+  PlusIcon,
+  TrashIcon,
+  TrendUpIcon,
+  ActivityIcon,
+  ClockIcon,
+  ZapIcon,
+  ArrowRightIcon,
+} from "./Icons";
 import { useCadra, tickToPrice, priceToTick } from "../context/CadraContext";
 
 interface CuratorStudioProps {
@@ -26,12 +39,14 @@ export function CuratorStudio({
   onPostBond,
   onProposeMandate,
 }: CuratorStudioProps) {
-  const { openConnectModal, vaults: contextVaults } = useCadra();
+  const { openConnectModal, vaults: contextVaults, isLoadingOnChain } = useCadra();
   const availableVaults = allVaults || contextVaults;
   const [selectedVaultId, setSelectedVaultId] = useState<number>(propVault?.id || availableVaults[0]?.id || 1);
   const vault = availableVaults.find((v) => v.id === selectedVaultId) || propVault || availableVaults[0];
 
   // Vault creation form state
+  const [isCreatingNewVault, setIsCreatingNewVault] = useState<boolean>(false);
+  const [isDeploying, setIsDeploying] = useState<boolean>(false);
   const [createName, setCreateName] = useState("");
   const [createTag, setCreateTag] = useState("");
   const [createDesc, setCreateDesc] = useState("");
@@ -41,23 +56,40 @@ export function CuratorStudio({
   const [createMaxConc, setCreateMaxConc] = useState("");
   const [createMinTicks, setCreateMinTicks] = useState("");
   const [createShortfall, setCreateShortfall] = useState("");
-  const [createBond, setCreateBond] = useState("");
+  const [createBond, setCreateBond] = useState("10");
 
   // Range editor state for existing vault
   const [ranges, setRanges] = useState<RangePosition[]>(vault?.activeRanges || []);
-  const [bondInput, setBondInput] = useState<string>("5000");
+  const [bondInput, setBondInput] = useState<string>("10");
   const [bondSuccessNotice, setBondSuccessNotice] = useState<string | null>(null);
   const [isDepositingBond, setIsDepositingBond] = useState<boolean>(false);
   const [rebalanceSuccessNotice, setRebalanceSuccessNotice] = useState<string | null>(null);
   const [isRebalancing, setIsRebalancing] = useState<boolean>(false);
 
   // Propose mandate state
-  const [newMinPrice, setNewMinPrice] = useState<number>(vault?.mandate.minPrice || 2400);
-  const [newMaxPrice, setNewMaxPrice] = useState<number>(vault?.mandate.maxPrice || 3600);
+  const [newMinPrice, setNewMinPrice] = useState<number>(vault?.mandate.minPrice || 2470);
+  const [newMaxPrice, setNewMaxPrice] = useState<number>(vault?.mandate.maxPrice || 2530);
   const [newMaxConcentration, setNewMaxConcentration] = useState<number>(
     (vault?.mandate.maxConcentrationBps || 5000) / 100
   );
   const [mandateSuccessNotice, setMandateSuccessNotice] = useState<boolean>(false);
+
+  // Synchronize propose inputs, ranges, and bond input when switching vaults
+  useEffect(() => {
+    if (vault) {
+      setNewMinPrice(vault.mandate.minPrice);
+      setNewMaxPrice(vault.mandate.maxPrice);
+      setNewMaxConcentration((vault.mandate.maxConcentrationBps || 5000) / 100);
+      setRanges(vault.activeRanges || []);
+      setBondInput("10");
+    }
+  }, [
+    vault?.id,
+    vault?.mandate?.minPrice,
+    vault?.mandate?.maxPrice,
+    vault?.mandate?.maxConcentrationBps,
+    vault?.activeRanges,
+  ]);
 
   const handleDepositBond = async () => {
     if (!connectedAddress) {
@@ -69,8 +101,10 @@ export function CuratorStudio({
 
     setIsDepositingBond(true);
     setBondSuccessNotice(null);
+    const toastId = toast.loading(`Posting $${val.toLocaleString()} USDC bond collateral on Unichain Sepolia...`);
     try {
       await onPostBond(vault.id, val);
+      toast.success(`Successfully posted $${val.toLocaleString()} USDC bond collateral!`, { id: toastId });
       setBondSuccessNotice(
         `Successfully posted $${val.toLocaleString()} USDC collateral on-chain! Total vault bond is now $${(
           vault.bondAmount + val
@@ -82,25 +116,34 @@ export function CuratorStudio({
       setTimeout(() => setBondSuccessNotice(null), 8000);
     } catch (err: any) {
       console.error("Bond deposit error:", err);
+      const errMsg = err?.shortMessage || err?.message || "Transaction rejected";
+      toast.error(`Failed to post bond: ${errMsg}`, { id: toastId });
       setBondSuccessNotice(
-        `Failed to post bond on-chain: ${err?.shortMessage || err?.message || "Transaction rejected"}`
+        `Failed to post bond on-chain: ${errMsg}`
       );
     } finally {
       setIsDepositingBond(false);
     }
   };
 
-  // 1. Vault Deployment Interface (When no vault exists)
-  if (!vault) {
+  // 1. Vault Deployment Interface (When no vault exists or user clicks "+ Create Vault")
+  if (!vault || isCreatingNewVault) {
     const handleDeploy = async () => {
       if (!connectedAddress) {
         if (openConnectModal) openConnectModal();
         return;
       }
-      const minP = parseFloat(createMinPrice) || 2000;
-      const maxP = parseFloat(createMaxPrice) || 5000;
+      if (isDeploying) return;
+
+      const minP = parseFloat(createMinPrice) || 2470;
+      const maxP = parseFloat(createMaxPrice) || 2530;
+      if (minP >= maxP) {
+        toast.error("Min price must be less than max price.");
+        return;
+      }
+
       const feeBps = (parseFloat(createFee) || 20) * 100;
-      const bondAmt = parseFloat(createBond) || 5000;
+      const bondAmt = parseFloat(createBond) || 10;
       const concBps = (parseFloat(createMaxConc) || 50) * 100;
       const shortfallBps = (parseFloat(createShortfall) || 5) * 100;
       const minWidth = parseInt(createMinTicks, 10) || 120;
@@ -130,8 +173,8 @@ export function CuratorStudio({
         isParked: false,
         bandLeft: false,
         mandate: {
-          minTick: -69060,
-          maxTick: -46080,
+          minTick: priceToTick(minP),
+          maxTick: priceToTick(maxP),
           minPrice: minP,
           maxPrice: maxP,
           maxConcentrationBps: concBps,
@@ -143,19 +186,44 @@ export function CuratorStudio({
       };
 
       if (onCreateVault) {
+        setIsDeploying(true);
+        const toastId = toast.loading("Deploying vault on Unichain Sepolia... Please confirm in your wallet.");
         try {
           const createdId = await onCreateVault(newVault);
           if (createdId) {
             setSelectedVaultId(createdId);
           }
+          setIsCreatingNewVault(false);
+          toast.success(`Vault #${createdId || ""} deployed successfully on-chain!`, { id: toastId });
         } catch (err: any) {
-          console.error("Vault deployment failed:", err);
+          const isRejected =
+            err?.message?.includes("denied") ||
+            err?.message?.includes("rejected") ||
+            err?.shortMessage?.includes("rejected") ||
+            err?.shortMessage?.includes("denied");
+          const errMsg = isRejected
+            ? "Transaction cancelled in wallet."
+            : err?.shortMessage || err?.message || "Transaction was rejected or failed.";
+          toast.error(errMsg, { id: toastId });
+        } finally {
+          setIsDeploying(false);
         }
       }
     };
 
     return (
       <div suppressHydrationWarning className="space-y-6 font-sans max-w-2xl mx-auto">
+        {vault && (
+          <div className="flex items-center justify-between pb-1">
+            <button
+              type="button"
+              onClick={() => setIsCreatingNewVault(false)}
+              className="text-xs font-semibold text-neutral-600 hover:text-neutral-950 flex items-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <span>← Back to {vault.name}</span>
+            </button>
+          </div>
+        )}
         {/* Curator Bond Spotlight Card */}
         <div className="rounded-[32px] bg-white border border-neutral-200/80 p-6 sm:p-8 shadow-[0_1px_3px_rgba(0,0,0,0.04)] flex flex-col sm:flex-row items-center gap-5">
           <div className="w-12 h-12 rounded-2xl bg-neutral-950 text-white flex items-center justify-center p-2.5 shrink-0 shadow-sm">
@@ -186,47 +254,119 @@ export function CuratorStudio({
           </div>
 
           <div className="space-y-4 text-xs">
-            {/* Quick Strategy Presets */}
+            {/* Quick Strategy Presets with Dynamic Quant Names */}
             <div className="space-y-2">
               <span className="text-[11px] uppercase font-mono text-neutral-400 block font-semibold">
-                Quick Presets:
+                Strategy Presets:
               </span>
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
                   onClick={() => {
-                    setCreateName("Alpha Dynamic Corridor");
-                    setCreateTag("Tight Range Active");
-                    setCreateDesc("Dynamic concentrated rebalancing inside tight ETH corridor.");
-                    setCreateFee("20");
-                    setCreateMinPrice("2400");
-                    setCreateMaxPrice("3600");
-                    setCreateMaxConc("50");
-                    setCreateMinTicks("200");
-                    setCreateShortfall("5");
-                    setCreateBond("10000");
+                    setCreateName("Apex Volatility Scalper");
+                    setCreateTag("Sub-1% Active Scalp");
+                    setCreateDesc("Ultra-concentrated sub-percent corridor targeting maximum fee velocity around current spot.");
+                    setCreateFee("25");
+                    setCreateMinPrice("2480");
+                    setCreateMaxPrice("2520");
+                    setCreateMaxConc("85");
+                    setCreateMinTicks("60");
+                    setCreateShortfall("2");
+                    setCreateBond("10");
                   }}
-                  className="px-3.5 py-2 rounded-full text-xs bg-neutral-100 hover:bg-neutral-200 text-neutral-900 transition-all cursor-pointer font-medium"
+                  className="px-3.5 py-1.5 rounded-full text-xs bg-neutral-100 hover:bg-neutral-200 text-neutral-900 transition-all cursor-pointer font-medium"
                 >
-                  Active Corridor (±1%)
+                  Apex Scalper (10 USDC)
                 </button>
                 <button
                   type="button"
                   onClick={() => {
-                    setCreateName("Defensive Wide Perimeter");
-                    setCreateTag("Wide Range Defensive");
-                    setCreateDesc("Wide safety perimeter for conservative long-term liquidity.");
-                    setCreateFee("15");
-                    setCreateMinPrice("2000");
-                    setCreateMaxPrice("4500");
-                    setCreateMaxConc("35");
-                    setCreateMinTicks("600");
-                    setCreateShortfall("8");
-                    setCreateBond("15000");
+                    setCreateName("Titan Corridor Momentum");
+                    setCreateTag("Adaptive Corridor");
+                    setCreateDesc("Dynamic directional breakout corridor capturing trend expansions while hedging perimeter.");
+                    setCreateFee("20");
+                    setCreateMinPrice("2450");
+                    setCreateMaxPrice("2550");
+                    setCreateMaxConc("65");
+                    setCreateMinTicks("120");
+                    setCreateShortfall("4");
+                    setCreateBond("10");
                   }}
-                  className="px-3.5 py-2 rounded-full text-xs bg-neutral-100 hover:bg-neutral-200 text-neutral-900 transition-all cursor-pointer font-medium"
+                  className="px-3.5 py-1.5 rounded-full text-xs bg-neutral-100 hover:bg-neutral-200 text-neutral-900 transition-all cursor-pointer font-medium"
                 >
-                  Safe & Wide (±10%)
+                  Titan Momentum (10 USDC)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCreateName("Valkyrie Equilibrium Float");
+                    setCreateTag("Mean Reversion Matrix");
+                    setCreateDesc("Balanced liquidity matrix capturing oscillator reversion around TWAP median.");
+                    setCreateFee("18");
+                    setCreateMinPrice("2420");
+                    setCreateMaxPrice("2580");
+                    setCreateMaxConc("50");
+                    setCreateMinTicks("180");
+                    setCreateShortfall("5");
+                    setCreateBond("15");
+                  }}
+                  className="px-3.5 py-1.5 rounded-full text-xs bg-neutral-100 hover:bg-neutral-200 text-neutral-900 transition-all cursor-pointer font-medium"
+                >
+                  Valkyrie Float (15 USDC)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCreateName("Sentinel Defensive Buffer");
+                    setCreateTag("Macro Perimeter Shield");
+                    setCreateDesc("Institutional-grade defensive perimeter designed for capital preservation and broad volume.");
+                    setCreateFee("15");
+                    setCreateMinPrice("2350");
+                    setCreateMaxPrice("2650");
+                    setCreateMaxConc("35");
+                    setCreateMinTicks("300");
+                    setCreateShortfall("6");
+                    setCreateBond("20");
+                  }}
+                  className="px-3.5 py-1.5 rounded-full text-xs bg-neutral-100 hover:bg-neutral-200 text-neutral-900 transition-all cursor-pointer font-medium"
+                >
+                  Sentinel Shield (20 USDC)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCreateName("Quantum Flash Arb");
+                    setCreateTag("Micro Frequency Churn");
+                    setCreateDesc("Low-capital tactical corridor built for high-frequency Uniswap v4 tick churn.");
+                    setCreateFee("20");
+                    setCreateMinPrice("2475");
+                    setCreateMaxPrice("2525");
+                    setCreateMaxConc("75");
+                    setCreateMinTicks("60");
+                    setCreateShortfall("3");
+                    setCreateBond("5");
+                  }}
+                  className="px-3.5 py-1.5 rounded-full text-xs bg-neutral-100 hover:bg-neutral-200 text-neutral-900 transition-all cursor-pointer font-medium"
+                >
+                  Quantum Arb (5 USDC)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCreateName("Boreas Deep Accumulator");
+                    setCreateTag("Asymmetric Dip Shield");
+                    setCreateDesc("Asymmetric downside boundary weighted to harvest heavy swap fees on volatile selloffs.");
+                    setCreateFee("16");
+                    setCreateMinPrice("2300");
+                    setCreateMaxPrice("2550");
+                    setCreateMaxConc("45");
+                    setCreateMinTicks("240");
+                    setCreateShortfall("5");
+                    setCreateBond("10");
+                  }}
+                  className="px-3.5 py-1.5 rounded-full text-xs bg-neutral-100 hover:bg-neutral-200 text-neutral-900 transition-all cursor-pointer font-medium"
+                >
+                  Boreas Dip (10 USDC)
                 </button>
               </div>
             </div>
@@ -254,7 +394,10 @@ export function CuratorStudio({
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-neutral-700 font-semibold block text-xs">Performance Fee (%, max 30%)</label>
+                <div className="flex items-center justify-between">
+                  <label className="text-neutral-700 font-semibold block text-xs">Performance Fee (%, max 30%)</label>
+                  <span className="text-[11px] text-emerald-700 font-medium">Cadra Platform: 1.0%</span>
+                </div>
                 <input
                   type="number"
                   value={createFee}
@@ -262,29 +405,63 @@ export function CuratorStudio({
                   onChange={(e) => setCreateFee(e.target.value)}
                   className="w-full bg-white border border-neutral-200 rounded-xl px-4 py-2.5 text-neutral-950 focus:outline-none focus:border-neutral-950 focus:ring-1 focus:ring-neutral-950 font-mono transition-all placeholder:text-neutral-400"
                 />
+                <p className="text-[11px] text-neutral-500">
+                  Curator net: {Math.max(0, (parseFloat(createFee) || 20) - 1).toFixed(1)}% · Platform: 1.0% (charged on alpha over benchmark only)
+                </p>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <label className="text-neutral-700 font-semibold block text-xs">Min Price ($)</label>
-                <input
-                  type="number"
-                  value={createMinPrice}
-                  placeholder="e.g. 2400"
-                  onChange={(e) => setCreateMinPrice(e.target.value)}
-                  className="w-full bg-white border border-neutral-200 rounded-xl px-4 py-2.5 text-neutral-950 font-mono focus:outline-none focus:border-neutral-950 focus:ring-1 focus:ring-neutral-950 transition-all placeholder:text-neutral-400"
-                />
+            {/* Price Corridor & Quick Ranges */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between flex-wrap gap-1.5">
+                <span className="text-[11px] uppercase font-mono text-neutral-400 font-semibold">
+                  Price Corridor ($/ETH):
+                </span>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-[10px] text-neutral-400 font-sans">Corridor Presets:</span>
+                  {[
+                    { label: "Ultra-Tight", min: "2480", max: "2520" },
+                    { label: "Scalp Band", min: "2460", max: "2540" },
+                    { label: "Core Corridor", min: "2450", max: "2550" },
+                    { label: "Balanced", min: "2400", max: "2600" },
+                    { label: "Wide Buffer", min: "2350", max: "2650" },
+                  ].map((preset) => (
+                    <button
+                      key={preset.label}
+                      type="button"
+                      onClick={() => {
+                        setCreateMinPrice(preset.min);
+                        setCreateMaxPrice(preset.max);
+                      }}
+                      className="px-2 py-0.5 rounded-md bg-neutral-100 hover:bg-neutral-200 text-neutral-800 text-[11px] font-mono transition-colors cursor-pointer active:scale-95"
+                    >
+                      {preset.label} (${preset.min}-${preset.max})
+                    </button>
+                  ))}
+                </div>
               </div>
-              <div className="space-y-1">
-                <label className="text-neutral-700 font-semibold block text-xs">Max Price ($)</label>
-                <input
-                  type="number"
-                  value={createMaxPrice}
-                  placeholder="e.g. 3600"
-                  onChange={(e) => setCreateMaxPrice(e.target.value)}
-                  className="w-full bg-white border border-neutral-200 rounded-xl px-4 py-2.5 text-neutral-950 font-mono focus:outline-none focus:border-neutral-950 focus:ring-1 focus:ring-neutral-950 transition-all placeholder:text-neutral-400"
-                />
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <label className="text-neutral-700 font-semibold block text-xs">Min Price ($)</label>
+                  <input
+                    type="number"
+                    value={createMinPrice}
+                    placeholder="e.g. 2470"
+                    onChange={(e) => setCreateMinPrice(e.target.value)}
+                    className="w-full bg-white border border-neutral-200 rounded-xl px-4 py-2.5 text-neutral-950 font-mono focus:outline-none focus:border-neutral-950 focus:ring-1 focus:ring-neutral-950 transition-all placeholder:text-neutral-400"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-neutral-700 font-semibold block text-xs">Max Price ($)</label>
+                  <input
+                    type="number"
+                    value={createMaxPrice}
+                    placeholder="e.g. 2530"
+                    onChange={(e) => setCreateMaxPrice(e.target.value)}
+                    className="w-full bg-white border border-neutral-200 rounded-xl px-4 py-2.5 text-neutral-950 font-mono focus:outline-none focus:border-neutral-950 focus:ring-1 focus:ring-neutral-950 transition-all placeholder:text-neutral-400"
+                  />
+                </div>
               </div>
             </div>
 
@@ -326,7 +503,7 @@ export function CuratorStudio({
               <input
                 type="number"
                 value={createBond}
-                placeholder="e.g. 10000"
+                placeholder="e.g. 10"
                 onChange={(e) => setCreateBond(e.target.value)}
                 className="w-full bg-white border border-neutral-200 rounded-xl px-4 py-2.5 text-neutral-950 font-mono focus:outline-none focus:border-neutral-950 focus:ring-1 focus:ring-neutral-950 transition-all placeholder:text-neutral-400"
               />
@@ -337,9 +514,23 @@ export function CuratorStudio({
 
             <button
               onClick={handleDeploy}
-              className="w-full h-[46px] rounded-full bg-neutral-950 text-white font-semibold text-[13px] hover:bg-neutral-800 transition-all shadow-[0_1px_3px_rgba(0,0,0,0.06)] mt-4 cursor-pointer active:scale-[0.98]"
+              disabled={isDeploying || isLoadingOnChain}
+              className={`w-full h-[46px] rounded-full font-semibold text-[13px] transition-all shadow-[0_1px_3px_rgba(0,0,0,0.06)] mt-4 flex items-center justify-center gap-2 ${
+                isDeploying || isLoadingOnChain
+                  ? "bg-neutral-800 text-neutral-300 cursor-not-allowed opacity-80"
+                  : "bg-neutral-950 text-white hover:bg-neutral-800 cursor-pointer active:scale-[0.98]"
+              }`}
             >
-              {!connectedAddress ? "Connect Wallet to Deploy" : "Deploy Vault On-Chain"}
+              {isDeploying || isLoadingOnChain ? (
+                <>
+                  <span className="w-4 h-4 rounded-full border-2 border-white/20 border-t-white animate-spin shrink-0" />
+                  <span>Deploying Vault On-Chain (Confirm in Wallet)...</span>
+                </>
+              ) : !connectedAddress ? (
+                "Connect Wallet to Deploy"
+              ) : (
+                "Deploy Vault On-Chain"
+              )}
             </button>
           </div>
         </div>
@@ -448,16 +639,20 @@ export function CuratorStudio({
     if (!isValidRebalance) return;
     setIsRebalancing(true);
     setRebalanceSuccessNotice(null);
+    const toastId = toast.loading("Executing rebalance transaction on Unichain Sepolia...");
     try {
       await onUpdateRanges(vault.id, ranges);
+      toast.success("Active ranges updated on Uniswap v4 pool!", { id: toastId });
       setRebalanceSuccessNotice(
         `Rebalance applied successfully on-chain! Active ranges updated across Uniswap v4 pool.`
       );
       setTimeout(() => setRebalanceSuccessNotice(null), 6000);
     } catch (err: any) {
       console.error("Rebalance error:", err);
+      const errMsg = err?.shortMessage || err?.message || "Transaction error";
+      toast.error(`Rebalance failed: ${errMsg}`, { id: toastId });
       setRebalanceSuccessNotice(
-        `Rebalance failed on-chain: ${err?.shortMessage || err?.message || "Transaction error"}`
+        `Rebalance failed on-chain: ${errMsg}`
       );
     } finally {
       setIsRebalancing(false);
@@ -465,17 +660,27 @@ export function CuratorStudio({
   };
 
   const handleProposeMandate = async () => {
+    if (!connectedAddress) {
+      if (openConnectModal) openConnectModal();
+      return;
+    }
+    const toastId = toast.loading("Submitting proposed mandate for next epoch...");
     try {
       await onProposeMandate(vault.id, {
         ...vault.mandate,
+        minTick: priceToTick(newMinPrice),
+        maxTick: priceToTick(newMaxPrice),
         minPrice: newMinPrice,
         maxPrice: newMaxPrice,
         maxConcentrationBps: newMaxConcentration * 100,
       });
+      toast.success("Mandate proposed for next epoch! Followers can review before epoch rollover.", { id: toastId });
       setMandateSuccessNotice(true);
       setTimeout(() => setMandateSuccessNotice(false), 5000);
     } catch (err: any) {
-      console.error("Propose mandate error:", err);
+      console.error("Mandate error:", err);
+      const errMsg = err?.shortMessage || err?.message || "Failed to propose mandate";
+      toast.error(`Mandate proposal failed: ${errMsg}`, { id: toastId });
     }
   };
 
@@ -486,178 +691,117 @@ export function CuratorStudio({
   const gaugePercent = Math.min(100, (shortfallPct / maxShortfallPct) * 100);
   const bufferRemaining = Math.max(0, maxShortfallPct - shortfallPct);
 
-  // Top HUD with the Parking Limit Gauge
+  // Top Header Card
   const TopHUD = (
-    <div suppressHydrationWarning className="bg-white border border-neutral-200/80 rounded-[32px] p-6 sm:p-8 space-y-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-neutral-100 pb-5">
+    <div suppressHydrationWarning className="bg-white border border-neutral-200/80 rounded-[32px] p-6 sm:p-8 space-y-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div className="flex items-center gap-3.5">
           <div className="w-11 h-11 rounded-2xl bg-neutral-950 text-white flex items-center justify-center shrink-0 shadow-sm">
             <ShieldIcon className="w-5 h-5 text-white" />
           </div>
           <div>
-            <span className="text-[11px] text-neutral-400 uppercase tracking-[0.08em] font-semibold block">
-              Curator Studio
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] text-neutral-400 uppercase tracking-[0.08em] font-semibold">
+                Curator Studio
+              </span>
+              <span
+                suppressHydrationWarning
+                className={`text-[11px] font-semibold px-2.5 py-0.5 rounded-full inline-flex items-center gap-1.5 ${
+                  vault.isParked
+                    ? "bg-red-50 text-red-700 border border-red-200"
+                    : "bg-emerald-50 text-emerald-700 border border-emerald-200/70"
+                }`}
+              >
+                <span className={`w-1.5 h-1.5 rounded-full ${vault.isParked ? "bg-red-500" : "bg-emerald-500 animate-pulse"}`} />
+                {vault.isParked ? "Parked (Safe)" : "Active"}
+              </span>
+            </div>
             <h1 suppressHydrationWarning className="text-2xl sm:text-[28px] font-bold text-neutral-950 tracking-[-0.03em] mt-0.5">
               {vault.name}
             </h1>
           </div>
         </div>
 
-        <div suppressHydrationWarning className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50/80 border border-emerald-200/80 text-xs font-mono">
-          <span className="text-neutral-500 font-medium">Capacity Multiplier:</span>
-          <span suppressHydrationWarning className="font-bold text-emerald-800 px-2 py-0.5 rounded-full bg-white border border-emerald-200 shadow-2xs">
-            {vault.capacityMultiplier}× (Max ${vault.capacity.toLocaleString()})
-          </span>
-        </div>
-      </div>
-
-      {/* Emergency Parking Alert Banner (On-Chain Reactive Tripped) */}
-      {vault.isParked && (
-        <div className="p-4 sm:p-5 rounded-2xl bg-red-500/10 border-2 border-red-500/40 flex items-start gap-3.5 text-red-950 animate-in fade-in duration-300">
-          <div className="w-10 h-10 rounded-xl bg-red-600 text-white flex items-center justify-center shrink-0 shadow-sm mt-0.5">
-            <AlertTriangleIcon className="w-5 h-5 text-white" />
-          </div>
-          <div className="flex-1 text-xs font-sans">
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="font-bold text-sm tracking-tight text-red-900 uppercase">
-                Emergency Brake Tripped: Vault is Parked
-              </span>
-              <span className="px-2 py-0.5 rounded-full bg-red-600 text-white font-mono font-bold text-[10px] uppercase">
-                Parked on-chain
-              </span>
-              <span className="text-[11px] font-mono font-bold text-red-700 bg-red-100 border border-red-200 px-2 py-0.5 rounded-full">
-                Reaction Latency: 1.08s
-              </span>
-            </div>
-            <p className="mt-1.5 text-neutral-700 leading-relaxed text-[12px]">
-              CadraReactive detected an out-of-band price deviation via <code className="bg-red-100 text-red-800 px-1 py-0.5 rounded text-[11px] font-mono">BandLeft</code> on Unichain Sepolia. The Reactive Smart Contract instantly triggered <code className="bg-red-100 text-red-800 px-1 py-0.5 rounded text-[11px] font-mono">enforce({vault.id})</code>, safely unwinding active concentrated positions into full-range Uniswap v4 liquidity to eliminate adverse selection. Curator actions remain frozen until epoch settlement.
-            </p>
-          </div>
-        </div>
-      )}
-
-      {/* Available Vaults Selector (if multiple vaults available) */}
-      {availableVaults.length > 1 && (
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none border-b border-neutral-100">
-          <span className="text-[11px] font-medium text-neutral-400 uppercase tracking-wider shrink-0">Managing:</span>
-          {availableVaults.map((v) => (
-            <button
-              key={v.id}
-              type="button"
-              onClick={() => setSelectedVaultId(v.id)}
-              className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all shrink-0 cursor-pointer ${
-                vault.id === v.id
-                  ? "bg-neutral-950 text-white shadow-2xs"
-                  : "bg-neutral-50 border border-neutral-200 text-neutral-600 hover:bg-neutral-100"
-              }`}
-            >
-              {v.name}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* Primary Metrics Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5 text-xs font-mono">
-        <div className="p-4 rounded-2xl bg-[#FAFAFA] border border-neutral-200/70">
-          <span className="text-neutral-400 uppercase text-[11px] block font-medium">Curator Bond</span>
-          <span suppressHydrationWarning className="text-lg font-bold text-neutral-950 mt-1 block">
-            ${vault.bondAmount.toLocaleString()} USDC
-          </span>
-          <span suppressHydrationWarning className="text-[11px] text-neutral-500 mt-0.5 block font-normal">
-            Owns {(vault.curatorOwnershipBps / 100).toFixed(0)}% of vault
-          </span>
-        </div>
-
-        <div className="p-4 rounded-2xl bg-[#FAFAFA] border border-neutral-200/70">
-          <span className="text-neutral-400 uppercase text-[11px] block font-medium">Total Managed</span>
-          <span suppressHydrationWarning className="text-lg font-bold text-neutral-950 mt-1 block">
-            ${vault.totalFollowerValue.toLocaleString()}
-          </span>
-          <span suppressHydrationWarning className="text-[11px] text-neutral-500 mt-0.5 block font-normal">
-            Max Capacity: ${vault.capacity.toLocaleString()}
-          </span>
-        </div>
-
-        <div className="p-4 rounded-2xl bg-[#FAFAFA] border border-neutral-200/70">
-          <span className="text-neutral-400 uppercase text-[11px] block font-medium">Carried Deficit (D)</span>
-          <span suppressHydrationWarning className={`text-lg font-bold mt-1 block ${vault.carriedDeficit > 0 ? "text-red-700" : "text-neutral-950"}`}>
-            ${vault.carriedDeficit.toLocaleString()}
-          </span>
-          <span suppressHydrationWarning className="text-[11px] text-neutral-500 mt-0.5 block font-normal">
-            {vault.carriedDeficit > 0 ? "Must recover before fees" : "Deficit fully clean"}
-          </span>
-        </div>
-
-        <div className="p-4 rounded-2xl bg-[#FAFAFA] border border-neutral-200/70">
-          <span className="text-neutral-400 uppercase text-[11px] block font-medium">Vault Status</span>
-          <span
-            suppressHydrationWarning
-            className={`text-[12px] font-bold uppercase mt-1 inline-flex items-center gap-1.5 ${
-              vault.isParked ? "text-red-700" : "text-emerald-700"
-            }`}
-          >
-            <span className={`w-2 h-2 rounded-full ${vault.isParked ? "bg-red-500" : "bg-emerald-500 animate-pulse"}`} />
-            {vault.isParked ? "Parked (Curator Frozen)" : "Active & Healthy"}
-          </span>
-          <span suppressHydrationWarning className="text-[11px] text-neutral-500 mt-0.5 block font-normal">
-            {vault.timesShielded > 0 ? `Shielded ${vault.timesShielded}× by Base Guard` : `Epoch #${vault.epoch || 1} in progress`}
-          </span>
-        </div>
-      </div>
-
-      {/* GAUGE TO THE PARKING LIMIT (Core PDF Feature) */}
-      <div className="p-5 rounded-2xl bg-[#FAFAFA] border border-neutral-200/70 space-y-3 font-mono">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div>
-            <div className="flex items-center gap-2">
-              <ActivityIcon className="w-4 h-4 text-neutral-700" />
-              <span className="text-neutral-900 uppercase text-[11px] font-bold tracking-wider">
-                Gauge to Emergency Parking Limit
-              </span>
-            </div>
-            <p className="text-[12px] text-neutral-500 font-sans mt-0.5">
-              CadraReactive monitors every swap on Unichain Sepolia. If shortfall crosses {maxShortfallPct.toFixed(1)}%, emergency parking executes in ~1 second.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2 shrink-0">
-            <span className={`text-[11px] font-semibold px-3 py-1 rounded-full ${
-              vault.isParked
-                ? "bg-red-100 text-red-900 border border-red-300"
-                : gaugePercent > 70
-                ? "bg-amber-100 text-amber-900 border border-amber-300 animate-pulse"
-                : "bg-emerald-100 text-emerald-900 border border-emerald-300"
-            }`}>
-              {vault.isParked
-                ? "Emergency Brake Tripped (Parked)"
-                : `${shortfallPct.toFixed(2)}% / ${maxShortfallPct.toFixed(1)}% (${bufferRemaining.toFixed(2)}% buffer remaining)`}
+        <div className="flex items-center gap-2.5">
+          <div suppressHydrationWarning className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50/80 border border-emerald-200/80 text-xs font-mono">
+            <span className="text-neutral-500 font-medium">Capacity:</span>
+            <span suppressHydrationWarning className="font-bold text-emerald-800 px-2 py-0.5 rounded-full bg-white border border-emerald-200 shadow-2xs">
+              {vault.capacityMultiplier}× (Max ${vault.capacity.toLocaleString()})
             </span>
           </div>
+          <button
+            type="button"
+            onClick={() => setIsCreatingNewVault(true)}
+            className="h-8.5 px-3.5 rounded-full bg-neutral-950 hover:bg-neutral-800 text-white font-semibold text-xs transition-all shadow-2xs flex items-center gap-1.5 cursor-pointer active:scale-95"
+            title="Deploy a new vault on-chain with your own mandate"
+          >
+            <span>+ Create Vault</span>
+          </button>
         </div>
+      </div>
 
-        {/* Visual Progress Bar */}
-        <div className="space-y-1.5">
-          <div className="h-3.5 w-full bg-neutral-200 rounded-full overflow-hidden flex relative">
-            <div
-              style={{ width: `${vault.isParked ? 100 : Math.max(4, gaugePercent)}%` }}
-              className={`h-full transition-all duration-500 rounded-full ${
-                vault.isParked
-                  ? "bg-red-600"
-                  : gaugePercent > 70
-                  ? "bg-amber-500"
-                  : "bg-emerald-600"
-              }`}
-            />
-          </div>
-
-          <div className="flex justify-between text-[11px] text-neutral-400 font-mono">
-            <span>0.0% (Equal to Pace)</span>
-            <span className="text-neutral-600 font-medium">Defensive Buffer Zone</span>
-            <span className="text-red-700 font-bold">{maxShortfallPct.toFixed(1)}% Parking Limit</span>
+      {/* Emergency Parking Alert Banner */}
+      {vault.isParked && (
+        <div className="p-4 rounded-2xl bg-red-50 border border-red-200 flex items-start gap-3 text-red-900 text-xs animate-in fade-in duration-200">
+          <AlertTriangleIcon className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
+          <div>
+            <span className="font-bold block text-sm">Emergency Protection Triggered</span>
+            <p className="text-neutral-600 mt-0.5 leading-relaxed">
+              Price exited your published corridor. Active positions have been safely parked into full-range benchmark liquidity to protect follower capital until epoch settlement.
+            </p>
           </div>
         </div>
+      )}
+
+      {/* Zero Curator Bond Alert Banner */}
+      {vault.bondAmount === 0 && (
+        <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200/90 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-amber-950 text-xs animate-in fade-in duration-200">
+          <div className="flex items-start gap-3">
+            <AlertTriangleIcon className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+            <div>
+              <span className="font-bold block text-sm">Curator Cash Bond Required ($0 Capacity)</span>
+              <p className="text-amber-800 mt-0.5 leading-relaxed">
+                This vault currently has $0 USDC bond collateral. In Cadra, curators must stake a cash bond to back follower capital. Post bond below to unlock follower capacity.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              const el = document.getElementById("post-bond-card");
+              if (el) el.scrollIntoView({ behavior: "smooth" });
+            }}
+            className="px-4 py-2 rounded-full bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs transition-colors shrink-0 cursor-pointer shadow-xs active:scale-95"
+          >
+            Post Bond Collateral
+          </button>
+        </div>
+      )}
+
+      {/* Available Vaults Selector */}
+      <div className="flex items-center gap-2 overflow-x-auto pt-2 scrollbar-none border-t border-neutral-100">
+        <span className="text-[11px] font-medium text-neutral-400 uppercase tracking-wider shrink-0">Managing:</span>
+        {availableVaults.map((v) => (
+          <button
+            key={v.id}
+            type="button"
+            onClick={() => setSelectedVaultId(v.id)}
+            className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all shrink-0 cursor-pointer ${
+              vault.id === v.id
+                ? "bg-neutral-950 text-white shadow-2xs"
+                : "bg-neutral-50 border border-neutral-200 text-neutral-600 hover:bg-neutral-100"
+            }`}
+          >
+            {v.name}
+          </button>
+        ))}
+        <button
+          type="button"
+          onClick={() => setIsCreatingNewVault(true)}
+          className="px-3 py-1.5 rounded-full text-xs font-medium border border-dashed border-neutral-300 text-neutral-600 hover:text-neutral-950 hover:border-neutral-950 transition-all shrink-0 cursor-pointer"
+        >
+          + New Vault
+        </button>
       </div>
     </div>
   );
@@ -679,13 +823,42 @@ export function CuratorStudio({
               </p>
             </div>
 
-            <button
-              onClick={handleAddRange}
-              className="h-[38px] px-4 rounded-full bg-white border border-neutral-200 hover:bg-neutral-50 text-[13px] text-neutral-900 transition-all font-semibold cursor-pointer shadow-2xs flex items-center gap-1.5 active:scale-[0.98]"
-            >
-              <PlusIcon className="w-3.5 h-3.5" />
-              <span>Add Range</span>
-            </button>
+            <div className="flex items-center gap-2 flex-wrap">
+              {[
+                { label: "Tight ($2480-$2520)", min: 2480, max: 2520 },
+                { label: "Scalp ($2460-$2540)", min: 2460, max: 2540 },
+                { label: "Core ($2450-$2550)", min: 2450, max: 2550 },
+              ].map((p) => (
+                <button
+                  key={p.label}
+                  type="button"
+                  onClick={() => {
+                    const lTick = Math.max(Math.round(mandate.minTick / 60) * 60, priceToTick(p.min));
+                    const uTick = Math.min(Math.round(mandate.maxTick / 60) * 60, priceToTick(p.max));
+                    setRanges([
+                      {
+                        id: `r-${Date.now()}`,
+                        lowerTick: lTick,
+                        upperTick: uTick,
+                        lowerPrice: tickToPrice(lTick),
+                        upperPrice: tickToPrice(uTick),
+                        liquidityPercent: 100,
+                      },
+                    ]);
+                  }}
+                  className="h-[32px] px-3 rounded-full bg-neutral-100 hover:bg-neutral-200 text-neutral-800 text-[11px] font-mono font-medium transition-colors cursor-pointer"
+                >
+                  {p.label}
+                </button>
+              ))}
+              <button
+                onClick={handleAddRange}
+                className="h-[38px] px-4 rounded-full bg-white border border-neutral-200 hover:bg-neutral-50 text-[13px] text-neutral-900 transition-all font-semibold cursor-pointer shadow-2xs flex items-center gap-1.5 active:scale-[0.98]"
+              >
+                <PlusIcon className="w-3.5 h-3.5" />
+                <span>Add Range</span>
+              </button>
+            </div>
           </div>
 
           {/* Range Rows */}
@@ -889,6 +1062,30 @@ export function CuratorStudio({
               Followers can inspect proposed changes and exit before the new epoch starts. Mandate swaps mid-epoch are prohibited.
             </p>
 
+            {/* Quick Presets for Proposed Rules */}
+            <div className="flex items-center gap-1.5 flex-wrap pt-1">
+              <span className="text-[11px] text-neutral-400 font-sans">Corridor Presets:</span>
+              {[
+                { label: "Ultra-Tight", min: 2480, max: 2520 },
+                { label: "Scalp Band", min: 2460, max: 2540 },
+                { label: "Core Buffer", min: 2450, max: 2550 },
+                { label: "Balanced", min: 2400, max: 2600 },
+                { label: "Wide Buffer", min: 2350, max: 2650 },
+              ].map((p) => (
+                <button
+                  key={p.label}
+                  type="button"
+                  onClick={() => {
+                    setNewMinPrice(p.min);
+                    setNewMaxPrice(p.max);
+                  }}
+                  className="px-2.5 py-1 rounded-lg bg-neutral-100 hover:bg-neutral-200 text-neutral-800 text-[11px] font-mono font-medium transition-colors cursor-pointer active:scale-95"
+                >
+                  {p.label} (${p.min}-${p.max})
+                </button>
+              ))}
+            </div>
+
             <div className="grid grid-cols-2 gap-3 text-xs font-mono">
               <div className="space-y-1">
                 <label className="text-neutral-700 font-semibold block text-xs">New Min Price ($)</label>
@@ -921,7 +1118,7 @@ export function CuratorStudio({
               onClick={handleProposeMandate}
               className="w-full h-[44px] rounded-full bg-neutral-950 text-white font-semibold text-[13px] hover:bg-neutral-800 transition-all cursor-pointer shadow-xs active:scale-[0.98] mt-2"
             >
-              Publish Proposed Rules
+              {!connectedAddress ? "Connect Wallet to Propose Rules" : "Publish Proposed Rules"}
             </button>
           </div>
         </div>
@@ -989,319 +1186,196 @@ export function CuratorStudio({
   }
 
   // 6. DEFAULT OVERVIEW SUB-PAGE
+  const isAhead = vault.vaultValue >= vault.paceValue;
+  const netAlpha = vault.vaultValue - vault.paceValue;
+
   return (
     <div suppressHydrationWarning className="space-y-6 font-sans max-w-5xl mx-auto">
       {TopHUD}
 
-      {/* Vault Value vs. The Pace Line Benchmark Panel */}
-      <div className="bg-white border border-neutral-200/80 rounded-[32px] p-6 sm:p-8 space-y-6 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-neutral-100 pb-4">
+      {/* 1. Primary High-Level Performance Metrics */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+        <div className="bg-white border border-neutral-200/80 rounded-[24px] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.03)] space-y-1">
+          <span className="text-neutral-400 text-xs uppercase tracking-wider font-medium block">
+            Vault Value
+          </span>
+          <span suppressHydrationWarning className="text-2xl font-bold text-neutral-950 font-mono tracking-tight block">
+            ${vault.vaultValue.toLocaleString()}
+          </span>
+          <span suppressHydrationWarning className="text-xs text-neutral-400 block font-mono">
+            Baseline: ${vault.paceValue.toLocaleString()} Pace
+          </span>
+        </div>
+
+        <div className="bg-white border border-neutral-200/80 rounded-[24px] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.03)] space-y-1">
+          <span className="text-neutral-400 text-xs uppercase tracking-wider font-medium block">
+            Curator Bond
+          </span>
+          <span suppressHydrationWarning className="text-2xl font-bold text-neutral-950 font-mono tracking-tight block">
+            ${vault.bondAmount.toLocaleString()} USDC
+          </span>
+          <span suppressHydrationWarning className="text-xs text-neutral-400 block font-mono">
+            Capacity: ${vault.capacity.toLocaleString()} ({vault.capacityMultiplier}×)
+          </span>
+        </div>
+
+        <div className="bg-white border border-neutral-200/80 rounded-[24px] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.03)] space-y-1">
+          <span className="text-neutral-400 text-xs uppercase tracking-wider font-medium block">
+            Net Return vs Pace
+          </span>
+          <span
+            suppressHydrationWarning
+            className={`text-2xl font-bold font-mono tracking-tight block ${
+              isAhead ? "text-emerald-700" : "text-red-700"
+            }`}
+          >
+            {isAhead ? "+" : ""}${netAlpha.toLocaleString()}
+          </span>
+          <span suppressHydrationWarning className="text-xs text-neutral-400 block">
+            {isAhead ? "Outperforming benchmark" : "Underperforming benchmark"}
+          </span>
+        </div>
+
+        <div className="bg-white border border-neutral-200/80 rounded-[24px] p-5 shadow-[0_1px_3px_rgba(0,0,0,0.03)] space-y-1">
+          <span className="text-neutral-400 text-xs uppercase tracking-wider font-medium block">
+            Fee on Alpha
+          </span>
+          <span suppressHydrationWarning className="text-2xl font-bold text-neutral-950 font-mono tracking-tight block">
+            {vault.perfFeeBps / 100}%
+          </span>
+          <span suppressHydrationWarning className="text-xs text-neutral-400 block">
+            Curator: {Math.max(0, (vault.perfFeeBps - 100) / 100)}% · Platform: 1%
+          </span>
+        </div>
+      </div>
+
+      {/* 2. Automated Protection Status (Calm & Simple) */}
+      <div className="bg-white border border-neutral-200/80 rounded-[24px] p-5 sm:p-6 shadow-[0_1px_3px_rgba(0,0,0,0.03)] flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-2xl bg-emerald-50 text-emerald-700 flex items-center justify-center shrink-0 border border-emerald-200/60">
+            <ShieldIcon className="w-5 h-5 text-emerald-700" />
+          </div>
           <div>
-            <div className="flex items-center gap-2">
-              <TrendUpIcon className="w-5 h-5 text-neutral-900" />
-              <h2 className="text-xl font-bold text-neutral-950 tracking-tight">
-                Vault Value vs. The Pace Benchmark
-              </h2>
-            </div>
-            <p className="text-[13px] text-neutral-500 mt-1">
-              Curator outperformance is benchmarked tick-by-tick against the passive full-range Uniswap v4 position (The Pace).
+            <h3 className="font-bold text-neutral-950 text-sm">Automated Protection Status</h3>
+            <p className="text-xs text-neutral-500 mt-0.5 leading-relaxed">
+              Operating normally within your corridor (${mandate.minPrice} – ${mandate.maxPrice}). If shortfall exceeds {maxShortfallPct.toFixed(1)}% below the benchmark, positions are automatically protected.
             </p>
           </div>
-
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-neutral-100 text-xs font-mono">
-            <span className="text-neutral-500">Benchmark:</span>
-            <span className="font-bold text-neutral-900">Pace (Full-Range v4 LP)</span>
-          </div>
         </div>
 
-        {/* Valuation Metrics Comparison Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 font-mono text-xs">
-          <div className="p-4 rounded-2xl bg-neutral-50 border border-neutral-200/70">
-            <div className="flex items-center justify-between text-neutral-400 uppercase text-[11px]">
-              <span>Active Vault Value</span>
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-            </div>
-            <span className="text-2xl font-bold text-neutral-950 mt-1 block">
-              ${vault.vaultValue.toLocaleString()}
-            </span>
-            <span className="text-[11px] text-neutral-500 mt-1 block font-sans">
-              Concentrated active LP + idle cash
-            </span>
-          </div>
+        <span className={`px-3.5 py-1.5 rounded-full text-xs font-semibold shrink-0 self-start sm:self-auto font-mono ${
+          vault.isParked
+            ? "bg-red-50 text-red-700 border border-red-200"
+            : "bg-emerald-50 text-emerald-800 border border-emerald-200/80"
+        }`}>
+          {vault.isParked ? "Positions Paused" : `Healthy · ${bufferRemaining.toFixed(1)}% buffer`}
+        </span>
+      </div>
 
-          <div className="p-4 rounded-2xl bg-neutral-50 border border-neutral-200/70">
-            <div className="flex items-center justify-between text-neutral-400 uppercase text-[11px]">
-              <span>The Pace Line (V_pace)</span>
-              <span className="w-2.5 h-2.5 rounded-full bg-neutral-500" />
-            </div>
-            <span className="text-2xl font-bold text-neutral-950 mt-1 block">
-              ${vault.paceValue.toLocaleString()}
-            </span>
-            <span className="text-[11px] text-neutral-500 mt-1 block font-sans">
-              Zero-alpha passive Uniswap v4 baseline
-            </span>
-          </div>
-
-          <div className="p-4 rounded-2xl bg-neutral-50 border border-neutral-200/70">
-            <div className="flex items-center justify-between text-neutral-400 uppercase text-[11px]">
-              <span>Alpha / Spread (&Delta;)</span>
-              <span className={`w-2.5 h-2.5 rounded-full ${vault.vaultValue >= vault.paceValue ? "bg-emerald-500" : "bg-red-500"}`} />
-            </div>
-            <span className={`text-2xl font-bold mt-1 block ${vault.vaultValue >= vault.paceValue ? "text-emerald-700" : "text-red-700"}`}>
-              {vault.vaultValue >= vault.paceValue ? "+" : ""}${(vault.vaultValue - vault.paceValue).toLocaleString()}
-            </span>
-            <span className="text-[11px] text-neutral-500 mt-1 block font-sans">
-              {vault.vaultValue >= vault.paceValue ? "Curator eligible for 20% perf fee" : `${shortfallPct.toFixed(2)}% below benchmark`}
-            </span>
-          </div>
-        </div>
-
-        {/* Visual Benchmark Comparison Bar */}
-        <div className="p-5 rounded-2xl bg-[#FAFAFA] border border-neutral-200/70 space-y-4">
-          <div className="flex justify-between items-center text-xs font-mono">
-            <span className="text-neutral-500 font-medium font-sans">Portfolio Position relative to The Pace Line:</span>
-            <span className={`font-bold px-2.5 py-0.5 rounded-full ${
-              vault.isParked
-                ? "bg-red-100 text-red-900 border border-red-300"
-                : vault.vaultValue >= vault.paceValue
-                ? "bg-emerald-100 text-emerald-900 border border-emerald-300"
-                : "bg-amber-100 text-amber-900 border border-amber-300"
-            }`}>
-              {vault.isParked
-                ? "PARKED (Emergency Brake)"
-                : vault.vaultValue >= vault.paceValue
-                ? `Ahead of Pace (+${vault.paceValue > 0 ? (((vault.vaultValue - vault.paceValue) / vault.paceValue) * 100).toFixed(2) : "0.00"}%)`
-                : `Behind Pace (-${shortfallPct.toFixed(2)}%)`}
-            </span>
-          </div>
-
-          {/* Visual Track */}
-          <div className="relative pt-6 pb-2">
-            {/* The Pace Benchmark Marker Line */}
-            <div className="absolute top-0 bottom-0 left-1/2 w-0.5 bg-neutral-900 z-10 -translate-x-1/2">
-              <span className="absolute -top-5 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded bg-neutral-900 text-white font-mono text-[10px] font-bold whitespace-nowrap shadow-xs">
-                The Pace (Baseline)
+      {/* 3. Core Operational Actions: Strategy & Bond */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        {/* Strategy Mandate Summary */}
+        <div className="bg-white border border-neutral-200/80 rounded-[28px] p-6 sm:p-7 space-y-4 shadow-[0_1px_3px_rgba(0,0,0,0.03)] flex flex-col justify-between">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-bold text-neutral-950">Active Strategy Rules</h3>
+              <span className="text-[11px] font-mono uppercase px-2.5 py-0.5 rounded-full bg-neutral-100 text-neutral-700 font-semibold">
+                {vault.tag}
               </span>
             </div>
-
-            {/* Bar Background Track */}
-            <div className="h-6 w-full bg-neutral-200 rounded-full overflow-hidden flex relative">
-              {/* Left half: Below Pace */}
-              <div className="w-1/2 h-full bg-red-100 border-r border-dashed border-neutral-400 flex items-center justify-start pl-3">
-                <span className="text-[10px] font-mono text-red-700 font-medium">Lagging Corridor</span>
-              </div>
-              {/* Right half: Above Pace */}
-              <div className="w-1/2 h-full bg-emerald-100 flex items-center justify-end pr-3">
-                <span className="text-[10px] font-mono text-emerald-800 font-medium">Alpha Zone (+20% Fee)</span>
-              </div>
-
-              {/* Vault Position Indicator */}
-              <div
-                style={{
-                  left: `${vault.isParked ? 15 : Math.max(8, Math.min(92, 50 + (vault.paceValue > 0 ? ((vault.vaultValue - vault.paceValue) / vault.paceValue) * 200 : 0)))}%`
-                }}
-                className="absolute top-0 bottom-0 w-3 -translate-x-1/2 bg-neutral-950 rounded-full border-2 border-white shadow-md transition-all duration-500"
-              />
-            </div>
-
-            <div className="flex justify-between text-[11px] text-neutral-400 font-mono mt-2">
-              <span className="text-red-700 font-bold">-{maxShortfallPct.toFixed(1)}% Emergency Park</span>
-              <span className="text-neutral-500">Benchmark Flat</span>
-              <span className="text-emerald-700 font-bold">+{(maxShortfallPct * 2).toFixed(1)}% Alpha</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Live Reactive Guard Event Feed (BandLeft -> react -> VaultParked) with Measured Latency */}
-      <div className="bg-white border border-neutral-200/80 rounded-[32px] p-6 sm:p-8 space-y-5 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b border-neutral-100 pb-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-amber-500/10 text-amber-700 flex items-center justify-center shrink-0">
-              <ZapIcon className="w-5 h-5 text-amber-600" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-xl font-bold text-neutral-950 tracking-tight">
-                  Reactive Autonomous Guard Feed
-                </h2>
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 text-[11px] font-mono font-bold">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" />
-                  Live Reactive Loop
-                </span>
-              </div>
-              <p className="text-[13px] text-neutral-500 mt-0.5">
-                Real-time Reactive Network execution stream across Unichain Sepolia and Reactive Lasna CometBFT.
-              </p>
-            </div>
-          </div>
-
-          {/* Measured Latency Callout (Core Hackathon Metric) */}
-          <div className="px-4 py-2 rounded-2xl bg-neutral-950 text-white font-mono text-right shrink-0 shadow-sm">
-            <span className="text-[10px] text-neutral-400 uppercase tracking-wider block font-medium">Measured Latency</span>
-            <div className="flex items-center gap-1.5 mt-0.5">
-              <span className="text-lg font-bold text-emerald-400">~1.10s</span>
-              <span className="text-[10px] text-neutral-300">vs 7s-14s RVM</span>
-            </div>
-          </div>
-        </div>
-
-        {/* 3-Step Execution Pipeline Diagram */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 font-mono text-xs">
-          <div className="p-3.5 rounded-2xl bg-[#FAFAFA] border border-neutral-200/70">
-            <div className="flex items-center justify-between text-[11px] text-neutral-400 font-bold uppercase">
-              <span>Step 1: Origin Breach</span>
-              <span className="px-1.5 py-0.5 rounded bg-blue-100 text-blue-800 text-[10px]">Unichain 1301</span>
-            </div>
-            <div className="mt-2 text-neutral-900 font-bold text-xs flex items-center gap-1.5">
-              <ActivityIcon className="w-3.5 h-3.5 text-blue-600 shrink-0" />
-              <span>BandLeft(vaultId, spotTick)</span>
-            </div>
-            <p className="text-[11px] text-neutral-500 font-sans mt-1">
-              Uniswap v4 pool swap pushes spot tick outside mandate corridor. Hook emits event and disarms mask.
+            <p className="text-xs text-neutral-500 leading-relaxed">
+              Your published mandate sets boundaries for active price corridors and emergency safety parking.
             </p>
+
+            <div className="space-y-2 text-xs font-mono pt-1">
+              <div className="p-3 rounded-xl bg-[#FAFAFA] border border-neutral-200/60 flex justify-between items-center">
+                <span className="text-neutral-500">Price Corridor</span>
+                <span className="font-bold text-neutral-950">${mandate.minPrice} – ${mandate.maxPrice} ETH/USDC</span>
+              </div>
+              <div className="p-3 rounded-xl bg-[#FAFAFA] border border-neutral-200/60 flex justify-between items-center">
+                <span className="text-neutral-500">Max Concentration</span>
+                <span className="font-bold text-neutral-950">{mandate.maxConcentrationBps / 100}% per range</span>
+              </div>
+              <div className="p-3 rounded-xl bg-[#FAFAFA] border border-neutral-200/60 flex justify-between items-center">
+                <span className="text-neutral-500">Emergency Parking Limit</span>
+                <span className="font-bold text-neutral-950">{mandate.maxShortfallBps / 100}% lag behind Pace</span>
+              </div>
+            </div>
           </div>
 
-          <div className="p-3.5 rounded-2xl bg-[#FAFAFA] border border-neutral-200/70">
-            <div className="flex items-center justify-between text-[11px] text-neutral-400 font-bold uppercase">
-              <span>Step 2: Reactive Hop</span>
-              <span className="px-1.5 py-0.5 rounded bg-purple-100 text-purple-800 text-[10px]">Lasna Omni 5318007</span>
-            </div>
-            <div className="mt-2 text-neutral-900 font-bold text-xs flex items-center gap-1.5">
-              <ZapIcon className="w-3.5 h-3.5 text-purple-600 shrink-0" />
-              <span>CadraReactive.react()</span>
-            </div>
-            <p className="text-[11px] text-neutral-500 font-sans mt-1">
-              CometBFT detects event within ~1.0s, encodes proxy-authorized callback payload and dispatches destination tx.
-            </p>
-          </div>
-
-          <div className="p-3.5 rounded-2xl bg-[#FAFAFA] border border-neutral-200/70">
-            <div className="flex items-center justify-between text-[11px] text-neutral-400 font-bold uppercase">
-              <span>Step 3: Callback Execution</span>
-              <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px]">Unichain 1301</span>
-            </div>
-            <div className="mt-2 text-neutral-900 font-bold text-xs flex items-center gap-1.5">
-              <ShieldIcon className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-              <span>enforce() &rarr; VaultParked</span>
-            </div>
-            <p className="text-[11px] text-neutral-500 font-sans mt-1">
-              Callback proxy invokes CadraCallback.enforce(). Hook checks shortfall; if breached, parks all assets.
-            </p>
+          <div className="flex items-center gap-2.5 pt-2">
+            <Link
+              href="/curator/rebalance"
+              className="flex-1 h-[40px] rounded-full bg-neutral-950 text-white font-semibold text-xs hover:bg-neutral-800 transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xs active:scale-[0.98]"
+            >
+              <span>Manage Price Ranges</span>
+              <ArrowRightIcon className="w-3.5 h-3.5" />
+            </Link>
+            <Link
+              href="/curator/mandate"
+              className="h-[40px] px-4 rounded-full bg-white border border-neutral-200 hover:bg-neutral-50 text-neutral-700 text-xs font-medium transition-all flex items-center justify-center cursor-pointer active:scale-[0.98]"
+            >
+              Edit Rules
+            </Link>
           </div>
         </div>
 
-        {/* Live Event Stream Table */}
-        <div className="border border-neutral-200/80 rounded-2xl overflow-hidden font-mono text-xs">
-          <div className="bg-neutral-50 px-4 py-2.5 border-b border-neutral-200/70 flex justify-between items-center text-neutral-500 text-[11px] uppercase font-bold">
-            <span>Live Reactive Execution Ledger</span>
-            <span>Unichain Sepolia (1301) &harr; Reactive Lasna (5318007)</span>
-          </div>
-
-          <div className="divide-y divide-neutral-100 bg-white">
-            {/* Event 1: Recent breach from DemoLoop */}
-            <div className="p-3.5 hover:bg-neutral-50/60 transition-colors space-y-1">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                  <span className="font-bold text-neutral-950">BandLeft &rarr; react() &rarr; EnforceExecuted</span>
-                  <span className="px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-700 text-[11px]">Vault #{vault.id}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-emerald-700 font-bold bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-full text-[11px]">
-                    Latency: 1.08s
-                  </span>
-                  <span className="text-[11px] text-neutral-400">Block 68401858</span>
-                </div>
-              </div>
-              <div className="flex flex-wrap items-center gap-3 text-[11px] text-neutral-500 font-sans pt-0.5">
-                <span>Origin Swap: <a href="https://sepolia.uniscan.xyz/tx/0x064de0a249dfad6b158006d79ea0f81628434fe1609dffcd9d4e0e83c364f7de" target="_blank" rel="noreferrer" className="text-blue-600 hover:underline font-mono">0x064d...f7de</a></span>
-                <span>Reactive: <a href="https://lasna-omni.reactscan.net/address/0x061216db95D483fc0e7e0c43976A62B7E207ba35" target="_blank" rel="noreferrer" className="text-purple-600 hover:underline font-mono">0x0612...ba35</a></span>
-                <span>Callback: <a href="https://sepolia.uniscan.xyz/address/0xb4Df1810374AFdE05F9D429eF1f0c3ED2ABdF2C6" target="_blank" rel="noreferrer" className="text-emerald-600 hover:underline font-mono">0xb4Df...F2C6</a></span>
-              </div>
+        {/* Bond Collateral Card */}
+        <div id="post-bond-card" className="bg-white border border-neutral-200/80 rounded-[28px] p-6 sm:p-7 space-y-4 shadow-[0_1px_3px_rgba(0,0,0,0.03)] flex flex-col justify-between">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <h3 className="text-base font-bold text-neutral-950">Add Bond Collateral</h3>
+              <span suppressHydrationWarning className="text-xs font-mono font-semibold px-2.5 py-1 rounded-full bg-neutral-100 text-neutral-700">
+                ${vault.bondAmount.toLocaleString()} USDC
+              </span>
             </div>
+            <p className="text-xs text-neutral-500 leading-relaxed">
+              Deposit additional USDC bond to expand your managing capacity ({vault.capacityMultiplier}× capacity per $1 bond).
+            </p>
 
-            {/* Event 2: Epoch settlement */}
-            <div className="p-3.5 hover:bg-neutral-50/60 transition-colors space-y-1">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-blue-500" />
-                  <span className="font-bold text-neutral-950">EpochReady &rarr; react() &rarr; SettleExecuted</span>
-                  <span className="px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-700 text-[11px]">Vault #1</span>
+            {bondSuccessNotice && (
+              <div className="flex items-start gap-2 p-3 rounded-xl bg-neutral-950 text-white text-xs animate-in fade-in duration-200">
+                <CheckCircleIcon className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                <div className="flex-1 text-[11px] leading-relaxed text-neutral-300">
+                  {bondSuccessNotice}
                 </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-blue-700 font-bold bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full text-[11px]">
-                    Settled Epoch 1 &rarr; 2
-                  </span>
-                  <span className="text-[11px] text-neutral-400">Block 68400832</span>
-                </div>
-              </div>
-              <div className="flex flex-wrap items-center gap-3 text-[11px] text-neutral-500 font-sans pt-0.5">
-                <span>Signal Tx: <a href="https://sepolia.uniscan.xyz/tx/0x52928d6272359d7ebbe5bc12c092a2556273f4b60f2622039df4961359323cee" target="_blank" rel="noreferrer" className="text-blue-600 hover:underline font-mono">0x5292...3cee</a></span>
-                <span>Settle Tx: <a href="https://sepolia.uniscan.xyz/tx/0xe848006291887cfd0c9d4d6d3f9532c771b3aad2d01787865084e216102d5545" target="_blank" rel="noreferrer" className="text-emerald-600 hover:underline font-mono">0xe848...5545</a></span>
-                <span>Status: <span className="text-emerald-700 font-medium">Re-benchmarked Pace Liquidity</span></span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Bond Collateral Expansion Panel */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white border border-neutral-200/80 rounded-[32px] p-6 sm:p-8 space-y-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-          <div className="flex items-center justify-between">
-            <h3 className="text-base font-bold text-neutral-950">Add Bond Collateral</h3>
-            <span suppressHydrationWarning className="text-xs font-mono font-semibold px-2.5 py-1 rounded-full bg-neutral-100 text-neutral-700">
-              Current: ${vault.bondAmount.toLocaleString()} USDC
-            </span>
-          </div>
-          <p className="text-[13px] text-neutral-500 leading-relaxed">
-            Deposit USDC bond to expand your managing capacity ({vault.capacityMultiplier}× capacity per USDC).
-          </p>
-
-          {bondSuccessNotice && (
-            <div className="flex items-start gap-2.5 p-3 rounded-2xl bg-neutral-950 text-white text-[12px] shadow-sm animate-in fade-in duration-200">
-              <CheckCircleIcon className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-              <div className="flex-1">
-                <p className="font-semibold text-white">Bond Deposited Successfully</p>
-                <p className="text-neutral-300 text-[11px] mt-0.5 leading-relaxed">{bondSuccessNotice}</p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setBondSuccessNotice(null)}
-                className="text-neutral-400 hover:text-white transition-colors cursor-pointer text-xs"
-              >
-                ×
-              </button>
-            </div>
-          )}
-
-          <div className="space-y-1.5 font-mono text-xs">
-            <label className="text-neutral-700 font-semibold block text-xs">Bond Amount (USDC)</label>
-            <div className="flex items-center border border-neutral-200 bg-white rounded-xl px-4 py-2.5 focus-within:border-neutral-950 focus-within:ring-1 focus-within:ring-neutral-950 transition-all">
-              <input
-                type="number"
-                value={bondInput}
-                onChange={(e) => setBondInput(e.target.value)}
-                className="bg-transparent text-neutral-950 w-full focus:outline-none font-mono"
-                placeholder="5000"
-              />
-              <span className="text-neutral-400 font-bold ml-2">USDC</span>
-            </div>
-
-            {/* Quick Amount Presets */}
-            <div className="flex items-center gap-1.5 pt-1.5">
-              <span className="text-[11px] text-neutral-400 font-sans">Quick presets:</span>
-              {[1000, 5000, 10000, 25000].map((preset) => (
                 <button
-                  key={preset}
                   type="button"
-                  onClick={() => setBondInput(preset.toString())}
-                  className="px-2.5 py-1 rounded-lg bg-neutral-100 hover:bg-neutral-200 text-neutral-800 text-[11px] font-mono font-medium transition-colors cursor-pointer active:scale-95"
+                  onClick={() => setBondSuccessNotice(null)}
+                  className="text-neutral-400 hover:text-white transition-colors cursor-pointer text-xs"
                 >
-                  +${preset >= 1000 ? `${preset / 1000}k` : preset}
+                  ×
                 </button>
-              ))}
+              </div>
+            )}
+
+            <div className="space-y-1.5 font-mono text-xs">
+              <label className="text-neutral-700 font-semibold block text-xs">Bond Amount (USDC)</label>
+              <div className="flex items-center border border-neutral-200 bg-white rounded-xl px-4 py-2.5 focus-within:border-neutral-950 focus-within:ring-1 focus-within:ring-neutral-950 transition-all">
+                <input
+                  type="number"
+                  value={bondInput}
+                  onChange={(e) => setBondInput(e.target.value)}
+                  className="bg-transparent text-neutral-950 w-full focus:outline-none font-mono"
+                  placeholder="10"
+                />
+                <span className="text-neutral-400 font-bold ml-2">USDC</span>
+              </div>
+
+              {/* Quick Presets */}
+              <div className="flex items-center gap-1.5 pt-1">
+                <span className="text-[11px] text-neutral-400 font-sans">Presets:</span>
+                {[5, 10, 15, 20].map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => setBondInput(preset.toString())}
+                    className="px-2.5 py-1 rounded-lg bg-neutral-100 hover:bg-neutral-200 text-neutral-800 text-[11px] font-mono font-medium transition-colors cursor-pointer active:scale-95"
+                  >
+                    +${preset}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -1309,41 +1383,66 @@ export function CuratorStudio({
             type="button"
             disabled={isDepositingBond}
             onClick={handleDepositBond}
-            className="w-full h-[44px] rounded-full bg-neutral-950 text-white font-semibold text-[13px] hover:bg-neutral-800 transition-all shadow-xs cursor-pointer active:scale-[0.98] disabled:opacity-60 flex items-center justify-center gap-2"
+            className="w-full h-[40px] rounded-full bg-neutral-950 text-white font-semibold text-xs hover:bg-neutral-800 transition-all shadow-xs cursor-pointer active:scale-[0.98] disabled:opacity-60 flex items-center justify-center gap-2 mt-2"
           >
             {isDepositingBond ? (
               <>
                 <span className="w-3.5 h-3.5 rounded-full border-2 border-white/20 border-t-white animate-spin" />
-                <span>Depositing Bond Collateral...</span>
+                <span>Depositing Bond...</span>
               </>
+            ) : !connectedAddress ? (
+              <span>Connect Wallet to Post Bond</span>
             ) : (
               <span>Deposit Bond Collateral</span>
             )}
           </button>
         </div>
+      </div>
 
-        {/* Quick Strategy Summary */}
-        <div className="bg-white border border-neutral-200/80 rounded-[32px] p-6 sm:p-8 space-y-4 shadow-[0_1px_3px_rgba(0,0,0,0.04)]">
-          <h3 className="text-base font-bold text-neutral-950">Strategy Mandate Summary</h3>
-          <p className="text-[13px] text-neutral-500 leading-relaxed">
-            Your mandate sets bounds on price corridors, concentration caps, and emergency safety parking.
-          </p>
-
-          <div className="space-y-2.5 font-mono text-xs">
-            <div className="p-3.5 rounded-2xl bg-[#FAFAFA] border border-neutral-200/60 flex justify-between items-center">
-              <span className="text-neutral-500">Price Corridor</span>
-              <span className="font-bold text-neutral-950">${mandate.minPrice} – ${mandate.maxPrice}</span>
-            </div>
-            <div className="p-3.5 rounded-2xl bg-[#FAFAFA] border border-neutral-200/60 flex justify-between items-center">
-              <span className="text-neutral-500">Max Concentration</span>
-              <span className="font-bold text-neutral-950">{mandate.maxConcentrationBps / 100}% per range</span>
-            </div>
-            <div className="p-3.5 rounded-2xl bg-[#FAFAFA] border border-neutral-200/60 flex justify-between items-center">
-              <span className="text-neutral-500">Emergency Parking Limit</span>
-              <span className="font-bold text-neutral-950">{mandate.maxShortfallBps / 100}% below Pace</span>
-            </div>
+      {/* 4. Recent Performance Settlements (Human-readable) */}
+      <div className="bg-white border border-neutral-200/80 rounded-[28px] p-6 sm:p-7 space-y-4 shadow-[0_1px_3px_rgba(0,0,0,0.03)]">
+        <div className="flex items-center justify-between">
+          <div>
+            <h3 className="text-base font-bold text-neutral-950">Performance Settlements</h3>
+            <p className="text-xs text-neutral-500 mt-0.5">
+              Completed epoch boundaries and distributed alpha performance fees.
+            </p>
           </div>
+          <Link
+            href="/curator/settlements"
+            className="text-xs font-semibold text-neutral-900 hover:underline"
+          >
+            View All Settlements &rarr;
+          </Link>
         </div>
+
+        {vault.history.length === 0 ? (
+          <div className="p-6 rounded-2xl bg-[#FAFAFA] border border-neutral-200/60 text-center space-y-1">
+            <span className="font-bold text-neutral-900 text-xs block">Epoch #{vault.epoch || 1} In Progress</span>
+            <span className="text-neutral-500 text-xs block">
+              Performance settlements occur automatically at the end of each epoch cycle.
+            </span>
+          </div>
+        ) : (
+          <div className="divide-y divide-neutral-100 font-mono text-xs">
+            {vault.history.slice(0, 3).map((h, i) => (
+              <div key={i} className="py-3 flex items-center justify-between">
+                <div>
+                  <span className="font-bold text-neutral-900">Epoch #{h.epoch}</span>
+                  <span className="text-neutral-400 ml-2">Multiplier: {h.multiplierAfter ?? vault.capacityMultiplier}×</span>
+                </div>
+                <div className="flex items-center gap-4">
+                  <span className={h.outcome === "ahead" ? "text-emerald-700 font-bold" : "text-red-700 font-bold"}>
+                    {h.gap >= 0 ? "+" : ""}${h.gap.toLocaleString()} vs Pace
+                  </span>
+                  <span className="text-neutral-800 font-semibold">
+                    Fee: ${h.feeOrPayout.toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

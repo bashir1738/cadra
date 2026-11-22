@@ -22,6 +22,7 @@ export interface SidebarProps {
   portalMode: "follower" | "curator";
   isOpenMobile?: boolean;
   onCloseMobile?: () => void;
+  onRequestSwitchRole?: (targetRole: "follower" | "curator") => void;
 }
 
 interface NavItem {
@@ -35,12 +36,11 @@ export const Sidebar = React.memo(function Sidebar({
   portalMode,
   isOpenMobile,
   onCloseMobile,
+  onRequestSwitchRole,
 }: SidebarProps) {
   const pathname = usePathname();
   const {
     vaults,
-    seedArchetypes,
-    resetDemo,
     setActiveRole,
   } = useCadra();
 
@@ -79,8 +79,9 @@ export const Sidebar = React.memo(function Sidebar({
     },
     {
       href: "/simulator",
-      label: "Simulator",
+      label: "Demo Sandbox",
       icon: <ActivityIcon className="w-[18px] h-[18px]" />,
+      badge: "Demo",
     },
   ];
 
@@ -124,8 +125,9 @@ export const Sidebar = React.memo(function Sidebar({
     },
     {
       href: "/simulator",
-      label: "Simulator",
+      label: "Demo Sandbox",
       icon: <ActivityIcon className="w-[18px] h-[18px]" />,
+      badge: "Demo",
     },
   ];
 
@@ -141,27 +143,28 @@ export const Sidebar = React.memo(function Sidebar({
       )}
 
       <aside
-        className={`fixed top-0 bottom-0 left-0 z-50 w-72 max-w-[85vw] bg-white border-r border-neutral-200/75 flex flex-col justify-between transition-transform duration-200 ease-in-out lg:static lg:w-64 lg:translate-x-0 lg:transition-none ${
+        className={`fixed top-0 bottom-0 left-0 z-40 w-64 h-screen bg-white border-r border-neutral-200/80 flex flex-col justify-between transition-transform duration-200 ease-in-out lg:translate-x-0 ${
           isOpenMobile ? "translate-x-0 shadow-2xl" : "-translate-x-full lg:translate-x-0"
         }`}
       >
         {/* Top Brand & Role Switcher */}
-        <div className="p-5 border-b border-neutral-100 space-y-5">
+        <div className="p-4 border-b border-neutral-100 space-y-3.5 shrink-0">
           <div className="flex items-center justify-between">
             <Link
               href="/"
               prefetch={true}
               aria-label="Cadra Home"
-              className="flex items-center group"
+              className="flex items-center gap-2.5 group"
               onClick={onCloseMobile}
             >
-              <div className="w-8 h-8 rounded-xl bg-neutral-950 flex items-center justify-center p-1.5 group-hover:scale-105 transition-transform shadow-sm">
+              <div className="w-8 h-8 rounded-xl bg-neutral-950 flex items-center justify-center p-1.5 group-hover:scale-105 transition-transform shadow-xs">
                 <img
                   src="/cadra/logo/cadra-mark-white.svg"
                   alt="Cadra"
                   className="w-full h-full object-contain"
                 />
               </div>
+              <span className="font-bold text-neutral-950 text-base tracking-tight">Cadra</span>
             </Link>
 
             {onCloseMobile && (
@@ -175,45 +178,53 @@ export const Sidebar = React.memo(function Sidebar({
             )}
           </div>
 
-          {/* Minimalist Portal Switcher */}
-          <div className="bg-neutral-100/80 p-1 rounded-xl flex items-center gap-1 text-[12px] font-medium">
-            <Link
-              href="/follower/portfolio"
-              prefetch={true}
+          {/* Minimalist Portal Switcher with Confirmation Intercept */}
+          <div className="bg-neutral-100/90 p-1 rounded-xl flex items-center gap-1 text-[12px] font-medium">
+            <button
+              type="button"
               onClick={() => {
-                setActiveRole("follower");
+                if (portalMode === "follower") return;
+                if (onRequestSwitchRole) {
+                  onRequestSwitchRole("follower");
+                } else {
+                  setActiveRole("follower");
+                }
                 if (onCloseMobile) onCloseMobile();
               }}
-              className={`flex-1 py-1.5 px-3 rounded-lg transition-colors duration-150 text-center cursor-pointer ${
+              className={`flex-1 py-1.5 px-3 rounded-lg transition-all duration-150 text-center cursor-pointer ${
                 portalMode === "follower"
-                  ? "bg-white text-neutral-950 shadow-[0_1px_3px_rgba(0,0,0,0.06)] font-semibold"
+                  ? "bg-white text-neutral-950 shadow-2xs font-semibold cursor-default"
                   : "text-neutral-500 hover:text-neutral-900"
               }`}
             >
               Follower
-            </Link>
-            <Link
-              href="/curator/overview"
-              prefetch={true}
+            </button>
+            <button
+              type="button"
               onClick={() => {
-                setActiveRole("curator");
+                if (portalMode === "curator") return;
+                if (onRequestSwitchRole) {
+                  onRequestSwitchRole("curator");
+                } else {
+                  setActiveRole("curator");
+                }
                 if (onCloseMobile) onCloseMobile();
               }}
-              className={`flex-1 py-1.5 px-3 rounded-lg transition-colors duration-150 text-center cursor-pointer ${
+              className={`flex-1 py-1.5 px-3 rounded-lg transition-all duration-150 text-center cursor-pointer ${
                 portalMode === "curator"
-                  ? "bg-neutral-950 text-white font-semibold"
+                  ? "bg-white text-neutral-950 shadow-2xs font-semibold cursor-default"
                   : "text-neutral-500 hover:text-neutral-900"
               }`}
             >
               Curator
-            </Link>
+            </button>
           </div>
         </div>
 
         {/* Navigation Links */}
-        <div className="flex-1 overflow-y-auto px-3 py-5 space-y-1">
-          <div className="px-3 pb-2 text-[11px] font-medium text-neutral-400">
-            {portalMode === "follower" ? "Follower Portal" : "Curator Studio"}
+        <div className="flex-1 overflow-y-auto px-3 py-3 space-y-1 min-h-0">
+          <div className="px-3 pb-1.5 text-[11px] font-semibold text-neutral-400 uppercase tracking-wider">
+            {portalMode === "follower" ? "Follower Tools" : "Curator Studio"}
           </div>
 
           {currentNavItems.map((item) => {
@@ -228,13 +239,13 @@ export const Sidebar = React.memo(function Sidebar({
                 href={item.href}
                 prefetch={true}
                 onClick={onCloseMobile}
-                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-[13px] font-medium transition-colors duration-150 ${
+                className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-[13px] font-medium transition-colors duration-150 ${
                   isSelected
                     ? "bg-neutral-950 text-white font-semibold"
                     : "text-neutral-600 hover:text-neutral-950 hover:bg-neutral-100/70"
                 }`}
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2.5">
                   <span className={isSelected ? "text-white" : "text-neutral-400"}>
                     {item.icon}
                   </span>
@@ -242,7 +253,7 @@ export const Sidebar = React.memo(function Sidebar({
                 </div>
                 {item.badge && (
                   <span
-                    className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${
+                    className={`text-[10px] px-2 py-0.5 rounded-full font-mono font-medium ${
                       isSelected
                         ? "bg-white/15 text-white"
                         : "bg-neutral-100 text-neutral-600"
@@ -255,47 +266,24 @@ export const Sidebar = React.memo(function Sidebar({
             );
           })}
 
-          <div className="pt-6 px-3">
+          <div className="pt-4 px-3">
             <Link
               href="/"
               prefetch={true}
               onClick={onCloseMobile}
-              className="w-full text-left text-[12px] font-medium text-neutral-400 hover:text-neutral-950 flex items-center gap-1.5 py-2 transition-colors duration-150"
+              className="w-full text-left text-[12px] font-medium text-neutral-400 hover:text-neutral-950 flex items-center gap-1.5 py-1.5 transition-colors duration-150"
             >
               <ChevronLeftIcon className="w-3.5 h-3.5" />
-              <span>Back to Website</span>
+              <span>Back to Home</span>
             </Link>
           </div>
         </div>
 
-        {/* Bottom Wallet & Sandbox Controls */}
-        <div className="p-4 border-t border-neutral-100 space-y-3 bg-[#FAFAFA]">
-          {/* RainbowKit Wallet Status Card */}
+        {/* Bottom Wallet & Network Status Card (Fixed, Compact, Zero Overflow) */}
+        <div className="p-3.5 border-t border-neutral-100 space-y-2 bg-[#FAFAFA] shrink-0">
           <CadraPrivyButton variant="sidebar" />
 
-          <div className="flex items-center justify-between text-[11px] text-neutral-500">
-            <span suppressHydrationWarning>{vaults.length} vaults</span>
-            <div className="flex items-center gap-1.5">
-              <button
-                onClick={seedArchetypes}
-                title="Load testnet archetype vaults"
-                className="px-2.5 py-1 rounded-lg border border-neutral-200 bg-white text-neutral-700 hover:border-neutral-400 hover:text-neutral-950 transition-colors cursor-pointer flex items-center gap-1"
-              >
-                <ZapIcon className="w-3 h-3 text-amber-500" />
-                <span>Seed</span>
-              </button>
-              <button
-                onClick={resetDemo}
-                title="Reset state"
-                className="px-2.5 py-1 rounded-lg border border-neutral-200 bg-white text-neutral-500 hover:text-red-600 hover:border-red-200 transition-colors cursor-pointer flex items-center gap-1"
-              >
-                <RefreshCwIcon className="w-3 h-3" />
-                <span>Reset</span>
-              </button>
-            </div>
-          </div>
-
-          <div className="pt-2.5 border-t border-neutral-200/60 flex items-center justify-between text-[11px] font-mono">
+          <div className="pt-2 border-t border-neutral-200/60 flex items-center justify-between text-[11px] font-mono">
             <span className="flex items-center gap-1.5 text-emerald-800 font-semibold">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
               Unichain Sepolia

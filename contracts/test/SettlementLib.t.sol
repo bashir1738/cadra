@@ -36,6 +36,39 @@ contract SettlementLibTest is Test {
         assertTrue(res.feeShares > 0, "Curator should receive fee shares");
     }
 
+    function test_settle_ahead_with_one_percent_protocol_fee() public pure {
+        uint256 vaultVal = 1100 * 1e6; // $1,100
+        uint256 paceVal = 1000 * 1e6;  // $1,000 (excess $100)
+        uint256 bond = 200 * 1e6;
+        uint256 deficit = 0;
+        uint256 totalShares = 1000 * 1e6;
+        uint16 perfFeeBps = 2000;      // 20% total performance fee
+        uint16 protocolFeeBps = 100;   // 1% platform fee (100 bps)
+
+        SettlementLib.SettlementResult memory res = SettlementLib.computeSettlement(
+            vaultVal,
+            paceVal,
+            bond,
+            deficit,
+            perfFeeBps,
+            protocolFeeBps,
+            INITIAL_MULTIPLIER,
+            totalShares
+        );
+
+        assertTrue(res.isAhead);
+        assertEq(res.gap, 100 * 1e6, "Gap must be +$100");
+        // Total fee = 20% of $100 = $20
+        assertEq(res.fee, 20 * 1e6, "Total fee should be $20");
+        // Protocol fee = 1% of $100 = $1
+        assertEq(res.protocolFee, 1 * 1e6, "Protocol fee must be exactly $1 (1% of profit)");
+        // Curator fee = $20 - $1 = $19
+        assertEq(res.curatorFee, 19 * 1e6, "Curator fee must be $19 (19% of profit)");
+        // Shares split: curator + protocol equals total feeShares
+        assertEq(res.curatorShares + res.protocolShares, res.feeShares, "Shares must sum to total feeShares");
+        assertEq(res.protocolShares, res.feeShares / 20, "Protocol gets exactly 1/20 (5%) of total fee shares");
+    }
+
     function test_settle_behind_covered_by_bond() public pure {
         uint256 vaultVal = 995 * 1e6;  // $995
         uint256 paceVal = 1010 * 1e6;  // $1,010
