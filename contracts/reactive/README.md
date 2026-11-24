@@ -125,12 +125,12 @@ Follow the strict 4-step sequence in [DeployReactive.s.sol](file:///home/bash/Do
 | Contract | Network | Address |
 | :--- | :--- | :--- |
 | **CadraReactive (Omni RSC)** | Reactive Lasna Omni (5318007) | `0xf937aee2e988557ba3774a8a41af349ef7112680` |
-| **CadraCallback** | Unichain Sepolia (1301) | `0xdcff832e039c3793bc16f419cca13258e2203b25` |
+| **CadraCallback** | Unichain Sepolia (1301) | `0x056f379A3d6495330D2996B289c4C9245a430553` |
 | **Callback Proxy** | Unichain Sepolia (1301) | `0x9299472A6399Fd1027ebF067571Eb3e3D7837FC4` |
 | **System Contract** | Reactive Lasna Omni (5318007) | `0x8888888888888888888888888888888888888888` |
 | **CadraHook** | Unichain Sepolia (1301) | `0x3515ffDABa1A7c16d5b217013EA6589DAaBA50c0` |
 
-The hook address above is the current Uniswap v4 deployment. The Reactive and callback addresses in this table are from the previous deployment and must be redeployed/relinked before autonomous callbacks are live for this pool.
+Read-only checks confirm that the Reactive contract's subscribed hook and configured callback recipient match this table, and that the callback points back to the hook. End-to-end execution from a new `BandLeft` or `EpochReady` event remains unverified. The transaction hashes below are deployment history and may refer to earlier wiring.
 
 Deployment transactions:
 

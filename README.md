@@ -37,12 +37,12 @@ Cadra contracts are deployed and verified live across **Unichain Sepolia (1301)*
 | **Uniswap v4 PoolManager** | Unichain Sepolia (1301) | `0x29f2b190eacD76F0cBEC50bA669aab7F4600da4C` | [View on Uniscan](https://sepolia.uniscan.xyz/address/0x29f2b190eacD76F0cBEC50bA669aab7F4600da4C) |
 | **Mock USDC (token0 / bondToken)** | Unichain Sepolia (1301) | `0x688Cfa2501c44CB6B3886f4C5662c55b73f36e8D` | [View on Uniscan](https://sepolia.uniscan.xyz/address/0x688Cfa2501c44CB6B3886f4C5662c55b73f36e8D) |
 | **Mock WETH (token1)** | Unichain Sepolia (1301) | `0xB4AB6C3Ae39df89bA203F01ef08e39775Fe1F0c6` | [View on Uniscan](https://sepolia.uniscan.xyz/address/0xB4AB6C3Ae39df89bA203F01ef08e39775Fe1F0c6) |
-| **CadraCallback** | Unichain Sepolia (1301) | `0xdcff832e039c3793bc16f419cca13258e2203b25` | [View on Uniscan](https://sepolia.uniscan.xyz/address/0xdcff832e039c3793bc16f419cca13258e2203b25) |
+| **CadraCallback** | Unichain Sepolia (1301) | `0x056f379A3d6495330D2996B289c4C9245a430553` | [View on Uniscan](https://sepolia.uniscan.xyz/address/0x056f379A3d6495330D2996B289c4C9245a430553) |
 | **Reactive Callback Proxy** | Unichain Sepolia (1301) | `0x9299472A6399Fd1027ebF067571Eb3e3D7837FC4` | [View on Uniscan](https://sepolia.uniscan.xyz/address/0x9299472A6399Fd1027ebF067571Eb3e3D7837FC4) |
 | **CadraReactive (Omni RSC)** | Reactive Lasna Omni (5318007) | `0xf937aee2e988557ba3774a8a41af349ef7112680` | [View on Reactscan](https://lasna.reactscan.net/address/0xf937aee2e988557ba3774a8a41af349ef7112680) |
 | **Reactive Omni System Contract** | Reactive Lasna Omni (5318007) | `0x8888888888888888888888888888888888888888` | [View on Reactscan](https://lasna.reactscan.net/address/0x8888888888888888888888888888888888888888) |
 
-> The current Uniswap v4 hook and pool are live. Reactive automation still needs to be connected to this pool; the Reactive and callback addresses listed here belong to the earlier deployment.
+> Read-only checks confirm that the Reactive contract subscribes to the current hook and has this callback recipient configured; the callback's immutable hook also matches. End-to-end execution from a new `BandLeft` or `EpochReady` event still needs to be verified.
 
 ### Reactive Omni Architecture & Verification
 
@@ -69,6 +69,8 @@ Cadra contracts are deployed and verified live across **Unichain Sepolia (1301)*
 
 ### Live Reactive Cross-Chain Safety Transactions
 
+The transactions below document an earlier callback deployment and are retained as history; they do not prove execution through the current callback address. Current read-only wiring is listed above. A new event-to-callback execution has not yet been confirmed.
+
 - **Live Uniswap v4 Swap Emitting `BandLeft` (Unichain Sepolia)**:
   - **Pool Liquidity Seeding Tx**: [`0x1f752a2dcfae5c09d4b4316b6b28e7a296b51a938132a7554f3429943c646a40`](https://sepolia.uniscan.xyz/tx/0x1f752a2dcfae5c09d4b4316b6b28e7a296b51a938132a7554f3429943c646a40)
   - **Live Swap Execution Tx**: [`0xbd90334f32e57cec739b548f9f7e5d3cb29acaaac1cb6f23373d26c3ffd24825`](https://sepolia.uniscan.xyz/tx/0xbd90334f32e57cec739b548f9f7e5d3cb29acaaac1cb6f23373d26c3ffd24825)
@@ -81,12 +83,12 @@ Cadra contracts are deployed and verified live across **Unichain Sepolia (1301)*
   - **Subscribed Events**: `BandLeft(uint256,int24)` and `EpochReady(uint256,uint256)` on Unichain Sepolia (Chain ID: `1301`) via Omni System Contract `0x8888888888888888888888888888888888888888`.
 - **`CadraCallback` Deployment on Unichain Sepolia (1301)**:
   - **Transaction Hash**: [`0x7835463a99ce65d0cbacc6fd3bd2b18f0015e705e6e0e7aac1375dd5d508dcf9`](https://sepolia.uniscan.xyz/tx/0x7835463a99ce65d0cbacc6fd3bd2b18f0015e705e6e0e7aac1375dd5d508dcf9)
-  - **Contract Address**: `0xdcff832e039c3793bc16f419cca13258e2203b25`
+  - **Contract Address**: `0xdcff832e039c3793bc16f419cca13258e2203b25` (historical callback; superseded)
   - **Authorized Proxy**: `0x9299472A6399Fd1027ebF067571Eb3e3D7837FC4`
   - **Authorized Sender (RSC)**: `0xf937aee2e988557ba3774a8a41af349ef7112680`
 - **Reactive Callback Recipient Linked on Lasna Omni**:
   - **Transaction Hash**: [`0x6ef362402205a8de616c9c6ea29fc5cfdfeec8f5ce2a25993f8200beb2fa8b22`](https://lasna-omni.reactscan.net/tx/0x6ef362402205a8de616c9c6ea29fc5cfdfeec8f5ce2a25993f8200beb2fa8b22)
-  - **Recipient Configured**: `0xdcff832e039c3793bc16f419cca13258e2203b25`
+  - **Recipient Configured**: `0xdcff832e039c3793bc16f419cca13258e2203b25` (historical recipient; superseded)
 
 ### Live On-Chain Vault State & Transactions
 

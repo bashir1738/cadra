@@ -98,7 +98,7 @@ The web application interacts directly with deployed contracts on **Unichain Sep
 - **Uniswap v4 PoolManager**: `0x29f2b190eacD76F0cBEC50bA669aab7F4600da4C`
 - **Mock USDC (Token0 / BondToken)**: `0x688Cfa2501c44CB6B3886f4C5662c55b73f36e8D`
 - **Mock WETH (Token1)**: `0xB4AB6C3Ae39df89bA203F01ef08e39775Fe1F0c6`
-- **CadraCallback**: `0xdcff832e039c3793bc16f419cca13258e2203b25` (Unichain Sepolia)
+- **CadraCallback**: `0x056f379A3d6495330D2996B289c4C9245a430553` (Unichain Sepolia)
 - **CadraReactive (Omni RSC)**: `0xf937aee2e988557ba3774a8a41af349ef7112680` (Reactive Lasna Omni 5318007)
 - **Reactive Callback Proxy**: `0x9299472A6399Fd1027ebF067571Eb3e3D7837FC4` (Unichain Sepolia)
 

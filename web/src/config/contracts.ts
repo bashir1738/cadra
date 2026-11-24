@@ -8,7 +8,7 @@ export const CONTRACT_ADDRESSES = {
   poolManager: (process.env.NEXT_PUBLIC_POOL_MANAGER_ADDRESS || "0x29f2b190eacD76F0cBEC50bA669aab7F4600da4C") as `0x${string}`,
   token0: (process.env.NEXT_PUBLIC_TOKEN0 || "0x31d0220469e10c4E71834a79b1f276d740d3768F") as `0x${string}`, // Official Circle USDC
   token1: (process.env.NEXT_PUBLIC_TOKEN1 || "0xB4AB6C3Ae39df89bA203F01ef08e39775Fe1F0c6") as `0x${string}`, // WETH (MockERC20)
-  callback: (process.env.NEXT_PUBLIC_CALLBACK_ADDRESS || "0xdcff832e039c3793bc16f419cca13258e2203b25") as `0x${string}`,
+  callback: (process.env.NEXT_PUBLIC_CALLBACK_ADDRESS || "0x056f379A3d6495330D2996B289c4C9245a430553") as `0x${string}`,
   reactive: (process.env.NEXT_PUBLIC_REACTIVE_ADDRESS || "0xf937aee2e988557ba3774a8a41af349ef7112680") as `0x${string}`,
   reactiveProxy: "0x9299472A6399Fd1027ebF067571Eb3e3D7837FC4" as `0x${string}`,
   reactiveSystem: "0x8888888888888888888888888888888888888888" as `0x${string}`,

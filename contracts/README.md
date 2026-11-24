@@ -90,11 +90,11 @@ cd reactive && forge test
 | **Uniswap v4 PoolManager** | Unichain Sepolia (1301) | `0x29f2b190eacD76F0cBEC50bA669aab7F4600da4C` | [Uniscan](https://sepolia.uniscan.xyz/address/0x29f2b190eacD76F0cBEC50bA669aab7F4600da4C) |
 | **Mock USDC (token0 / bondToken)** | Unichain Sepolia (1301) | `0x688Cfa2501c44CB6B3886f4C5662c55b73f36e8D` | [Uniscan](https://sepolia.uniscan.xyz/address/0x688Cfa2501c44CB6B3886f4C5662c55b73f36e8D) |
 | **Mock WETH (token1)** | Unichain Sepolia (1301) | `0xB4AB6C3Ae39df89bA203F01ef08e39775Fe1F0c6` | [Uniscan](https://sepolia.uniscan.xyz/address/0xB4AB6C3Ae39df89bA203F01ef08e39775Fe1F0c6) |
-| **CadraCallback** | Unichain Sepolia (1301) | `0xdcff832e039c3793bc16f419cca13258e2203b25` | [Uniscan](https://sepolia.uniscan.xyz/address/0xdcff832e039c3793bc16f419cca13258e2203b25) |
+| **CadraCallback** | Unichain Sepolia (1301) | `0x056f379A3d6495330D2996B289c4C9245a430553` | [Uniscan](https://sepolia.uniscan.xyz/address/0x056f379A3d6495330D2996B289c4C9245a430553) |
 | **Reactive Callback Proxy** | Unichain Sepolia (1301) | `0x9299472A6399Fd1027ebF067571Eb3e3D7837FC4` | [Uniscan](https://sepolia.uniscan.xyz/address/0x9299472A6399Fd1027ebF067571Eb3e3D7837FC4) |
 | **CadraReactive (Omni RSC)** | Reactive Lasna Omni (5318007) | `0xf937aee2e988557ba3774a8a41af349ef7112680` | [Reactscan](https://lasna.reactscan.net/address/0xf937aee2e988557ba3774a8a41af349ef7112680) |
 
-> The current Uniswap v4 hook and pool are deployed. The Reactive/callback pair above is from the previous deployment and must be reconnected before autonomous callbacks are active for this pool.
+> Read-only checks confirm that the Reactive contract subscribes to the listed hook, its callback recipient is the listed callback, and the callback points back to the hook. A live `BandLeft`/`EpochReady` callback execution has not yet been confirmed.
 
 ### On-Chain Transactions:
 - **CadraReactive Deployed on Lasna Omni**: [`0x1dfd4e736099a8f03e2df931f1117f196f2277befbb8c5a504b6f896eda57a62`](https://lasna.reactscan.net/tx/0x1dfd4e736099a8f03e2df931f1117f196f2277befbb8c5a504b6f896eda57a62)
