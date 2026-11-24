@@ -94,7 +94,7 @@ pnpm run bots:sharp
 The web application interacts directly with deployed contracts on **Unichain Sepolia (Chain ID: 1301)**:
 
 - **Wired via Privy & Wagmi**: Supports MetaMask, Coinbase Wallet, Rainbow, and Privy embedded wallets.
-- **Hook Contract**: `0x728D9b5f428B736A26D07879F55C3982Ddf890C0`
+- **Hook Contract**: `0x3515ffDABa1A7c16d5b217013EA6589DAaBA50c0`
 - **Uniswap v4 PoolManager**: `0x29f2b190eacD76F0cBEC50bA669aab7F4600da4C`
 - **Mock USDC (Token0 / BondToken)**: `0x688Cfa2501c44CB6B3886f4C5662c55b73f36e8D`
 - **Mock WETH (Token1)**: `0xB4AB6C3Ae39df89bA203F01ef08e39775Fe1F0c6`

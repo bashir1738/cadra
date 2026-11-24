@@ -18,7 +18,7 @@ const lasnaClient = createPublicClient({
   transport: http("https://lasna-rpc.rnk.dev/"),
 });
 
-const CADRA_HOOK = "0x728D9b5f428B736A26D07879F55C3982Ddf890C0";
+const CADRA_HOOK = "0x3515ffDABa1A7c16d5b217013EA6589DAaBA50c0";
 const CADRA_CALLBACK = "0xdcff832e039c3793bc16f419cca13258e2203b25";
 
 async function measureLatency() {

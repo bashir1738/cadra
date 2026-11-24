@@ -17,7 +17,8 @@ contract DeployReactiveScript is Script {
         vm.startBroadcast(deployerKey);
 
         // Step 1: Deploy CadraReactive on Reactive Lasna
-        reactive = new CadraReactive{value: 0.05 ether}(hookAddress);
+        uint256 funding = vm.envOr("REACTIVE_DEPLOY_FUNDING", uint256(0.03 ether));
+        reactive = new CadraReactive{value: funding}(hookAddress);
 
         vm.stopBroadcast();
     }

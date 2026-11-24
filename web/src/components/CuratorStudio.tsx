@@ -26,6 +26,7 @@ interface CuratorStudioProps {
   onCreateVault?: (newVault: VaultData) => void | Promise<any>;
   onUpdateRanges: (vaultId: number, newRanges: RangePosition[]) => void | Promise<any>;
   onPostBond: (vaultId: number, amount: number) => void | Promise<any>;
+  onWithdrawBond?: (vaultId: number, amount: number) => void | Promise<any>;
   onProposeMandate: (vaultId: number, mandate: VaultData["mandate"]) => void | Promise<any>;
 }
 
@@ -37,9 +38,16 @@ export function CuratorStudio({
   onCreateVault,
   onUpdateRanges,
   onPostBond,
+  onWithdrawBond,
   onProposeMandate,
 }: CuratorStudioProps) {
-  const { openConnectModal, vaults: contextVaults, isLoadingOnChain } = useCadra();
+  const {
+    openConnectModal,
+    vaults: contextVaults,
+    isLoadingOnChain,
+    withdrawBond: contextWithdrawBond,
+    closeVault: contextCloseVault,
+  } = useCadra();
   const availableVaults = allVaults || contextVaults;
   const [selectedVaultId, setSelectedVaultId] = useState<number>(propVault?.id || availableVaults[0]?.id || 1);
   const vault = availableVaults.find((v) => v.id === selectedVaultId) || propVault || availableVaults[0];
@@ -63,6 +71,10 @@ export function CuratorStudio({
   const [bondInput, setBondInput] = useState<string>("10");
   const [bondSuccessNotice, setBondSuccessNotice] = useState<string | null>(null);
   const [isDepositingBond, setIsDepositingBond] = useState<boolean>(false);
+  const [withdrawBondInput, setWithdrawBondInput] = useState<string>("");
+  const [isWithdrawingBond, setIsWithdrawingBond] = useState<boolean>(false);
+  const [bondWithdrawNotice, setBondWithdrawNotice] = useState<string | null>(null);
+  const [isClosingVault, setIsClosingVault] = useState<boolean>(false);
   const [rebalanceSuccessNotice, setRebalanceSuccessNotice] = useState<string | null>(null);
   const [isRebalancing, setIsRebalancing] = useState<boolean>(false);
 
@@ -82,6 +94,7 @@ export function CuratorStudio({
       setNewMaxConcentration((vault.mandate.maxConcentrationBps || 5000) / 100);
       setRanges(vault.activeRanges || []);
       setBondInput("10");
+      setWithdrawBondInput(vault.bondAmount > 0 ? vault.bondAmount.toString() : "");
     }
   }, [
     vault?.id,
@@ -90,6 +103,54 @@ export function CuratorStudio({
     vault?.mandate?.maxConcentrationBps,
     vault?.activeRanges,
   ]);
+
+  const handleWithdrawBond = async () => {
+    if (!connectedAddress) {
+      if (openConnectModal) openConnectModal();
+      return;
+    }
+    const val = parseFloat(withdrawBondInput);
+    if (!vault || !Number.isFinite(val) || val <= 0 || val > vault.bondAmount) {
+      setBondWithdrawNotice(`Enter a bond amount between $0 and $${vault?.bondAmount.toLocaleString() || "0"}.`);
+      return;
+    }
+
+    setIsWithdrawingBond(true);
+    setBondWithdrawNotice(null);
+    const toastId = toast.loading(`Withdrawing $${val.toLocaleString()} USDC bond on Unichain Sepolia...`);
+    try {
+      await (onWithdrawBond || contextWithdrawBond)(vault.id, val);
+      toast.success(`Successfully withdrew $${val.toLocaleString()} USDC bond collateral.`, { id: toastId });
+      setBondWithdrawNotice(`$${val.toLocaleString()} USDC bond withdrawn on-chain. Remaining bond collateral may still be required for follower capacity.`);
+      setWithdrawBondInput("");
+    } catch (err: any) {
+      const message = err?.shortMessage || err?.message || "Bond withdrawal failed.";
+      toast.error(message, { id: toastId });
+      setBondWithdrawNotice(message);
+    } finally {
+      setIsWithdrawingBond(false);
+    }
+  };
+
+  const handleCloseVault = async () => {
+    if (!connectedAddress) {
+      if (openConnectModal) openConnectModal();
+      return;
+    }
+    if (!vault || vault.curatorAddress.toLowerCase() !== connectedAddress.toLowerCase() || vault.isClosed) return;
+    if (!window.confirm("Close this vault and unwind all active liquidity? Followers will need to claim their funds before the remaining bond can be withdrawn.")) return;
+
+    setIsClosingVault(true);
+    const toastId = toast.loading("Closing vault and unwinding liquidity on-chain...");
+    try {
+      await contextCloseVault(vault.id);
+      toast.success("Vault closed. Followers can now request and settle withdrawals.", { id: toastId });
+    } catch (err: any) {
+      toast.error(err?.shortMessage || err?.message || "Vault close failed.", { id: toastId });
+    } finally {
+      setIsClosingVault(false);
+    }
+  };
 
   const handleDepositBond = async () => {
     if (!connectedAddress) {
@@ -1375,6 +1436,64 @@ export function CuratorStudio({
                     +${preset}
                   </button>
                 ))}
+              </div>
+            </div>
+
+            <div className="border-t border-neutral-100 pt-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-neutral-700">Withdraw Bond Collateral</span>
+                <span className="text-[11px] text-neutral-400 font-mono">24h cooldown</span>
+              </div>
+              <p className="text-[11px] text-neutral-500 leading-relaxed">
+                Withdrawals are allowed after the cooldown only when enough bond remains to secure follower capital.
+              </p>
+              {vault.bondUnlockTime && vault.bondUnlockTime > Math.floor(Date.now() / 1000) && (
+                <p className="text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                  Bond unlocks at {new Date(vault.bondUnlockTime * 1000).toLocaleString()}.
+                </p>
+              )}
+              {bondWithdrawNotice && (
+                <div className="text-[11px] leading-relaxed text-neutral-600 bg-neutral-50 border border-neutral-200 rounded-lg px-3 py-2">
+                  {bondWithdrawNotice}
+                </div>
+              )}
+              <div className="flex items-center border border-neutral-200 bg-white rounded-xl px-4 py-2.5 focus-within:border-neutral-950 focus-within:ring-1 focus-within:ring-neutral-950 transition-all">
+                <input
+                  type="number"
+                  min="0"
+                  max={vault.bondAmount}
+                  value={withdrawBondInput}
+                  onChange={(e) => setWithdrawBondInput(e.target.value)}
+                  className="bg-transparent text-neutral-950 w-full focus:outline-none font-mono text-xs"
+                  placeholder={`Up to ${vault.bondAmount} USDC`}
+                />
+                <span className="text-neutral-400 font-bold ml-2 text-xs">USDC</span>
+              </div>
+              <button
+                type="button"
+                disabled={isWithdrawingBond || vault.bondAmount <= 0 || vault.curatorAddress.toLowerCase() !== connectedAddress?.toLowerCase()}
+                onClick={handleWithdrawBond}
+                className="w-full h-[40px] rounded-full bg-white border border-neutral-300 text-neutral-800 hover:bg-neutral-50 font-semibold text-xs transition-all cursor-pointer active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {isWithdrawingBond ? "Withdrawing Bond..." : vault.curatorAddress.toLowerCase() !== connectedAddress?.toLowerCase() ? "Curator Wallet Required" : "Withdraw Bond USDC"}
+              </button>
+
+              <div className="border-t border-neutral-100 pt-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-neutral-700">Vault Lifecycle</span>
+                  {vault.isClosed && <span className="text-[11px] font-mono font-semibold text-emerald-700">CLOSED</span>}
+                </div>
+                <p className="text-[11px] text-neutral-500 leading-relaxed">
+                  Closing stops new deposits and rebalances, then unwinds active liquidity so followers can claim their funds. Withdraw the remaining bond after claims settle.
+                </p>
+                <button
+                  type="button"
+                  disabled={isClosingVault || vault.isClosed || vault.curatorAddress.toLowerCase() !== connectedAddress?.toLowerCase()}
+                  onClick={handleCloseVault}
+                  className="w-full h-[40px] rounded-full bg-red-50 border border-red-200 text-red-700 hover:bg-red-100 font-semibold text-xs transition-all cursor-pointer active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                >
+                  {isClosingVault ? "Closing Vault..." : vault.isClosed ? "Vault Closed" : vault.curatorAddress.toLowerCase() !== connectedAddress?.toLowerCase() ? "Curator Wallet Required" : "Close Vault & Unwind Liquidity"}
+                </button>
               </div>
             </div>
           </div>

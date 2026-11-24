@@ -57,6 +57,8 @@ interface CadraContextType {
   createVault: (newVault: VaultData) => Promise<number | undefined>;
   updateRanges: (vaultId: number, newRanges: RangePosition[]) => Promise<void>;
   postBond: (vaultId: number, amount: number) => Promise<void>;
+  withdrawBond: (vaultId: number, amount: number) => Promise<void>;
+  closeVault: (vaultId: number) => Promise<void>;
   proposeMandate: (vaultId: number, mandate: VaultData["mandate"]) => Promise<void>;
   triggerEnforce: (vaultId: number) => Promise<void>;
   triggerSettle: (vaultId: number, simulatedGapUsdc: number) => Promise<void>;
@@ -435,6 +437,8 @@ export function CadraProvider({ children }: { children: React.ReactNode }) {
             })) as bigint;
           } catch {}
 
+          const closed = BigInt(vaultRaw.epochStart || 0) === BigInt("0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff");
+
           const bondUsdc = Number(vaultRaw.bond) / 1e6;
           const mult = Number(vaultRaw.capacityMultiplier || 5);
           const capacityUsdc = bondUsdc * mult;
@@ -475,6 +479,7 @@ export function CadraProvider({ children }: { children: React.ReactNode }) {
             description: "Live Uniswap v4 on-chain benchmarked liquidity on Unichain Sepolia.",
             perfFeeBps: Number(vaultRaw.perfFeeBps || 2000),
             bondAmount: bondUsdc,
+            bondUnlockTime: Number(vaultRaw.bondUnlockTime || 0),
             capacity: capacityUsdc,
             capacityMultiplier: mult,
             totalFollowerValue: totalValUsdc,
@@ -487,10 +492,11 @@ export function CadraProvider({ children }: { children: React.ReactNode }) {
             timesParked: Number(vaultRaw.record?.timesParked || 0),
             timesShielded: 0,
             epoch: Number(vaultRaw.epoch || 1),
-            epochStart: Number(vaultRaw.epochStart || Math.floor(Date.now() / 1000)),
+            epochStart: closed ? 0 : Number(vaultRaw.epochStart || Math.floor(Date.now() / 1000)),
             epochDuration: 3600,
             isParked: Boolean(vaultRaw.isFrozen),
             bandLeft: Boolean(vaultRaw.bandLeft),
+            isClosed: closed,
             mandate: {
               minTick,
               maxTick,
@@ -866,6 +872,7 @@ export function CadraProvider({ children }: { children: React.ReactNode }) {
 
       setOnChainTxHash(tx);
       await publicClient.waitForTransactionReceipt({ hash: tx });
+
       await fetchOnChainVaults();
     } finally {
       setIsLoadingOnChain(false);
@@ -892,6 +899,22 @@ export function CadraProvider({ children }: { children: React.ReactNode }) {
 
       setOnChainTxHash(tx);
       await publicClient.waitForTransactionReceipt({ hash: tx });
+
+      // A closed vault can settle immediately. Trigger settlement after the
+      // request so the follower receives the queued claim without waiting for
+      // the next Reactive epoch signal.
+      if (vaults.find((v) => v.id === vaultId)?.isClosed) {
+        const settleTx = await client.writeContract({
+          address: CONTRACT_ADDRESSES.hook,
+          abi: CADRA_HOOK_ABI,
+          functionName: "settle",
+          args: [BigInt(vaultId)],
+          account,
+          gas: BigInt(800000),
+        });
+        setOnChainTxHash(settleTx);
+        await publicClient.waitForTransactionReceipt({ hash: settleTx });
+      }
       await fetchOnChainVaults();
     } finally {
       setIsLoadingOnChain(false);
@@ -1062,6 +1085,69 @@ export function CadraProvider({ children }: { children: React.ReactNode }) {
       setOnChainTxHash(tx);
       await publicClient.waitForTransactionReceipt({ hash: tx });
       await fetchOnChainVaults();
+    } finally {
+      setIsLoadingOnChain(false);
+    }
+  };
+
+  // 5. Curator withdraws bond collateral on-chain.
+  // The hook enforces the one-day cooldown and required collateral for follower capital.
+  const withdrawBond = async (vaultId: number, amount: number) => {
+    if (amount <= 0) throw new Error("Bond withdrawal amount must be greater than zero.");
+
+    setIsLoadingOnChain(true);
+    setOnChainTxHash(null);
+    try {
+      const client = await getAsyncWalletClient();
+      const account = (connectedAddress || client.account?.address) as `0x${string}`;
+      const amountUnits = parseUnits(amount.toString(), 6);
+
+      const tx = await client.writeContract({
+        address: CONTRACT_ADDRESSES.hook,
+        abi: CADRA_HOOK_ABI,
+        functionName: "withdrawBond",
+        args: [BigInt(vaultId), amountUnits],
+        account,
+        gas: BigInt(250000),
+      });
+
+      setOnChainTxHash(tx);
+      await publicClient.waitForTransactionReceipt({ hash: tx });
+      await fetchOnChainVaults();
+    } catch (err: any) {
+      const message = err?.shortMessage || err?.message || "Bond withdrawal failed.";
+      if (message.includes("CooldownActive")) {
+        throw new Error("Bond withdrawal is still in the 24-hour cooldown period.");
+      }
+      if (message.includes("InsufficientBond")) {
+        throw new Error("This bond is still securing follower capital. Withdrawals must leave the required collateral in the vault.");
+      }
+      throw err;
+    } finally {
+      setIsLoadingOnChain(false);
+    }
+  };
+
+  const closeVault = async (vaultId: number) => {
+    setIsLoadingOnChain(true);
+    setOnChainTxHash(null);
+    try {
+      const client = await getAsyncWalletClient();
+      const account = (connectedAddress || client.account?.address) as `0x${string}`;
+      const tx = await client.writeContract({
+        address: CONTRACT_ADDRESSES.hook,
+        abi: CADRA_HOOK_ABI,
+        functionName: "closeVault",
+        args: [BigInt(vaultId)],
+        account,
+        gas: BigInt(500000),
+      });
+      setOnChainTxHash(tx);
+      await publicClient.waitForTransactionReceipt({ hash: tx });
+      await fetchOnChainVaults();
+    } catch (err: any) {
+      const message = err?.shortMessage || err?.message || "Vault closure failed.";
+      throw err;
     } finally {
       setIsLoadingOnChain(false);
     }
@@ -1299,6 +1385,8 @@ export function CadraProvider({ children }: { children: React.ReactNode }) {
       deleteAllVaults,
       updateRanges,
       postBond,
+      withdrawBond,
+      closeVault,
       proposeMandate,
       triggerEnforce,
       triggerSettle,

@@ -1,6 +1,15 @@
 // Auto-generated from contracts/out/CadraHook.sol/CadraHook.json — do not edit by hand.
 export const CADRA_HOOK_ABI = [
   {
+    "type": "function",
+    "name": "closeVault",
+    "inputs": [
+      { "name": "vaultId", "type": "uint256", "internalType": "uint256" }
+    ],
+    "outputs": [],
+    "stateMutability": "nonpayable"
+  },
+  {
     "type": "constructor",
     "inputs": [
       {

@@ -9,8 +9,8 @@ contract DeployCallback is Script {
     address constant CALLBACK_PROXY = 0x9299472A6399Fd1027ebF067571Eb3e3D7837FC4;
     // These are the deployed Cadra contracts. The PoolManager address must never
     // be used as the callback sender.
-    address constant CADRA_REACTIVE = 0xf937aee2e988557ba3774a8a41af349ef7112680;
-    address constant CADRA_HOOK = 0x3007A44a54EcBAe0335c4AcE9a00a1dD15Ca90c0;
+    address constant CADRA_REACTIVE = 0xF937AEe2e988557bA3774a8a41Af349EF7112680;
+    address constant CADRA_HOOK = 0x3515ffDABa1A7c16d5b217013EA6589DAaBA50c0;
 
     function run() external returns (address newCallback) {
         uint256 deployerKey = vm.envUint("DEPLOYER_PRIVATE_KEY");

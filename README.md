@@ -21,6 +21,10 @@
 > **TESTNET ONLY**  
 > Cadra is built for **Atrium Academy’s UHI11 Hookathon** (Theme: *Active Management and Curation*). The smart contracts and frontend operate live on **Unichain Sepolia (Chain ID: 1301)** and **Reactive Lasna (Chain ID: 5318007)**.
 
+### Cadra
+
+Cadra lets users follow a curator who manages Uniswap v4 liquidity for them. Followers deposit USDC into a vault, the curator manages the liquidity within published rules, and fees are charged only when the vault beats a passive benchmark called the Pace. The curator also posts a USDC bond to help cover losses. Uniswap v4 holds and executes the liquidity; Reactive Network watches for rule breaches and sends the safety action back to the v4 hook.
+
 ---
 
 ## 1. Live Testnet Deployments (Unichain Sepolia & Reactive Lasna Omni)
@@ -29,7 +33,7 @@ Cadra contracts are deployed and verified live across **Unichain Sepolia (1301)*
 
 | Contract / Entity | Network | Address / Identifier | Explorer Link |
 | :--- | :--- | :--- | :--- |
-| **CadraHook (v2)** | Unichain Sepolia (1301) | `0x3007A44a54EcBAe0335c4AcE9a00a1dD15Ca90c0` | [View on Uniscan](https://sepolia.uniscan.xyz/address/0x3007A44a54EcBAe0335c4AcE9a00a1dD15Ca90c0) |
+| **CadraHook** | Unichain Sepolia (1301) | `0x3515ffDABa1A7c16d5b217013EA6589DAaBA50c0` | [View on Uniscan](https://sepolia.uniscan.xyz/address/0x3515ffDABa1A7c16d5b217013EA6589DAaBA50c0) |
 | **Uniswap v4 PoolManager** | Unichain Sepolia (1301) | `0x29f2b190eacD76F0cBEC50bA669aab7F4600da4C` | [View on Uniscan](https://sepolia.uniscan.xyz/address/0x29f2b190eacD76F0cBEC50bA669aab7F4600da4C) |
 | **Mock USDC (token0 / bondToken)** | Unichain Sepolia (1301) | `0x688Cfa2501c44CB6B3886f4C5662c55b73f36e8D` | [View on Uniscan](https://sepolia.uniscan.xyz/address/0x688Cfa2501c44CB6B3886f4C5662c55b73f36e8D) |
 | **Mock WETH (token1)** | Unichain Sepolia (1301) | `0xB4AB6C3Ae39df89bA203F01ef08e39775Fe1F0c6` | [View on Uniscan](https://sepolia.uniscan.xyz/address/0xB4AB6C3Ae39df89bA203F01ef08e39775Fe1F0c6) |
@@ -37,6 +41,8 @@ Cadra contracts are deployed and verified live across **Unichain Sepolia (1301)*
 | **Reactive Callback Proxy** | Unichain Sepolia (1301) | `0x9299472A6399Fd1027ebF067571Eb3e3D7837FC4` | [View on Uniscan](https://sepolia.uniscan.xyz/address/0x9299472A6399Fd1027ebF067571Eb3e3D7837FC4) |
 | **CadraReactive (Omni RSC)** | Reactive Lasna Omni (5318007) | `0xf937aee2e988557ba3774a8a41af349ef7112680` | [View on Reactscan](https://lasna.reactscan.net/address/0xf937aee2e988557ba3774a8a41af349ef7112680) |
 | **Reactive Omni System Contract** | Reactive Lasna Omni (5318007) | `0x8888888888888888888888888888888888888888` | [View on Reactscan](https://lasna.reactscan.net/address/0x8888888888888888888888888888888888888888) |
+
+> The current Uniswap v4 hook and pool are live. Reactive automation still needs to be connected to this pool; the Reactive and callback addresses listed here belong to the earlier deployment.
 
 ### Reactive Omni Architecture & Verification
 
@@ -99,7 +105,7 @@ Cadra contracts are deployed and verified live across **Unichain Sepolia (1301)*
 ## 2. Overview & Pitch
 
 ### The Problem
-Managing concentrated liquidity on Uniswap v3/v4 is too complex for passive users, so LPs delegate capital to active vault managers. However, traditional vault managers charge performance fees (typically 10–20%) on **any profit**—including market beta (token appreciation) and baseline swap fees that a passive full-range LP would have earned automatically without paying anyone.
+Managing concentrated liquidity on Uniswap v4 is too complex for passive users, so LPs delegate capital to active vault managers. However, traditional vault managers charge performance fees (typically 10–20%) on **any profit**—including market beta (token appreciation) and baseline swap fees that a passive full-range LP would have earned automatically without paying anyone.
 
 Followers pay fees for market luck, and when a curator makes bad concentrated bets or gets picked off by toxic flow, followers absorb 100% of the downside while the curator loses nothing.
 
@@ -121,6 +127,20 @@ A natural question arises: *If `CadraHook.enforce()` is permissionless and calla
 2. **Sub-Second Deterministic Latency**: Reactive Network operates with CometBFT consensus on Reactive Lasna (~0.7s–1.0s block times) with direct validator event ingestion. As soon as a toxic swap pushes price outside the curator's mandate band, Reactive processes `react()` and dispatches the callback proxy on Unichain Sepolia within ~1 second—preventing toxic orderflow from exploiting unhedged liquidity.
 3. **Guaranteed Execution without MEV Extortion**: Keepers only execute when profitable. In market crashes, keeper gas auctions can delay critical parking transactions by blocks or minutes. Reactive Network guarantees autonomous callback delivery directly through the protocol's system contract and authorized callback proxy (`0x9299472A6399Fd1027ebF067571Eb3e3D7837FC4`).
 
+### How Uniswap v4 and Reactive Network Work Together
+
+Cadra separates liquidity control from event-driven automation. **Uniswap v4 is the execution layer**: `CadraHook` owns the vault accounting and concentrated liquidity, validates curator mandates, maintains the Pace benchmark, and emits canonical events from the pool lifecycle. **Reactive Network is the observation and dispatch layer**: `CadraReactive` listens to those events on Reactive Lasna and requests an authenticated callback back to Unichain Sepolia.
+
+The handoff works as follows:
+
+1. A swap enters the Uniswap v4 `PoolManager`. CadraHook's `afterSwap` hook compares the observed price with each vault's permitted corridor.
+2. When a vault leaves its corridor, CadraHook emits `BandLeft(vaultId, tick)`. At epoch boundaries, a permissionless signal emits `EpochReady(vaultId, epoch)`.
+3. CadraReactive is subscribed to those two event topics through Reactive's system contract. Its `react()` function accepts only system-delivered logs from chain `1301` and the pinned hook address.
+4. CadraReactive requests a callback to Unichain Sepolia. The callback payload is `enforce(address,uint256)` for a band breach or `settle(address,uint256)` for an epoch boundary; Reactive replaces the zero-address placeholder with the RSC identity.
+5. CadraCallback accepts the request only from the authorized callback proxy and the pinned CadraReactive sender, then calls the hook. The hook performs the final state transition atomically: parking liquidity, settling the Pace result, processing withdrawals, and updating bond coverage.
+
+This division keeps funds and protocol rules on Uniswap v4 while allowing Reactive Network to provide deterministic cross-chain monitoring and execution. Reactive never holds follower funds and cannot choose arbitrary vault actions; the hook remains the final authority over every state change.
+
 ---
 
 ## 3. Core Concepts
@@ -137,6 +157,7 @@ A natural question arises: *If `CadraHook.enforce()` is permissionless and calla
 | **Bond** | The curator's USDC collateral. Pays followers immediately if the vault finishes an epoch behind the Pace. |
 | **Capacity** | The maximum capital a curator may manage: $\text{Bond} \times m$. Multiplier $m$ scales with verified track record (from $2\times$ to $20\times$). |
 | **Deficit Carry** | Any shortfall exceeding the bond. Curators must make up this deficit in future epochs before earning fees again. |
+| **Reactive Contracts** | `CadraReactive` watches the Uniswap v4 hook for rule breaches and epoch events. `CadraCallback` receives the authenticated request on Unichain and calls the hook to enforce safety or settle the vault. They automate actions; they never hold follower funds. |
 
 ---
 
@@ -152,6 +173,8 @@ The Next.js 16 web application is wired directly to the live Unichain Sepolia sm
   - **Bond Posting**: `USDC.approve(...)` + `CadraHook.postBond(vaultId, amount)`
   - **Follower Deposits**: `USDC.approve(...)` + `CadraHook.deposit(vaultId, amount0, 0)`
   - **Follower Withdrawals**: `CadraHook.requestWithdraw(vaultId, shares)`
+  - **Curator Vault Closure**: `CadraHook.closeVault(vaultId)` permanently stops new deposits/rebalances and unwinds active liquidity.
+  - **Curator Bond Withdrawal**: `CadraHook.withdrawBond(vaultId, amount)` returns excess bond collateral after cooldown and follower claims.
   - **Rebalance**: `CadraHook.rebalance(vaultId, ranges)`
   - **Mandate Proposals**: `CadraHook.proposeMandate(vaultId, mandate)`
   - **Safety Triggers**: `CadraHook.enforce(vaultId)` and `CadraHook.settle(vaultId)`

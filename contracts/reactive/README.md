@@ -23,6 +23,34 @@ Unichain Sepolia (Chain ID: 1301)                Reactive Lasna (Chain ID: 53180
 └───────────────────────────────────────┘
 ```
 
+## How the Uniswap v4 Hook and Reactive Contracts Work Hand in Hand
+
+Cadra uses Uniswap v4 for custody, liquidity management, and rule enforcement, while Reactive Network supplies the autonomous trigger path:
+
+| Stage | Uniswap v4 / Unichain Sepolia | Reactive Network / Lasna |
+| :--- | :--- | :--- |
+| Observe | `CadraHook.afterSwap` evaluates the pool price and vault mandate. | `CadraReactive` receives subscribed `BandLeft` and `EpochReady` logs. |
+| Decide | The hook exposes permissionless `enforce()` and `settle()` entry points. | `react()` maps each event topic to the correct callback payload. |
+| Dispatch | `CadraCallback` is the only destination contract accepted by the hook workflow. | The system contract sends the callback request to chain `1301`. |
+| Execute | `CadraCallback` calls `CadraHook.enforce(vaultId)` or `settle(vaultId)`. | Reactive supplies the authenticated RSC sender identity. |
+
+The hook remains the source of truth. Reactive does not custody USDC, calculate vault NAV, or override mandates. It only transports an event-derived request across chains. The callback performs a second authorization check before forwarding the request, and the hook performs the final caller, timing, price-deviation, and vault-state checks.
+
+### End-to-End Safety Flow
+
+1. A Uniswap v4 swap moves the pool outside a curator's permitted range.
+2. `CadraHook` emits `BandLeft(vaultId, currentTick)` after the swap.
+3. `CadraReactive.react()` verifies the system caller, source chain, hook address, and topic.
+4. Reactive's system contract schedules `enforce(address,uint256)` for the Unichain callback proxy.
+5. `CadraCallback` verifies both the callback proxy and the pinned Reactive sender.
+6. `CadraHook.enforce(vaultId)` freezes the vault and parks liquidity into the full-range Pace position when the shortfall rules require it.
+
+Settlement follows the same path with `EpochReady`. If settlement conditions temporarily reject the operation, `CadraCallback` records `SettleFailed` instead of reverting the callback service; anyone can retry settlement once the hook's conditions are satisfied.
+
+### What Happens During a Curator Exit
+
+`closeVault(vaultId)` is executed directly by the curator on Unichain. It permanently stops new deposits, rebalances, and bond additions, then unwinds the vault's active ranges. Followers request withdrawals through the hook; a closed vault can settle immediately, and the frontend prompts the follower wallet and submits the claim flow. Only after follower obligations are satisfied can the curator withdraw excess bond collateral.
+
 ---
 
 ## 2. Contracts Overview
@@ -45,6 +73,8 @@ Unichain Sepolia (Chain ID: 1301)                Reactive Lasna (Chain ID: 53180
   * `onlyServiceProvider`: Ensures the caller is the verified Unichain callback proxy (`0x9299472A6399Fd1027ebF067571Eb3e3D7837FC4`).
   * `onlyCallbackSender(sender)`: Ensures the first 160-bit address parameter matches the pinned `CadraReactive` address on Lasna.
   * **Execution**: Forwards authenticated requests directly to `hook.enforce(vaultId)` or `hook.settle(vaultId)`. A temporary settlement revert is caught and emitted as `SettleFailed`, so the callback service itself does not fail silently.
+
+**In simple terms:** `CadraReactive` watches the Uniswap v4 hook for events that need an automatic response. `CadraCallback` delivers that response back to Unichain, where the hook performs the actual safety or settlement action. The Reactive contracts are automation infrastructure, not a custody layer.
 
 ---
 
@@ -98,7 +128,9 @@ Follow the strict 4-step sequence in [DeployReactive.s.sol](file:///home/bash/Do
 | **CadraCallback** | Unichain Sepolia (1301) | `0xdcff832e039c3793bc16f419cca13258e2203b25` |
 | **Callback Proxy** | Unichain Sepolia (1301) | `0x9299472A6399Fd1027ebF067571Eb3e3D7837FC4` |
 | **System Contract** | Reactive Lasna Omni (5318007) | `0x8888888888888888888888888888888888888888` |
-| **CadraHook** | Unichain Sepolia (1301) | `0x728D9b5f428B736A26D07879F55C3982Ddf890C0` |
+| **CadraHook** | Unichain Sepolia (1301) | `0x3515ffDABa1A7c16d5b217013EA6589DAaBA50c0` |
+
+The hook address above is the current Uniswap v4 deployment. The Reactive and callback addresses in this table are from the previous deployment and must be redeployed/relinked before autonomous callbacks are live for this pool.
 
 Deployment transactions:
 

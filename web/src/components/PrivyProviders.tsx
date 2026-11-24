@@ -46,7 +46,6 @@ export function PrivyProviders({ children }: { children: React.ReactNode }) {
           accentColor: "#09090b",
           walletChainType: "ethereum-only",
           walletList: [
-            "detected_ethereum_wallets",
             "metamask",
             "coinbase_wallet",
             "rainbow",

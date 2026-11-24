@@ -36,5 +36,10 @@
     "tailwindcss": "4.3.3",
     "typescript": "^5"
   },
-  "packageManager": "pnpm@10.28.2"
+  "packageManager": "pnpm@10.28.2",
+  "pnpm": {
+    "patchedDependencies": {
+      "@privy-io/react-auth@3.52.0": "patches/@privy-io__react-auth@3.52.0.patch"
+    }
+  }
 }

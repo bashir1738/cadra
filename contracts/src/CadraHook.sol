@@ -126,7 +126,7 @@ contract CadraHook is BaseHook, IUnlockCallback, ReentrancyGuardTransient {
     error BondCurrencyMismatch();
 
     struct UnlockCallbackData {
-        uint8 action; // 1: rebalance, 2: park, 3: fullRangeInit, 4: withdrawUnwind
+        uint8 action; // 1: rebalance/close, 2: park, 3: fullRangeInit, 4: withdrawUnwind
         uint256 vaultId;
         Range[] newRanges;
     }
@@ -331,6 +331,7 @@ contract CadraHook is BaseHook, IUnlockCallback, ReentrancyGuardTransient {
     function postBond(uint256 vaultId, uint256 amount) external nonReentrant {
         Vault storage v = vaults[vaultId];
         if (v.curator == address(0)) revert VaultNotFound();
+        if (v.epochStart == type(uint256).max) revert VaultFrozen();
 
         bondToken.safeTransferFrom(msg.sender, address(this), amount);
         v.bond += amount;
@@ -363,6 +364,17 @@ contract CadraHook is BaseHook, IUnlockCallback, ReentrancyGuardTransient {
         emit BondChanged(vaultId, v.bond, _bondValueInToken1(v, twapSqrtPrice) * v.capacityMultiplier);
     }
 
+    /// @notice Permanently stops a vault from accepting new deposits or rebalances.
+    /// Followers exit by requesting withdrawals, which are paid during settlement.
+    function closeVault(uint256 vaultId) external nonReentrant {
+        Vault storage v = vaults[vaultId];
+        if (msg.sender != v.curator) revert OnlyCurator();
+        // The max timestamp is a terminal sentinel and is already exposed by getVault().
+        v.epochStart = type(uint256).max;
+        // Action 1 removes every position; an empty range list means no liquidity is re-added.
+        poolManager.unlock(abi.encode(UnlockCallbackData({action: 1, vaultId: vaultId, newRanges: new Range[](0)})));
+    }
+
     // ==========================================
     //            DEPOSIT & WITHDRAW QUEUES
     // ==========================================
@@ -378,6 +390,7 @@ contract CadraHook is BaseHook, IUnlockCallback, ReentrancyGuardTransient {
     {
         Vault storage v = vaults[vaultId];
         if (v.curator == address(0)) revert VaultNotFound();
+        if (v.epochStart == type(uint256).max) revert VaultFrozen();
 
         // Verify spot deviation to protect deposit-time valuation
         _checkSpotDeviation(v.poolKey.toId(), false);
@@ -442,6 +455,7 @@ contract CadraHook is BaseHook, IUnlockCallback, ReentrancyGuardTransient {
         Vault storage v = vaults[vaultId];
         if (msg.sender != v.curator) revert OnlyCurator();
         if (v.isFrozen) revert VaultFrozen();
+        if (v.epochStart == type(uint256).max) revert VaultFrozen();
 
         MandateLib.validateRanges(v.mandate, ranges, v.poolKey.tickSpacing);
 
@@ -479,7 +493,7 @@ contract CadraHook is BaseHook, IUnlockCallback, ReentrancyGuardTransient {
 
     function enforce(uint256 vaultId) external nonReentrant returns (bool) {
         Vault storage v = vaults[vaultId];
-        if (v.curator == address(0) || v.isFrozen) return false;
+        if (v.curator == address(0) || v.isFrozen || v.epochStart == type(uint256).max) return false;
 
         PoolId poolId = v.poolKey.toId();
 
@@ -516,8 +530,9 @@ contract CadraHook is BaseHook, IUnlockCallback, ReentrancyGuardTransient {
 
     function settle(uint256 vaultId) external nonReentrant {
         Vault storage v = vaults[vaultId];
-        uint256 epochEnd = v.epochStart + epochLength;
-        if (block.timestamp < epochEnd) revert EpochNotEnded();
+        bool closed = v.epochStart == type(uint256).max;
+        uint256 epochEnd = closed ? 0 : v.epochStart + epochLength;
+        if (!closed && block.timestamp < epochEnd) revert EpochNotEnded();
 
         PoolId poolId = v.poolKey.toId();
         // Fallback to pure TWAP if beyond grace period to ensure liveness against prolonged spot manipulation
@@ -584,7 +599,7 @@ contract CadraHook is BaseHook, IUnlockCallback, ReentrancyGuardTransient {
         v.isFrozen = false;
         v.bandLeft = false;
         uint256 vIdx = vaultIndexInPool[vaultId];
-        if (vIdx < 32) {
+        if (!closed && vIdx < 32) {
             poolActiveBandMask[poolId] |= uint32(1) << uint32(vIdx);
         }
 
@@ -670,9 +685,11 @@ contract CadraHook is BaseHook, IUnlockCallback, ReentrancyGuardTransient {
             vaultId, v.epoch, vaultVal, paceVal, res.curatorFee, res.bondPayout, res.newDeficit, res.protocolFee
         );
 
-        v.epochStart = block.timestamp;
-        v.epoch++;
-        epochReadySignaled[vaultId] = false;
+        if (!closed) {
+            v.epochStart = block.timestamp;
+            v.epoch++;
+            epochReadySignaled[vaultId] = false;
+        }
     }
 
     /// @notice Permissionless function to signal that an epoch has ended, emitting EpochReady for Reactive settlement.

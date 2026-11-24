@@ -25,6 +25,7 @@ export interface VaultData {
   description: string;
   perfFeeBps: number; // e.g. 2000 = 20%
   bondAmount: number; // USDC
+  bondUnlockTime?: number; // Unix timestamp after which bond withdrawals may be requested
   capacity: number; // bond * multiplier
   capacityMultiplier: number; // 2x to 20x
   totalFollowerValue: number; // USDC
@@ -41,6 +42,7 @@ export interface VaultData {
   epochDuration: number; // seconds
   isParked: boolean;
   bandLeft: boolean;
+  isClosed?: boolean;
   mandate: Mandate;
   activeRanges: RangePosition[];
   history: {

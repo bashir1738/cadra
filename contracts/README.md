@@ -48,9 +48,10 @@ contracts/
 
 `CadraHook` inherits from `BaseHook` and `IUnlockCallback`:
 - **Address Flag Mining**: Uses `AFTER_INITIALIZE` (`1 << 12`), `BEFORE_SWAP` (`1 << 7`), and `AFTER_SWAP` (`1 << 6`).
-- **Runtime Size**: **23,476 B** (**+1,100 Bytes** of headroom under the EIP-170 hard limit of 24,576 B).
+- **Runtime Size**: **24,573 B** (**3 Bytes** of headroom under the EIP-170 hard limit of 24,576 B).
 - **Anti-Sandwich Deposits**: Follower shares are calculated and locked at deposit time via `depositWithSlippage()`, referencing TWAP price and `minSharesOut`.
 - **Pro-Rata Dual-Token Redemptions**: Queued withdrawals unwind proportional liquidity and pay out both `token0` and `token1` from idle balances.
+- **Curator Full Exit**: `closeVault()` permanently stops new deposits and rebalances, unwinds active ranges, and lets followers request claims before the curator withdraws excess bond collateral.
 - **Autonomous Enforcement**: When pool price breaches a mandate band, `BandLeft` is emitted. While `enforce(vaultId)` is permissionless, Reactive Network eliminates reliance on off-chain keeper infrastructure or profit incentives, autonomously guaranteeing execution via `CadraCallback` in ~1 second. It checks if the vault is behind the Pace (`vaultVal < paceVal` and `shortfallBps >= maxShortfallBps`), freezing the curator (`isFrozen = true`, `timesParked++`) and parking 100% of funds into full-range benchmark LP. If already ahead or within tolerance, it returns `false` cleanly without reverting.
 - **Liveness-Guaranteed Settlement**: `settle(vaultId)` concludes the epoch. If spot price is temporarily volatile, it reverts to prevent manipulation. If deviation persists beyond `SETTLEMENT_GRACE_PERIOD` (1 hour), it falls back to TWAP valuation, guaranteeing liveness.
 
@@ -85,13 +86,15 @@ cd reactive && forge test
 
 | Contract | Network | Address | Explorer Link |
 | :--- | :--- | :--- | :--- |
-| **CadraHook (v2)** | Unichain Sepolia (1301) | `0x3007A44a54EcBAe0335c4AcE9a00a1dD15Ca90c0` | [Uniscan](https://sepolia.uniscan.xyz/address/0x3007A44a54EcBAe0335c4AcE9a00a1dD15Ca90c0) |
+| **CadraHook** | Unichain Sepolia (1301) | `0x3515ffDABa1A7c16d5b217013EA6589DAaBA50c0` | [Uniscan](https://sepolia.uniscan.xyz/address/0x3515ffDABa1A7c16d5b217013EA6589DAaBA50c0) |
 | **Uniswap v4 PoolManager** | Unichain Sepolia (1301) | `0x29f2b190eacD76F0cBEC50bA669aab7F4600da4C` | [Uniscan](https://sepolia.uniscan.xyz/address/0x29f2b190eacD76F0cBEC50bA669aab7F4600da4C) |
 | **Mock USDC (token0 / bondToken)** | Unichain Sepolia (1301) | `0x688Cfa2501c44CB6B3886f4C5662c55b73f36e8D` | [Uniscan](https://sepolia.uniscan.xyz/address/0x688Cfa2501c44CB6B3886f4C5662c55b73f36e8D) |
 | **Mock WETH (token1)** | Unichain Sepolia (1301) | `0xB4AB6C3Ae39df89bA203F01ef08e39775Fe1F0c6` | [Uniscan](https://sepolia.uniscan.xyz/address/0xB4AB6C3Ae39df89bA203F01ef08e39775Fe1F0c6) |
 | **CadraCallback** | Unichain Sepolia (1301) | `0xdcff832e039c3793bc16f419cca13258e2203b25` | [Uniscan](https://sepolia.uniscan.xyz/address/0xdcff832e039c3793bc16f419cca13258e2203b25) |
 | **Reactive Callback Proxy** | Unichain Sepolia (1301) | `0x9299472A6399Fd1027ebF067571Eb3e3D7837FC4` | [Uniscan](https://sepolia.uniscan.xyz/address/0x9299472A6399Fd1027ebF067571Eb3e3D7837FC4) |
 | **CadraReactive (Omni RSC)** | Reactive Lasna Omni (5318007) | `0xf937aee2e988557ba3774a8a41af349ef7112680` | [Reactscan](https://lasna.reactscan.net/address/0xf937aee2e988557ba3774a8a41af349ef7112680) |
+
+> The current Uniswap v4 hook and pool are deployed. The Reactive/callback pair above is from the previous deployment and must be reconnected before autonomous callbacks are active for this pool.
 
 ### On-Chain Transactions:
 - **CadraReactive Deployed on Lasna Omni**: [`0x1dfd4e736099a8f03e2df931f1117f196f2277befbb8c5a504b6f896eda57a62`](https://lasna.reactscan.net/tx/0x1dfd4e736099a8f03e2df931f1117f196f2277befbb8c5a504b6f896eda57a62)

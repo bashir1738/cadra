@@ -387,7 +387,7 @@ export function LiveSimulator({
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <a
-            href="https://sepolia.uniscan.xyz/address/0x3007A44a54EcBAe0335c4AcE9a00a1dD15Ca90c0"
+            href="https://sepolia.uniscan.xyz/address/0x3515ffDABa1A7c16d5b217013EA6589DAaBA50c0"
             target="_blank"
             rel="noopener noreferrer"
             className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-mono font-medium transition-colors border border-white/15"
