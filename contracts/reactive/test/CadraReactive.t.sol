@@ -12,27 +12,16 @@ import {AbstractReactive} from "@reactive/src/base/AbstractReactive.sol";
 
 contract MockSystemContract is ISystemContract {
     uint256 public subscriptionCount;
+    uint256 public unsubscribeCount;
     CallbackConfiguration_V_1_0 public lastCallback;
 
-    function subscribe(
-        uint256,
-        address,
-        uint256,
-        uint256,
-        uint256,
-        uint256
-    ) external override {
+    function subscribe(uint256, address, uint256, uint256, uint256, uint256) external override {
         subscriptionCount++;
     }
 
-    function unsubscribe(
-        uint256,
-        address,
-        uint256,
-        uint256,
-        uint256,
-        uint256
-    ) external override {}
+    function unsubscribe(uint256, address, uint256, uint256, uint256, uint256) external override {
+        unsubscribeCount++;
+    }
 
     function requestCallbackV_1_0(CallbackConfiguration_V_1_0 calldata config) external override {
         lastCallback = config;
@@ -53,7 +42,10 @@ contract MockCallbackProxy is IPayable {
     function coverDebt(address) external payable override {}
 
     /// @notice Simulates real Reactive Omni proxy: replaces address(0) placeholder in payload with RSC address
-    function executeCallback(address target, address rsc, bytes memory rawPayload) external returns (bool, bytes memory) {
+    function executeCallback(address target, address rsc, bytes memory rawPayload)
+        external
+        returns (bool, bytes memory)
+    {
         bytes memory modifiedPayload = new bytes(rawPayload.length);
         for (uint256 i = 0; i < rawPayload.length; i++) {
             modifiedPayload[i] = rawPayload[i];
@@ -72,6 +64,11 @@ contract MockCallbackProxy is IPayable {
 contract MockHook is ICadraHook {
     uint256 public lastEnforcedVault;
     uint256 public lastSettledVault;
+    bool public failSettlement;
+
+    function setFailSettlement(bool value) external {
+        failSettlement = value;
+    }
 
     function enforce(uint256 vaultId) external override returns (bool) {
         lastEnforcedVault = vaultId;
@@ -79,6 +76,7 @@ contract MockHook is ICadraHook {
     }
 
     function settle(uint256 vaultId) external override {
+        if (failSettlement) revert("SpotDeviation");
         lastSettledVault = vaultId;
     }
 }
@@ -124,7 +122,8 @@ contract CadraReactiveSubprojectTest is Test {
         vm.prank(SYSTEM_ADDR);
         reactiveContract.react(logRecord);
 
-        (uint256 chainId, address recipient, uint64 gasLimit, bytes memory payload) = MockSystemContract(SYSTEM_ADDR).lastCallback();
+        (uint256 chainId, address recipient, uint64 gasLimit, bytes memory payload) =
+            MockSystemContract(SYSTEM_ADDR).lastCallback();
         assertEq(chainId, 1301);
         assertEq(recipient, address(callbackContract));
         assertEq(gasLimit, 1_500_000);
@@ -148,11 +147,57 @@ contract CadraReactiveSubprojectTest is Test {
         vm.prank(SYSTEM_ADDR);
         reactiveContract.react(logRecord);
 
-        (uint256 chainId, address recipient, uint64 gasLimit, bytes memory payload) = MockSystemContract(SYSTEM_ADDR).lastCallback();
+        (uint256 chainId, address recipient, uint64 gasLimit, bytes memory payload) =
+            MockSystemContract(SYSTEM_ADDR).lastCallback();
         assertEq(chainId, 1301);
         assertEq(recipient, address(callbackContract));
         assertEq(gasLimit, 1_500_000);
         assertEq(payload, abi.encodeWithSignature("settle(address,uint256)", address(0), vaultId));
+    }
+
+    function test_react_uses_updated_gas_limit() public {
+        reactiveContract.setCallbackGasLimit(2_500_000);
+        LogRecord memory logRecord = LogRecord({
+            chainId: 1301,
+            _contract: address(mockHook),
+            topic0: reactiveContract.BAND_LEFT_TOPIC(),
+            topic1: 1,
+            topic2: 0,
+            topic3: 0,
+            data: "",
+            blockNumber: 100,
+            opCode: 0
+        });
+
+        vm.prank(SYSTEM_ADDR);
+        reactiveContract.react(logRecord);
+        (,, uint64 gasLimit,) = MockSystemContract(SYSTEM_ADDR).lastCallback();
+        assertEq(gasLimit, 2_500_000);
+    }
+
+    function test_subscribe_hook_unsubscribes_old_topics() public {
+        MockHook replacement = new MockHook();
+        reactiveContract.subscribeHook(address(replacement));
+        assertEq(MockSystemContract(SYSTEM_ADDR).unsubscribeCount(), 2);
+        assertEq(MockSystemContract(SYSTEM_ADDR).subscriptionCount(), 4);
+        assertEq(reactiveContract.hook(), address(replacement));
+    }
+
+    function test_react_rejects_unknown_topic() public {
+        LogRecord memory logRecord = LogRecord({
+            chainId: 1301,
+            _contract: address(mockHook),
+            topic0: 123,
+            topic1: 1,
+            topic2: 0,
+            topic3: 0,
+            data: "",
+            blockNumber: 100,
+            opCode: 0
+        });
+        vm.prank(SYSTEM_ADDR);
+        vm.expectRevert("InvalidTopic");
+        reactiveContract.react(logRecord);
     }
 
     function test_react_reverts_if_not_system() public {
@@ -225,6 +270,18 @@ contract CadraReactiveSubprojectTest is Test {
         callbackContract.settle(address(reactiveContract), 13);
         assertEq(mockHook.lastSettledVault(), 13);
         assertEq(callbackContract.lastSettleTimestamp(13), block.timestamp);
+        assertTrue(callbackContract.lastSettleResult(13));
+    }
+
+    function test_callback_settle_records_failure_without_reverting() public {
+        mockHook.setFailSettlement(true);
+
+        vm.prank(address(mockProxy), address(reactiveContract));
+        callbackContract.settle(address(reactiveContract), 13);
+
+        assertFalse(callbackContract.lastSettleResult(13));
+        assertEq(callbackContract.lastSettleTimestamp(13), block.timestamp);
+        assertEq(mockHook.lastSettledVault(), 0);
     }
 
     function test_callback_rejects_unauthorized_proxy() public {
@@ -274,7 +331,7 @@ contract CadraReactiveSubprojectTest is Test {
         reactiveContract.react(bandLeftLog);
 
         // Step 3: Capture emitted callback request from Reactive SYSTEM contract
-        (uint256 destChainId, address callbackDest, uint64 gasBudget, bytes memory enforcePayload) = 
+        (uint256 destChainId, address callbackDest, uint64 gasBudget, bytes memory enforcePayload) =
             MockSystemContract(SYSTEM_ADDR).lastCallback();
 
         assertEq(destChainId, 1301, "Target chain must be Unichain Sepolia");
@@ -304,7 +361,7 @@ contract CadraReactiveSubprojectTest is Test {
         vm.prank(SYSTEM_ADDR);
         reactiveContract.react(epochReadyLog);
 
-        (, , , bytes memory settlePayload) = MockSystemContract(SYSTEM_ADDR).lastCallback();
+        (,,, bytes memory settlePayload) = MockSystemContract(SYSTEM_ADDR).lastCallback();
         assertEq(settlePayload, abi.encodeWithSignature("settle(address,uint256)", address(0), vaultId));
 
         mockProxy.executeCallback(address(callbackContract), address(reactiveContract), settlePayload);

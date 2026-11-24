@@ -52,4 +52,4 @@ Step 5: Liquidity re-deposited into v2 vaults
    - Upon `settle()`, idle `token0` and `token1` are claimed by followers.
    - The Cadra web application surfaces a one-click **"Migrate to Cadra v2"** workflow that claims from v1 and queues into the corresponding v2 vault.
 4. **Reactive Subproject Decommissioning**:
-   - Once all vaults on v1 have completed their final epoch, call `setCallbackRecipient(address(0))` on the v1 `CadraReactive` contract to halt further callbacks.
+   - Once all vaults on v1 have completed their final epoch, call `clearCallbackRecipient()` on the v1 `CadraReactive` contract to halt further callbacks.

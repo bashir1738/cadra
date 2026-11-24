@@ -4,6 +4,7 @@ import React from "react";
 import { DashboardLayout } from "../../../components/DashboardLayout";
 import { CuratorStudio } from "../../../components/CuratorStudio";
 import { useCadra } from "../../../context/CadraContext";
+import { ReactiveOperations } from "../../../components/ReactiveOperations";
 
 export default function CuratorOverviewPage() {
   const {
@@ -26,6 +27,7 @@ export default function CuratorOverviewPage() {
         onPostBond={postBond}
         onProposeMandate={proposeMandate}
       />
+      <ReactiveOperations />
     </DashboardLayout>
   );
 }

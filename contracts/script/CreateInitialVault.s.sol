@@ -44,7 +44,7 @@ contract CreateInitialVaultScript is Script {
             maxShortfallBps: 500
         });
 
-        uint256 vaultId = hook.createVault(key, 2000, mandate); // 20% perf fee
+        uint256 vaultId = hook.createVault(key, 2000, mandate, 1000 ether); // 20% perf fee
         console.log("Created Vault ID:", vaultId);
 
         // Approve and post 10 USDC bond (gives 50 USDC follower capacity)

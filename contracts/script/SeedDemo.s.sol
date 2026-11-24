@@ -54,7 +54,7 @@ contract SeedDemoScript is Script {
             minRangeWidth: 120,
             maxShortfallBps: 500
         });
-        uint256 tightVaultId = hook.createVault(poolKey, 2000, tightMandate);
+        uint256 tightVaultId = hook.createVault(poolKey, 2000, tightMandate, 1000 ether);
         hook.postBond(tightVaultId, bondAmount);
         vm.stopBroadcast();
 
@@ -68,7 +68,7 @@ contract SeedDemoScript is Script {
             minRangeWidth: 600,
             maxShortfallBps: 1000
         });
-        uint256 wideVaultId = hook.createVault(poolKey, 1500, wideMandate);
+        uint256 wideVaultId = hook.createVault(poolKey, 1500, wideMandate, 1000 ether);
         hook.postBond(wideVaultId, bondAmount);
         vm.stopBroadcast();
 
@@ -82,7 +82,7 @@ contract SeedDemoScript is Script {
             minRangeWidth: 600,
             maxShortfallBps: 800
         });
-        uint256 lazyVaultId = hook.createVault(poolKey, 1000, lazyMandate);
+        uint256 lazyVaultId = hook.createVault(poolKey, 1000, lazyMandate, 1000 ether);
         hook.postBond(lazyVaultId, bondAmount);
         vm.stopBroadcast();
 
@@ -96,7 +96,7 @@ contract SeedDemoScript is Script {
             minRangeWidth: 60,
             maxShortfallBps: 300
         });
-        uint256 recklessVaultId = hook.createVault(poolKey, 3000, recklessMandate);
+        uint256 recklessVaultId = hook.createVault(poolKey, 3000, recklessMandate, 1000 ether);
         hook.postBond(recklessVaultId, bondAmount);
         vm.stopBroadcast();
 

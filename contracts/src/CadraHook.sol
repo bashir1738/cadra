@@ -16,6 +16,7 @@ import {SwapParams, ModifyLiquidityParams} from "@uniswap/v4-core/src/types/Pool
 import {IUnlockCallback} from "@uniswap/v4-core/src/interfaces/callback/IUnlockCallback.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {ReentrancyGuardTransient} from "@openzeppelin/contracts/utils/ReentrancyGuardTransient.sol";
 import {FullMath} from "@uniswap/v4-core/src/libraries/FullMath.sol";
 
 import {Mandate, Range} from "./types/Mandate.sol";
@@ -27,21 +28,21 @@ import {TwapOracle} from "./libraries/TwapOracle.sol";
 
 /// @title CadraHook
 /// @notice Uniswap v4 hook for curated liquidity benchmarking against the Pace.
-contract CadraHook is BaseHook, IUnlockCallback {
+contract CadraHook is BaseHook, IUnlockCallback, ReentrancyGuardTransient {
     using PoolIdLibrary for PoolKey;
     using CurrencyLibrary for Currency;
     using SafeERC20 for IERC20;
     using TwapOracle for TwapOracle.Buffer;
 
-    uint256 public constant MAX_PERF_FEE_BPS = 3000; // 30%
-    uint256 public constant MAX_VAULTS_PER_POOL = 32;
-    uint256 public constant SETTLEMENT_GRACE_PERIOD = 1 hours;
-    uint256 public constant BOND_WITHDRAW_COOLDOWN = 1 days;
+    uint256 internal constant MAX_PERF_FEE_BPS = 3000; // 30%
+    uint256 internal constant MAX_VAULTS_PER_POOL = 32;
+    uint256 internal constant SETTLEMENT_GRACE_PERIOD = 1 hours;
+    uint256 internal constant BOND_WITHDRAW_COOLDOWN = 1 days;
 
-    IERC20 public immutable bondToken;
-    uint256 public immutable epochLength;
-    uint32 public immutable twapWindow;
-    int24 public immutable maxSpotDeviationTicks;
+    IERC20 internal immutable bondToken;
+    uint256 internal immutable epochLength;
+    uint32 internal immutable twapWindow;
+    int24 internal immutable maxSpotDeviationTicks;
 
     uint256 public nextVaultId = 1;
 
@@ -49,15 +50,15 @@ contract CadraHook is BaseHook, IUnlockCallback {
     address public protocolTreasury;
     uint16 public protocolFeeBps = 100; // 100 bps = 1.00% of excess profit
 
-    mapping(uint256 => Vault) public vaults;
+    mapping(uint256 => Vault) internal vaults;
     mapping(uint256 => Range[]) internal vaultPositions;
     mapping(uint256 => mapping(address => uint256)) public vaultFollowerShares;
     mapping(uint256 => QueuedDeposit[]) internal vaultDeposits;
     mapping(uint256 => QueuedWithdraw[]) internal vaultWithdraws;
 
-    mapping(PoolId => uint256[]) public poolVaults;
+    mapping(PoolId => uint256[]) internal poolVaults;
     mapping(PoolId => TwapOracle.Buffer) internal poolOracles;
-    mapping(PoolId => bool) public poolRegistered;
+    mapping(PoolId => bool) internal poolRegistered;
 
     // Hook idle token balances per vault
     mapping(uint256 => uint256) public vaultIdle0;
@@ -71,10 +72,10 @@ contract CadraHook is BaseHook, IUnlockCallback {
     mapping(uint256 => bool) public epochReadySignaled;
 
     // Safe tick envelope & active mask for gas-optimized afterSwap
-    mapping(PoolId => int24) public poolSafeMinTick;
-    mapping(PoolId => int24) public poolSafeMaxTick;
+    mapping(PoolId => int24) internal poolSafeMinTick;
+    mapping(PoolId => int24) internal poolSafeMaxTick;
     mapping(PoolId => uint32) public poolActiveBandMask;
-    mapping(uint256 => uint256) public vaultIndexInPool;
+    mapping(uint256 => uint256) internal vaultIndexInPool;
 
     // Events
     event VaultCreated(uint256 indexed vaultId, address indexed curator, PoolId indexed poolId, uint16 perfFeeBps);
@@ -83,11 +84,7 @@ contract CadraHook is BaseHook, IUnlockCallback {
     event DepositQueued(uint256 indexed vaultId, address indexed follower, uint256 amount0, uint256 amount1);
     event WithdrawQueued(uint256 indexed vaultId, address indexed follower, uint256 shares);
     event WithdrawProcessed(
-        uint256 indexed vaultId,
-        address indexed follower,
-        uint256 amount0,
-        uint256 amount1,
-        uint256 shares
+        uint256 indexed vaultId, address indexed follower, uint256 amount0, uint256 amount1, uint256 shares
     );
     event Rebalanced(uint256 indexed vaultId, Range[] ranges);
     event BandLeft(uint256 indexed vaultId, int24 tick);
@@ -125,6 +122,8 @@ contract CadraHook is BaseHook, IUnlockCallback {
     error SlippageExceeded();
     error InsufficientIdle();
     error AlreadySignaled();
+    error ZeroAmount();
+    error BondCurrencyMismatch();
 
     struct UnlockCallbackData {
         uint8 action; // 1: rebalance, 2: park, 3: fullRangeInit, 4: withdrawUnwind
@@ -137,14 +136,16 @@ contract CadraHook is BaseHook, IUnlockCallback {
         IERC20 _bondToken,
         uint256 _epochLength,
         uint32 _twapWindow,
-        int24 _maxSpotDeviationTicks
+        int24 _maxSpotDeviationTicks,
+        address _owner
     ) BaseHook(_poolManager) {
         bondToken = _bondToken;
         epochLength = _epochLength;
         twapWindow = _twapWindow;
         maxSpotDeviationTicks = _maxSpotDeviationTicks;
-        owner = msg.sender;
-        protocolTreasury = msg.sender;
+        // CREATE2 deployer is msg.sender during construction; pass the real admin explicitly.
+        owner = _owner;
+        protocolTreasury = _owner;
     }
 
     function getHookPermissions() public pure override returns (Hooks.Permissions memory) {
@@ -170,42 +171,34 @@ contract CadraHook is BaseHook, IUnlockCallback {
     //            HOOK CALLBACKS
     // ==========================================
 
-    function _afterInitialize(
-        address,
-        PoolKey calldata key,
-        uint160,
-        int24 tick
-    ) internal override returns (bytes4) {
+    function _afterInitialize(address, PoolKey calldata key, uint160, int24 tick) internal override returns (bytes4) {
         PoolId poolId = key.toId();
         poolRegistered[poolId] = true;
         poolOracles[poolId].initialize(tick);
         return this.afterInitialize.selector;
     }
 
-    function _beforeSwap(
-        address,
-        PoolKey calldata key,
-        SwapParams calldata,
-        bytes calldata
-    ) internal override returns (bytes4, BeforeSwapDelta, uint24) {
+    function _beforeSwap(address, PoolKey calldata key, SwapParams calldata, bytes calldata)
+        internal
+        override
+        returns (bytes4, BeforeSwapDelta, uint24)
+    {
         PoolId poolId = key.toId();
-        (, int24 spotTick, , ) = StateLibrary.getSlot0(poolManager, poolId);
+        (, int24 spotTick,,) = StateLibrary.getSlot0(poolManager, poolId);
         poolOracles[poolId].write(spotTick);
         return (this.beforeSwap.selector, BeforeSwapDeltaLibrary.ZERO_DELTA, 0);
     }
 
-    function _afterSwap(
-        address,
-        PoolKey calldata key,
-        SwapParams calldata,
-        BalanceDelta,
-        bytes calldata
-    ) internal override returns (bytes4, int128) {
+    function _afterSwap(address, PoolKey calldata key, SwapParams calldata, BalanceDelta, bytes calldata)
+        internal
+        override
+        returns (bytes4, int128)
+    {
         PoolId poolId = key.toId();
         uint32 activeMask = poolActiveBandMask[poolId];
         if (activeMask == 0) return (this.afterSwap.selector, 0);
 
-        (, int24 spotTick, , ) = StateLibrary.getSlot0(poolManager, poolId);
+        (, int24 spotTick,,) = StateLibrary.getSlot0(poolManager, poolId);
 
         // Fast-path: spotTick is within the safe envelope of all active vaults (no loop, ~97% gas reduction)
         int24 safeMin = poolSafeMinTick[poolId];
@@ -263,13 +256,20 @@ contract CadraHook is BaseHook, IUnlockCallback {
     //            VAULT CREATION & MANDATE
     // ==========================================
 
-    function createVault(
-        PoolKey calldata key,
-        uint16 perfFeeBps,
-        Mandate calldata mandate
-    ) external returns (uint256 vaultId) {
+    function createVault(PoolKey calldata key, uint16 perfFeeBps, Mandate calldata mandate, uint256 initialBond)
+        external
+        nonReentrant
+        returns (uint256 vaultId)
+    {
         if (perfFeeBps > MAX_PERF_FEE_BPS) revert PerfFeeTooHigh();
+        if (initialBond == 0) revert ZeroAmount();
         MandateLib.validateMandate(mandate);
+
+        // Bond must be one of the pool currencies so settle payouts cannot DoS.
+        address bt = address(bondToken);
+        if (bt != Currency.unwrap(key.currency0) && bt != Currency.unwrap(key.currency1)) {
+            revert BondCurrencyMismatch();
+        }
 
         PoolId poolId = key.toId();
         if (poolVaults[poolId].length >= MAX_VAULTS_PER_POOL) revert MaxVaultsReached();
@@ -284,10 +284,9 @@ contract CadraHook is BaseHook, IUnlockCallback {
         v.epoch = 1;
         v.epochStart = block.timestamp;
 
-        // Take initial fee-growth snapshots if pool is initialized
-        if (poolRegistered[poolId]) {
-            (v.feeGrowthGlobal0X128Snapshot, v.feeGrowthGlobal1X128Snapshot) = StateLibrary.getFeeGrowthGlobals(poolManager, poolId);
-        }
+        bondToken.safeTransferFrom(msg.sender, address(this), initialBond);
+        v.bond = initialBond;
+        v.bondUnlockTime = block.timestamp + BOND_WITHDRAW_COOLDOWN;
 
         uint256 idx = poolVaults[poolId].length;
         vaultIndexInPool[vaultId] = idx;
@@ -310,6 +309,7 @@ contract CadraHook is BaseHook, IUnlockCallback {
         }
 
         emit VaultCreated(vaultId, msg.sender, poolId, perfFeeBps);
+        emit BondChanged(vaultId, v.bond, _bondValueInToken1(v, getTwapSqrtPrice(poolId)) * v.capacityMultiplier);
         emit MandateSet(vaultId, mandate, 1);
     }
 
@@ -328,7 +328,7 @@ contract CadraHook is BaseHook, IUnlockCallback {
     //            BOND & CAPACITY
     // ==========================================
 
-    function postBond(uint256 vaultId, uint256 amount) external {
+    function postBond(uint256 vaultId, uint256 amount) external nonReentrant {
         Vault storage v = vaults[vaultId];
         if (v.curator == address(0)) revert VaultNotFound();
 
@@ -336,22 +336,31 @@ contract CadraHook is BaseHook, IUnlockCallback {
         v.bond += amount;
         v.bondUnlockTime = block.timestamp + BOND_WITHDRAW_COOLDOWN;
 
-        emit BondChanged(vaultId, v.bond, v.bond * v.capacityMultiplier);
+        emit BondChanged(
+            vaultId, v.bond, _bondValueInToken1(v, getTwapSqrtPrice(v.poolKey.toId())) * v.capacityMultiplier
+        );
     }
 
-    function withdrawBond(uint256 vaultId, uint256 amount) external {
+    function withdrawBond(uint256 vaultId, uint256 amount) external nonReentrant {
         Vault storage v = vaults[vaultId];
         if (msg.sender != v.curator) revert OnlyCurator();
         if (block.timestamp < v.bondUnlockTime) revert CooldownActive();
 
         uint256 currentVal = getVaultTotalValue(vaultId);
         uint256 requiredBond = (currentVal + v.capacityMultiplier - 1) / v.capacityMultiplier;
-        if (v.bond - amount < requiredBond) revert InsufficientBond();
+        // requiredBond is in token1; convert remaining bond to token1 for comparison.
+        uint160 twapSqrtPrice = getTwapSqrtPrice(v.poolKey.toId());
+        uint256 remainingBondVal = _bondValueInToken1(v, twapSqrtPrice);
+        // remaining = bond - amount, but amount is bondToken units; convert amount too.
+        uint256 amountVal = address(bondToken) == Currency.unwrap(v.poolKey.currency1)
+            ? amount
+            : PaceLib.token0ToToken1Value(amount, twapSqrtPrice);
+        if (remainingBondVal < amountVal + requiredBond) revert InsufficientBond();
 
         v.bond -= amount;
         bondToken.safeTransfer(msg.sender, amount);
 
-        emit BondChanged(vaultId, v.bond, v.bond * v.capacityMultiplier);
+        emit BondChanged(vaultId, v.bond, _bondValueInToken1(v, twapSqrtPrice) * v.capacityMultiplier);
     }
 
     // ==========================================
@@ -362,33 +371,30 @@ contract CadraHook is BaseHook, IUnlockCallback {
         return depositWithSlippage(vaultId, amount0, amount1, 0);
     }
 
-    function depositWithSlippage(
-        uint256 vaultId,
-        uint256 amount0,
-        uint256 amount1,
-        uint256 minSharesOut
-    ) public returns (uint256 sharesToMint) {
+    function depositWithSlippage(uint256 vaultId, uint256 amount0, uint256 amount1, uint256 minSharesOut)
+        public
+        nonReentrant
+        returns (uint256 sharesToMint)
+    {
         Vault storage v = vaults[vaultId];
         if (v.curator == address(0)) revert VaultNotFound();
 
         // Verify spot deviation to protect deposit-time valuation
-        verifySpotDeviation(v.poolKey.toId());
+        _checkSpotDeviation(v.poolKey.toId(), false);
 
         uint160 twapSqrtPrice = getTwapSqrtPrice(v.poolKey.toId());
         uint256 depValue = PaceLib.token0ToToken1Value(amount0, twapSqrtPrice) + amount1;
         if (depValue == 0) revert ZeroDeposit();
 
-        // Capacity check: current active + pending + new deposit
+        // Capacity check: current active + pending + new deposit (bond converted to token1)
         uint256 currentVal = getVaultValue(vaultId);
         uint256 pendingVal = vaultPending1[vaultId] + PaceLib.token0ToToken1Value(vaultPending0[vaultId], twapSqrtPrice);
-        if (currentVal + pendingVal + depValue > v.bond * v.capacityMultiplier) revert CapacityExceeded();
+        uint256 bondVal = _bondValueInToken1(v, twapSqrtPrice);
+        if (currentVal + pendingVal + depValue > bondVal * v.capacityMultiplier) revert CapacityExceeded();
 
-        // Lock share price at deposit time (anti-sandwich)
-        sharesToMint = (v.totalShares == 0 || currentVal == 0)
-            ? depValue
-            : FullMath.mulDiv(depValue, v.totalShares, currentVal);
-
-        if (sharesToMint < minSharesOut) revert SlippageExceeded();
+        // Return an estimate for callers; final mint shares are calculated at settlement NAV.
+        sharesToMint =
+            (v.totalShares == 0 || currentVal == 0) ? depValue : FullMath.mulDiv(depValue, v.totalShares, currentVal);
 
         if (amount0 > 0) {
             IERC20(Currency.unwrap(v.poolKey.currency0)).safeTransferFrom(msg.sender, address(this), amount0);
@@ -399,14 +405,14 @@ contract CadraHook is BaseHook, IUnlockCallback {
             vaultPending1[vaultId] += amount1;
         }
 
-        vaultDeposits[vaultId].push(QueuedDeposit({
-            follower: msg.sender,
-            sharesToMint: sharesToMint
-        }));
+        vaultDeposits[vaultId].push(
+            QueuedDeposit({follower: msg.sender, amount0: amount0, amount1: amount1, minSharesOut: minSharesOut})
+        );
         emit DepositQueued(vaultId, msg.sender, amount0, amount1);
     }
 
-    function requestWithdraw(uint256 vaultId, uint256 shares) external {
+    function requestWithdraw(uint256 vaultId, uint256 shares) external nonReentrant {
+        if (shares == 0) revert ZeroAmount();
         if (vaultFollowerShares[vaultId][msg.sender] < shares) revert InsufficientShares();
 
         vaultFollowerShares[vaultId][msg.sender] -= shares;
@@ -415,11 +421,24 @@ contract CadraHook is BaseHook, IUnlockCallback {
         emit WithdrawQueued(vaultId, msg.sender, shares);
     }
 
+    function cancelWithdraw(uint256 vaultId) external nonReentrant {
+        QueuedWithdraw[] storage queue = vaultWithdraws[vaultId];
+        uint256 cancelled;
+        for (uint256 i = 0; i < queue.length; i++) {
+            if (queue[i].follower == msg.sender) {
+                cancelled += queue[i].shares;
+                queue[i].shares = 0;
+            }
+        }
+        if (cancelled == 0) revert InsufficientShares();
+        vaultFollowerShares[vaultId][msg.sender] += cancelled;
+    }
+
     // ==========================================
     //            REBALANCE & PARKING
     // ==========================================
 
-    function rebalance(uint256 vaultId, Range[] calldata ranges) external {
+    function rebalance(uint256 vaultId, Range[] calldata ranges) external nonReentrant {
         Vault storage v = vaults[vaultId];
         if (msg.sender != v.curator) revert OnlyCurator();
         if (v.isFrozen) revert VaultFrozen();
@@ -431,15 +450,13 @@ contract CadraHook is BaseHook, IUnlockCallback {
 
         // Concentration check on each new range
         for (uint256 i = 0; i < ranges.length; i++) {
-            MandateLib.validateConcentration(_rangeValue(twapSqrtPrice, ranges[i]), totalVaultVal, v.mandate.maxConcentrationBps);
+            MandateLib.validateConcentration(
+                _rangeValue(twapSqrtPrice, ranges[i]), totalVaultVal, v.mandate.maxConcentrationBps
+            );
         }
 
         // Execute position adjustments via PoolManager.unlock
-        poolManager.unlock(abi.encode(UnlockCallbackData({
-            action: 1,
-            vaultId: vaultId,
-            newRanges: ranges
-        })));
+        poolManager.unlock(abi.encode(UnlockCallbackData({action: 1, vaultId: vaultId, newRanges: ranges})));
 
         // Update stored positions
         delete vaultPositions[vaultId];
@@ -448,7 +465,7 @@ contract CadraHook is BaseHook, IUnlockCallback {
         }
 
         // Clear bandLeft if tick is within mandate and re-arm active mask
-        (, int24 currentTick, , ) = StateLibrary.getSlot0(poolManager, v.poolKey.toId());
+        (, int24 currentTick,,) = StateLibrary.getSlot0(poolManager, v.poolKey.toId());
         if (currentTick >= v.mandate.minTick && currentTick <= v.mandate.maxTick) {
             v.bandLeft = false;
             uint256 idx = vaultIndexInPool[vaultId];
@@ -460,14 +477,14 @@ contract CadraHook is BaseHook, IUnlockCallback {
         emit Rebalanced(vaultId, ranges);
     }
 
-    function enforce(uint256 vaultId) external returns (bool) {
+    function enforce(uint256 vaultId) external nonReentrant returns (bool) {
         Vault storage v = vaults[vaultId];
         if (v.curator == address(0) || v.isFrozen) return false;
 
         PoolId poolId = v.poolKey.toId();
-        
+
         // Spot deviation check: verify without reverting so keeper automation does not revert
-        (, int24 spotTick, , ) = StateLibrary.getSlot0(poolManager, poolId);
+        (, int24 spotTick,,) = StateLibrary.getSlot0(poolManager, poolId);
         int24 twapTick = poolOracles[poolId].getTwapTick(twapWindow, spotTick);
         int24 diff = spotTick > twapTick ? spotTick - twapTick : twapTick - spotTick;
         if (diff > maxSpotDeviationTicks) return false;
@@ -487,11 +504,7 @@ contract CadraHook is BaseHook, IUnlockCallback {
         v.record.timesParked++;
 
         // Remove existing positions and park into full range
-        poolManager.unlock(abi.encode(UnlockCallbackData({
-            action: 2,
-            vaultId: vaultId,
-            newRanges: new Range[](0)
-        })));
+        poolManager.unlock(abi.encode(UnlockCallbackData({action: 2, vaultId: vaultId, newRanges: new Range[](0)})));
 
         emit VaultParked(vaultId, v.epoch, shortfallBps);
         return true;
@@ -501,7 +514,7 @@ contract CadraHook is BaseHook, IUnlockCallback {
     //               SETTLEMENT
     // ==========================================
 
-    function settle(uint256 vaultId) external {
+    function settle(uint256 vaultId) external nonReentrant {
         Vault storage v = vaults[vaultId];
         uint256 epochEnd = v.epochStart + epochLength;
         if (block.timestamp < epochEnd) revert EpochNotEnded();
@@ -514,16 +527,17 @@ contract CadraHook is BaseHook, IUnlockCallback {
         uint256 vaultVal = getVaultValue(vaultId);
         uint256 paceVal = getPaceValue(vaultId);
 
-        SettlementLib.SettlementResult memory res = SettlementLib.computeSettlement(
-            vaultVal,
-            paceVal,
-            v.bond,
-            v.deficit,
-            v.perfFeeBps,
-            protocolFeeBps,
-            v.capacityMultiplier,
-            v.totalShares
-        );
+        SettlementLib.SettlementResult memory res;
+        if (v.epoch == 1) {
+            // No Pace benchmark yet: neutral settlement (no fees, no multiplier change).
+            res.newBond = v.bond;
+            res.newDeficit = v.deficit;
+            res.newMultiplier = v.capacityMultiplier;
+        } else {
+            res = SettlementLib.computeSettlement(
+                vaultVal, paceVal, v.bond, v.deficit, v.perfFeeBps, protocolFeeBps, v.capacityMultiplier, v.totalShares
+            );
+        }
 
         // Update record
         if (res.isAhead) {
@@ -550,9 +564,14 @@ contract CadraHook is BaseHook, IUnlockCallback {
             v.totalShares += res.feeShares;
         }
 
-        // If bond payout, add payout to idle token1
+        // Route bond payouts to the currency that backs the bond.
+        // Bond currency is validated in createVault, so one branch always matches.
         if (res.bondPayout > 0) {
-            vaultIdle1[vaultId] += res.bondPayout;
+            if (address(bondToken) == Currency.unwrap(v.poolKey.currency1)) {
+                vaultIdle1[vaultId] += res.bondPayout;
+            } else {
+                vaultIdle0[vaultId] += res.bondPayout;
+            }
         }
 
         // Apply pending mandate
@@ -569,6 +588,40 @@ contract CadraHook is BaseHook, IUnlockCallback {
             poolActiveBandMask[poolId] |= uint32(1) << uint32(vIdx);
         }
 
+        // Measure settlement NAV while pending deposits are still escrowed.
+        // Activating them first would include depositor funds in NAV and under-mint shares.
+        uint160 settlementSqrtPrice = getTwapSqrtPrice(poolId);
+        uint256 navBeforeDeposits = getVaultValue(vaultId);
+        uint256 sharesBeforeDeposits = v.totalShares;
+
+        // Activate pending deposits into idle balances.
+        uint256 p0 = vaultPending0[vaultId];
+        if (p0 > 0) {
+            vaultIdle0[vaultId] += p0;
+            vaultPending0[vaultId] = 0;
+        }
+        uint256 p1 = vaultPending1[vaultId];
+        if (p1 > 0) {
+            vaultIdle1[vaultId] += p1;
+            vaultPending1[vaultId] = 0;
+        }
+
+        QueuedDeposit[] storage dQueue = vaultDeposits[vaultId];
+        for (uint256 i = 0; i < dQueue.length; i++) {
+            QueuedDeposit memory qd = dQueue[i];
+            uint256 depValue = PaceLib.token0ToToken1Value(qd.amount0, settlementSqrtPrice) + qd.amount1;
+            if (depValue == 0) continue;
+
+            uint256 sharesToMint = (sharesBeforeDeposits == 0 || navBeforeDeposits == 0)
+                ? depValue
+                : FullMath.mulDiv(depValue, sharesBeforeDeposits, navBeforeDeposits);
+            if (sharesToMint < qd.minSharesOut) revert SlippageExceeded();
+
+            vaultFollowerShares[vaultId][qd.follower] += sharesToMint;
+            v.totalShares += sharesToMint;
+        }
+        delete vaultDeposits[vaultId];
+
         // Process withdrawals — pro-rata token0 and token1 payouts (never silently fails/skips)
         QueuedWithdraw[] storage wQueue = vaultWithdraws[vaultId];
         uint256 totalWithdrawShares = 0;
@@ -579,11 +632,9 @@ contract CadraHook is BaseHook, IUnlockCallback {
         if (totalWithdrawShares > 0 && v.totalShares > 0) {
             // Unwind pro-rata liquidity if positions exist
             if (vaultPositions[vaultId].length > 0) {
-                poolManager.unlock(abi.encode(UnlockCallbackData({
-                    action: 4,
-                    vaultId: vaultId,
-                    newRanges: new Range[](0)
-                })));
+                poolManager.unlock(
+                    abi.encode(UnlockCallbackData({action: 4, vaultId: vaultId, newRanges: new Range[](0)}))
+                );
             }
 
             uint256 sharesBasis = v.totalShares;
@@ -611,33 +662,13 @@ contract CadraHook is BaseHook, IUnlockCallback {
         }
         delete vaultWithdraws[vaultId];
 
-        // Process deposits — activate pending tokens to idle and mint locked shares (anti-sandwich)
-        QueuedDeposit[] storage dQueue = vaultDeposits[vaultId];
-        for (uint256 i = 0; i < dQueue.length; i++) {
-            QueuedDeposit memory qd = dQueue[i];
-            vaultFollowerShares[vaultId][qd.follower] += qd.sharesToMint;
-            v.totalShares += qd.sharesToMint;
-        }
-        delete vaultDeposits[vaultId];
-
-        uint256 p0 = vaultPending0[vaultId];
-        if (p0 > 0) {
-            vaultIdle0[vaultId] += p0;
-            vaultPending0[vaultId] = 0;
-        }
-        uint256 p1 = vaultPending1[vaultId];
-        if (p1 > 0) {
-            vaultIdle1[vaultId] += p1;
-            vaultPending1[vaultId] = 0;
-        }
-
         // Re-benchmark Pace for the next epoch
         uint160 twapSqrtPrice = getTwapSqrtPrice(poolId);
         v.startValue = getVaultValue(vaultId);
         v.paceLiquidity = PaceLib.computePaceLiquidity(v.startValue, twapSqrtPrice);
-        (v.feeGrowthGlobal0X128Snapshot, v.feeGrowthGlobal1X128Snapshot) = StateLibrary.getFeeGrowthGlobals(poolManager, poolId);
-
-        emit Settled(vaultId, v.epoch, vaultVal, paceVal, res.curatorFee, res.bondPayout, res.newDeficit, res.protocolFee);
+        emit Settled(
+            vaultId, v.epoch, vaultVal, paceVal, res.curatorFee, res.bondPayout, res.newDeficit, res.protocolFee
+        );
 
         v.epochStart = block.timestamp;
         v.epoch++;
@@ -700,7 +731,9 @@ contract CadraHook is BaseHook, IUnlockCallback {
                 delete vaultPositions[vId];
                 if (parkLiquidity > 0) {
                     _modifyAndSettle(v.poolKey, vId, tickLower, tickUpper, int256(uint256(parkLiquidity)));
-                    vaultPositions[vId].push(Range({tickLower: tickLower, tickUpper: tickUpper, liquidity: parkLiquidity}));
+                    vaultPositions[vId].push(
+                        Range({tickLower: tickLower, tickUpper: tickUpper, liquidity: parkLiquidity})
+                    );
                 }
             }
         } else if (decoded.action == 4) {
@@ -736,13 +769,10 @@ contract CadraHook is BaseHook, IUnlockCallback {
         int24 tickUpper,
         int256 liquidityDelta
     ) internal {
-        (BalanceDelta delta, ) = poolManager.modifyLiquidity(
+        (BalanceDelta delta,) = poolManager.modifyLiquidity(
             key,
             ModifyLiquidityParams({
-                tickLower: tickLower,
-                tickUpper: tickUpper,
-                liquidityDelta: liquidityDelta,
-                salt: bytes32(vaultId)
+                tickLower: tickLower, tickUpper: tickUpper, liquidityDelta: liquidityDelta, salt: bytes32(vaultId)
             }),
             ""
         );
@@ -784,6 +814,14 @@ contract CadraHook is BaseHook, IUnlockCallback {
         return a1 + PaceLib.token0ToToken1Value(a0, twapSqrtPrice);
     }
 
+    /// @dev Bond denominated in bondToken; convert to token1 (vault value unit) at TWAP.
+    ///      createVault guarantees bondToken is currency0 or currency1 of the pool.
+    function _bondValueInToken1(Vault storage v, uint160 twapSqrtPrice) internal view returns (uint256) {
+        if (v.bond == 0) return 0;
+        if (address(bondToken) == Currency.unwrap(v.poolKey.currency1)) return v.bond;
+        return PaceLib.token0ToToken1Value(v.bond, twapSqrtPrice);
+    }
+
     function getVaultValue(uint256 vaultId) public view returns (uint256) {
         Vault storage v = vaults[vaultId];
         PoolId poolId = v.poolKey.toId();
@@ -803,30 +841,20 @@ contract CadraHook is BaseHook, IUnlockCallback {
         PoolId poolId = v.poolKey.toId();
         uint160 twapSqrtPrice = getTwapSqrtPrice(poolId);
 
-        (uint256 currentFeeGrowth0, uint256 currentFeeGrowth1) = StateLibrary.getFeeGrowthGlobals(poolManager, poolId);
-
-        uint256 dF0;
-        uint256 dF1;
-        unchecked {
-            dF0 = currentFeeGrowth0 - v.feeGrowthGlobal0X128Snapshot;
-            dF1 = currentFeeGrowth1 - v.feeGrowthGlobal1X128Snapshot;
-        }
-
-        return PaceLib.computePaceValue(v.paceLiquidity, twapSqrtPrice, dF0, dF1);
+        // Do not use pool-wide feeGrowthGlobal here. It can be inflated by a
+        // donation/self-trade and is not a reliable measure of passive full-range
+        // fees. LP fee accounting for vault positions remains a separate issue.
+        return PaceLib.computePaceValue(v.paceLiquidity, twapSqrtPrice, 0, 0);
     }
 
-    function getTwapSqrtPrice(PoolId poolId) public view returns (uint160) {
-        (, int24 spotTick, , ) = StateLibrary.getSlot0(poolManager, poolId);
+    function getTwapSqrtPrice(PoolId poolId) internal view returns (uint160) {
+        (, int24 spotTick,,) = StateLibrary.getSlot0(poolManager, poolId);
         int24 twapTick = poolOracles[poolId].getTwapTick(twapWindow, spotTick);
         return TickMath.getSqrtPriceAtTick(twapTick);
     }
 
-    function verifySpotDeviation(PoolId poolId) public view {
-        _checkSpotDeviation(poolId, false);
-    }
-
     function _checkSpotDeviation(PoolId poolId, bool allowGraceFallback) internal view {
-        (, int24 spotTick, , ) = StateLibrary.getSlot0(poolManager, poolId);
+        (, int24 spotTick,,) = StateLibrary.getSlot0(poolManager, poolId);
         int24 twapTick = poolOracles[poolId].getTwapTick(twapWindow, spotTick);
         int24 diff = spotTick > twapTick ? spotTick - twapTick : twapTick - spotTick;
         if (diff > maxSpotDeviationTicks && !allowGraceFallback) revert SpotDeviationTooHigh(spotTick, twapTick);
@@ -842,7 +870,7 @@ contract CadraHook is BaseHook, IUnlockCallback {
 
     function getVaultTotalValue(uint256 vaultId) public view returns (uint256) {
         uint160 twapSqrtPrice = getTwapSqrtPrice(vaults[vaultId].poolKey.toId());
-        return getVaultValue(vaultId) + vaultPending1[vaultId] + PaceLib.token0ToToken1Value(vaultPending0[vaultId], twapSqrtPrice);
+        return getVaultValue(vaultId) + vaultPending1[vaultId]
+            + PaceLib.token0ToToken1Value(vaultPending0[vaultId], twapSqrtPrice);
     }
-
 }

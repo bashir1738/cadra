@@ -23,7 +23,7 @@ export interface BotConfig {
 export function getConfig(): BotConfig {
   return {
     rpcUrl: process.env.RPC_URL || process.env.NEXT_PUBLIC_RPC_URL || "https://sepolia.unichain.org",
-    hookAddress: (process.env.HOOK_ADDRESS || process.env.NEXT_PUBLIC_HOOK_ADDRESS || "0x6974BEEfCD6B8Bf30ee2838d830eEbFb892f50c0") as `0x${string}`,
+    hookAddress: (process.env.HOOK_ADDRESS || process.env.NEXT_PUBLIC_HOOK_ADDRESS || "0x3007A44a54EcBAe0335c4AcE9a00a1dD15Ca90c0") as `0x${string}`,
     poolManagerAddress: (process.env.POOL_MANAGER_ADDRESS || process.env.NEXT_PUBLIC_POOL_MANAGER_ADDRESS || "0x29f2b190eacD76F0cBEC50bA669aab7F4600da4C") as `0x${string}`,
     token0: (process.env.TOKEN0 || process.env.NEXT_PUBLIC_TOKEN0 || "0x31d0220469e10c4E71834a79b1f276d740d3768F") as `0x${string}`,
     token1: (process.env.TOKEN1 || process.env.NEXT_PUBLIC_TOKEN1 || "0xB4AB6C3Ae39df89bA203F01ef08e39775Fe1F0c6") as `0x${string}`,

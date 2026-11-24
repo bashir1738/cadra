@@ -13,10 +13,11 @@ struct Record {
 }
 
 /// @notice Queued deposit to be processed at the next epoch settlement.
-/// @dev sharesToMint is locked at deposit time using TWAP valuation (eliminates settle-time sandwich attacks).
 struct QueuedDeposit {
     address follower;
-    uint256 sharesToMint;
+    uint256 amount0;
+    uint256 amount1;
+    uint256 minSharesOut;
 }
 
 /// @notice Queued withdrawal to be processed at the next epoch settlement.
@@ -29,23 +30,20 @@ struct QueuedWithdraw {
 struct Vault {
     address curator;
     PoolKey poolKey;
-    uint16 perfFeeBps;              // Performance fee in bps (e.g. 2000 = 20%, max 3000 = 30%)
+    uint16 perfFeeBps; // Performance fee in bps (e.g. 2000 = 20%, max 3000 = 30%)
     Mandate mandate;
     Mandate pendingMandate;
     bool hasPendingMandate;
-    uint256 bond;                   // Bond deposited in USDC
-    uint256 bondUnlockTime;         // Cooldown timestamp for bond withdrawals
-    uint256 capacityMultiplier;     // Current multiplier m (starts at 5, min 2, max 20)
-    uint256 deficit;                // Carried deficit D from uncovered shortfalls
-    bool isFrozen;                  // True if vault is parked and curator is frozen
-    bool bandLeft;                  // Flag set if spot price left [minTick, maxTick]
-    bool epochReadyEmitted;         // Flag set when EpochReady event is emitted for Reactive settlement
-    uint256 epoch;                  // Current epoch index (starts at 1)
-    uint256 epochStart;             // Timestamp when the current epoch began
-    uint256 startValue;             // V0: Vault benchmark value at epoch start (in token1)
-    uint128 paceLiquidity;          // L_pace: Liquidity of the benchmark full-range position
-    uint256 feeGrowthGlobal0X128Snapshot; // Pool feeGrowthGlobal0X128 snapshot at epoch start
-    uint256 feeGrowthGlobal1X128Snapshot; // Pool feeGrowthGlobal1X128 snapshot at epoch start
-    uint256 totalShares;            // Total shares issued to followers and curator
-    Record record;                  // Curator historical record
+    uint256 bond; // Bond deposited in USDC
+    uint256 bondUnlockTime; // Cooldown timestamp for bond withdrawals
+    uint256 capacityMultiplier; // Current multiplier m (starts at 5, min 2, max 20)
+    uint256 deficit; // Carried deficit D from uncovered shortfalls
+    bool isFrozen; // True if vault is parked and curator is frozen
+    bool bandLeft; // Flag set if spot price left [minTick, maxTick]
+    uint256 epoch; // Current epoch index (starts at 1)
+    uint256 epochStart; // Timestamp when the current epoch began
+    uint256 startValue; // V0: Vault benchmark value at epoch start (in token1)
+    uint128 paceLiquidity; // L_pace: Liquidity of the benchmark full-range position
+    uint256 totalShares; // Total shares issued to followers and curator
+    Record record; // Curator historical record
 }

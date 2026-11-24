@@ -51,7 +51,7 @@ Cadra enforces 5 strict invariants across its lifecycle:
 | **Reentrancy Attacks** | Critical | **Transient Lock Architecture**: The hook implements Uniswap v4 `IUnlockCallback`. Only `poolManager` can call `unlockCallback()`, and external token transfers occur only after state updates (CEI pattern). | **Mitigated** |
 | **Keeper Revert DoS** | Medium | **Clean Boolean Returns**: `enforce()` returns `false` cleanly instead of reverting when the vault is ahead or spot is temporarily deviated, preventing automation loops from wasting keeper gas. | **Mitigated** |
 | **Cross-Chain Callback Spoofing** | Critical | **Cryptographic Callback Authentication**: `CadraCallback.sol` enforces both `onlyServiceProvider` (the verified proxy `0x9299472A6399Fd1027ebF067571Eb3e3D7837FC4`) and `onlyCallbackSender` (the pinned `CadraReactive` address). | **Mitigated** |
-| **Callback Gas Exhaustion** | Medium | **Generous Gas Budget**: `CALLBACK_GAS = 1_500_000` allocated on Reactive dispatch, far exceeding the ~350k gas needed for full-range parking. Native ETH debt replenishment available via `coverDebt()`. | **Mitigated** |
+| **Callback Gas Exhaustion** | Medium | **Configurable Gas Budget**: `callbackGasLimit` defaults to `1_500_000` and can be raised by the RSC owner for vaults with many positions. Native ETH debt replenishment is available via `coverDebt()`. | **Operationally Configurable** |
 
 ---
 

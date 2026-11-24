@@ -42,49 +42,23 @@ contract CadraHookTest is Test, Deployers {
         deployMintAndApprove2Currencies();
 
         // Mine hook address with AFTER_INITIALIZE | BEFORE_SWAP | AFTER_SWAP flags
-        uint160 flags = uint160(
-            Hooks.AFTER_INITIALIZE_FLAG | Hooks.BEFORE_SWAP_FLAG | Hooks.AFTER_SWAP_FLAG
-        );
+        uint160 flags = uint160(Hooks.AFTER_INITIALIZE_FLAG | Hooks.BEFORE_SWAP_FLAG | Hooks.AFTER_SWAP_FLAG);
 
         bytes memory constructorArgs = abi.encode(
-            manager,
-            IERC20(Currency.unwrap(currency1)),
-            EPOCH_LENGTH,
-            TWAP_WINDOW,
-            MAX_SPOT_DEVIATION
+            manager, IERC20(Currency.unwrap(currency1)), EPOCH_LENGTH, TWAP_WINDOW, MAX_SPOT_DEVIATION, address(this)
         );
 
-        (, bytes32 salt) = HookMiner.find(
-            address(this),
-            flags,
-            type(CadraHook).creationCode,
-            constructorArgs
-        );
+        (, bytes32 salt) = HookMiner.find(address(this), flags, type(CadraHook).creationCode, constructorArgs);
 
         hook = new CadraHook{salt: salt}(
-            manager,
-            IERC20(Currency.unwrap(currency1)),
-            EPOCH_LENGTH,
-            TWAP_WINDOW,
-            MAX_SPOT_DEVIATION
+            manager, IERC20(Currency.unwrap(currency1)), EPOCH_LENGTH, TWAP_WINDOW, MAX_SPOT_DEVIATION, address(this)
         );
 
         // Initialize pool with hook
-        (poolKey, poolId) = initPool(
-            currency0,
-            currency1,
-            IHooks(address(hook)),
-            3000,
-            60,
-            SQRT_PRICE_1_1
-        );
+        (poolKey, poolId) = initPool(currency0, currency1, IHooks(address(hook)), 3000, 60, SQRT_PRICE_1_1);
 
         defaultMandate = Mandate({
-            minTick: -1200,
-            maxTick: 1200,
-            maxConcentrationBps: 6000,
-            minRangeWidth: 120,
-            maxShortfallBps: 500
+            minTick: -1200, maxTick: 1200, maxConcentrationBps: 6000, minRangeWidth: 120, maxShortfallBps: 500
         });
 
         // Fund curator and follower
@@ -104,7 +78,7 @@ contract CadraHookTest is Test, Deployers {
 
     function test_createVault_and_postBond() public {
         vm.prank(curator);
-        uint256 vaultId = hook.createVault(poolKey, 2000, defaultMandate);
+        uint256 vaultId = hook.createVault(poolKey, 2000, defaultMandate, 1000 ether);
         assertEq(vaultId, 1);
 
         Vault memory v = hook.getVault(vaultId);
@@ -112,27 +86,22 @@ contract CadraHookTest is Test, Deployers {
         assertEq(v.perfFeeBps, 2000);
         assertEq(v.capacityMultiplier, 5);
         assertEq(v.epoch, 1);
-        assertEq(v.bond, 0);
+        assertEq(v.bond, 1000 ether);
         assertEq(v.mandate.minTick, defaultMandate.minTick);
 
         // Post bond
         vm.prank(curator);
         hook.postBond(vaultId, 10_000 ether);
 
-        assertEq(hook.getVault(vaultId).bond, 10_000 ether);
+        assertEq(hook.getVault(vaultId).bond, 11_000 ether);
     }
 
     function test_proposeMandate_applies_only_at_settlement() public {
         vm.prank(curator);
-        uint256 vaultId = hook.createVault(poolKey, 2000, defaultMandate);
+        uint256 vaultId = hook.createVault(poolKey, 2000, defaultMandate, 1000 ether);
 
-        Mandate memory newMandate = Mandate({
-            minTick: -600,
-            maxTick: 600,
-            maxConcentrationBps: 5000,
-            minRangeWidth: 120,
-            maxShortfallBps: 300
-        });
+        Mandate memory newMandate =
+            Mandate({minTick: -600, maxTick: 600, maxConcentrationBps: 5000, minRangeWidth: 120, maxShortfallBps: 300});
 
         // Non-curator proposal fails
         vm.prank(follower);
@@ -159,11 +128,9 @@ contract CadraHookTest is Test, Deployers {
 
     function test_deposit_queue_and_capacity_limit() public {
         vm.prank(curator);
-        uint256 vaultId = hook.createVault(poolKey, 2000, defaultMandate);
+        uint256 vaultId = hook.createVault(poolKey, 2000, defaultMandate, 1000 ether);
 
-        // Bond is $1,000 -> capacity = $5,000
-        vm.prank(curator);
-        hook.postBond(vaultId, 1000 ether);
+        // Initial bond is $1,000 -> capacity = $5,000
 
         // Follower deposits $6,000 -> exceeds capacity
         vm.prank(follower);
@@ -183,7 +150,7 @@ contract CadraHookTest is Test, Deployers {
 
     function test_rebalance_only_curator() public {
         vm.prank(curator);
-        uint256 vaultId = hook.createVault(poolKey, 2000, defaultMandate);
+        uint256 vaultId = hook.createVault(poolKey, 2000, defaultMandate, 1000 ether);
 
         Range[] memory ranges = new Range[](1);
         ranges[0] = Range({tickLower: -120, tickUpper: 120, liquidity: 100});
@@ -195,7 +162,7 @@ contract CadraHookTest is Test, Deployers {
 
     function test_rebalance_rejected_for_out_of_bounds() public {
         vm.prank(curator);
-        uint256 vaultId = hook.createVault(poolKey, 2000, defaultMandate);
+        uint256 vaultId = hook.createVault(poolKey, 2000, defaultMandate, 1000 ether);
 
         // Mandate allows [-1200, 1200]. Propose [-2400, 0] -> out of bounds
         Range[] memory ranges = new Range[](1);
@@ -208,7 +175,7 @@ contract CadraHookTest is Test, Deployers {
 
     function test_rebalance_rejected_for_too_narrow() public {
         vm.prank(curator);
-        uint256 vaultId = hook.createVault(poolKey, 2000, defaultMandate);
+        uint256 vaultId = hook.createVault(poolKey, 2000, defaultMandate, 1000 ether);
 
         // Mandate requires minRangeWidth = 120. Provide width 60 (e.g. [0, 60])
         Range[] memory ranges = new Range[](1);
@@ -221,7 +188,7 @@ contract CadraHookTest is Test, Deployers {
 
     function test_settle_ahead_lifecycle() public {
         vm.prank(curator);
-        uint256 vaultId = hook.createVault(poolKey, 2000, defaultMandate);
+        uint256 vaultId = hook.createVault(poolKey, 2000, defaultMandate, 1000 ether);
 
         vm.prank(curator);
         hook.postBond(vaultId, 10_000 ether);
@@ -243,7 +210,7 @@ contract CadraHookTest is Test, Deployers {
 
         Vault memory v = hook.getVault(vaultId);
         assertEq(v.epoch, 3);
-        assertEq(v.capacityMultiplier, 7, "Multiplier increased twice on 2 ahead epochs (5 -> 6 -> 7)");
+        assertEq(v.capacityMultiplier, 6, "Only epoch 2 can increase the multiplier; epoch 1 is not benchmarked");
     }
 
     function test_settle_protocol_fee_split_and_treasury_management() public {
@@ -266,7 +233,7 @@ contract CadraHookTest is Test, Deployers {
         hook.setProtocolFeeBps(100); // Reset to 1%
 
         vm.prank(curator);
-        uint256 vaultId = hook.createVault(poolKey, 2000, defaultMandate);
+        uint256 vaultId = hook.createVault(poolKey, 2000, defaultMandate, 1000 ether);
 
         vm.prank(curator);
         hook.postBond(vaultId, 10_000 ether);
@@ -282,7 +249,7 @@ contract CadraHookTest is Test, Deployers {
 
     function test_queued_withdrawals_lifecycle() public {
         vm.prank(curator);
-        uint256 vaultId = hook.createVault(poolKey, 2000, defaultMandate);
+        uint256 vaultId = hook.createVault(poolKey, 2000, defaultMandate, 1000 ether);
 
         vm.prank(curator);
         hook.postBond(vaultId, 10_000 ether);
@@ -313,7 +280,7 @@ contract CadraHookTest is Test, Deployers {
 
     function test_enforce_noop_when_ahead_or_below_threshold() public {
         vm.prank(curator);
-        uint256 vaultId = hook.createVault(poolKey, 2000, defaultMandate);
+        uint256 vaultId = hook.createVault(poolKey, 2000, defaultMandate, 1000 ether);
 
         vm.prank(curator);
         hook.postBond(vaultId, 10_000 ether);
@@ -325,7 +292,7 @@ contract CadraHookTest is Test, Deployers {
 
     function test_withdrawal_pays_token0_when_idle1_insufficient() public {
         vm.prank(curator);
-        uint256 vaultId = hook.createVault(poolKey, 2000, defaultMandate);
+        uint256 vaultId = hook.createVault(poolKey, 2000, defaultMandate, 1000 ether);
         vm.prank(curator);
         hook.postBond(vaultId, 10_000 ether);
 
@@ -356,7 +323,7 @@ contract CadraHookTest is Test, Deployers {
 
     function test_afterSwap_sets_bandLeft_and_enforce_parks_vault() public {
         vm.prank(curator);
-        uint256 vaultId = hook.createVault(poolKey, 2000, defaultMandate);
+        uint256 vaultId = hook.createVault(poolKey, 2000, defaultMandate, 1000 ether);
 
         vm.prank(curator);
         hook.postBond(vaultId, 10_000 ether);
@@ -374,11 +341,7 @@ contract CadraHookTest is Test, Deployers {
         // Swap token0 for token1 to push price downwards
         swapRouter.swap(
             poolKey,
-            SwapParams({
-                zeroForOne: true,
-                amountSpecified: -1 ether,
-                sqrtPriceLimitX96: TickMath.MIN_SQRT_PRICE + 1
-            }),
+            SwapParams({zeroForOne: true, amountSpecified: -1 ether, sqrtPriceLimitX96: TickMath.MIN_SQRT_PRICE + 1}),
             PoolSwapTest.TestSettings({takeClaims: false, settleUsingBurn: false}),
             ""
         );
@@ -403,7 +366,7 @@ contract CadraHookTest is Test, Deployers {
 
     function test_anti_sandwich_deposit_locks_shares() public {
         vm.prank(curator);
-        uint256 vaultId = hook.createVault(poolKey, 2000, defaultMandate);
+        uint256 vaultId = hook.createVault(poolKey, 2000, defaultMandate, 1000 ether);
         vm.prank(curator);
         hook.postBond(vaultId, 10_000 ether);
 
@@ -425,9 +388,30 @@ contract CadraHookTest is Test, Deployers {
         assertEq(hook.vaultIdle1(vaultId), 1000 ether);
     }
 
+    function test_pace_ignores_manipulable_global_fee_growth() public {
+        vm.prank(curator);
+        uint256 vaultId = hook.createVault(poolKey, 2000, defaultMandate, 1000 ether);
+
+        vm.prank(follower);
+        hook.deposit(vaultId, 0, 1000 ether);
+
+        vm.warp(block.timestamp + EPOCH_LENGTH + 1);
+        hook.settle(vaultId);
+
+        uint256 paceBefore = hook.getPaceValue(vaultId);
+
+        // Pool.State.pools[poolId] starts at slot keccak256(poolId, 6). The two
+        // fee-growth words follow Slot0, so offsets 1 and 2 are the globals.
+        bytes32 poolStateSlot = keccak256(abi.encodePacked(PoolId.unwrap(poolId), uint256(6)));
+        vm.store(address(manager), bytes32(uint256(poolStateSlot) + 1), bytes32(type(uint256).max));
+        vm.store(address(manager), bytes32(uint256(poolStateSlot) + 2), bytes32(type(uint256).max));
+
+        assertEq(hook.getPaceValue(vaultId), paceBefore, "Pace must ignore global fee-growth inflation");
+    }
+
     function test_pro_rata_dual_token_withdrawal_with_position_unwind() public {
         vm.prank(curator);
-        uint256 vaultId = hook.createVault(poolKey, 2000, defaultMandate);
+        uint256 vaultId = hook.createVault(poolKey, 2000, defaultMandate, 1000 ether);
         vm.prank(curator);
         hook.postBond(vaultId, 20_000 ether);
 
@@ -471,7 +455,7 @@ contract CadraHookTest is Test, Deployers {
 
     function test_signalEpochReady_emits_when_epoch_ended() public {
         vm.prank(curator);
-        uint256 vaultId = hook.createVault(poolKey, 2000, defaultMandate);
+        uint256 vaultId = hook.createVault(poolKey, 2000, defaultMandate, 1000 ether);
 
         // Warp past epoch end
         vm.warp(hook.getVault(vaultId).epochStart + EPOCH_LENGTH + 1);
@@ -486,7 +470,7 @@ contract CadraHookTest is Test, Deployers {
 
     function test_signalEpochReady_reverts_early() public {
         vm.prank(curator);
-        uint256 vaultId = hook.createVault(poolKey, 2000, defaultMandate);
+        uint256 vaultId = hook.createVault(poolKey, 2000, defaultMandate, 1000 ether);
 
         // Before epoch end: must revert EpochNotEnded
         vm.expectRevert(CadraHook.EpochNotEnded.selector);
@@ -495,7 +479,7 @@ contract CadraHookTest is Test, Deployers {
 
     function test_signalEpochReady_reverts_double() public {
         vm.prank(curator);
-        uint256 vaultId = hook.createVault(poolKey, 2000, defaultMandate);
+        uint256 vaultId = hook.createVault(poolKey, 2000, defaultMandate, 1000 ether);
 
         // Warp past epoch end
         vm.warp(hook.getVault(vaultId).epochStart + EPOCH_LENGTH + 1);
@@ -512,7 +496,7 @@ contract CadraHookTest is Test, Deployers {
 
     function test_settle_spot_deviation_grace_fallback() public {
         vm.prank(curator);
-        uint256 vaultId = hook.createVault(poolKey, 2000, defaultMandate);
+        uint256 vaultId = hook.createVault(poolKey, 2000, defaultMandate, 1000 ether);
 
         // Advance to epoch end
         uint256 epochEnd = hook.getVault(vaultId).epochStart + EPOCH_LENGTH;
@@ -523,11 +507,7 @@ contract CadraHookTest is Test, Deployers {
         MockERC20(Currency.unwrap(currency0)).approve(address(swapRouter), type(uint256).max);
         swapRouter.swap(
             poolKey,
-            SwapParams({
-                zeroForOne: true,
-                amountSpecified: -1 ether,
-                sqrtPriceLimitX96: TickMath.MIN_SQRT_PRICE + 1
-            }),
+            SwapParams({zeroForOne: true, amountSpecified: -1 ether, sqrtPriceLimitX96: TickMath.MIN_SQRT_PRICE + 1}),
             PoolSwapTest.TestSettings({takeClaims: false, settleUsingBurn: false}),
             ""
         );

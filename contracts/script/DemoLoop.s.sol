@@ -86,7 +86,7 @@ contract DemoLoopScript is Script {
             maxShortfallBps: 100
         });
 
-        uint256 vaultId = hook.createVault(key, 2000, mandate);
+        uint256 vaultId = hook.createVault(key, 2000, mandate, 1000 ether);
         console2.log("Created Vault ID:", vaultId);
 
         // Post Bond: $5,000 USDC

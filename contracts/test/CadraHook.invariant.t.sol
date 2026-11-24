@@ -63,7 +63,7 @@ contract CadraHandler is Test {
             maxShortfallBps: 500
         });
         vm.prank(curator);
-        uint256 id = hook.createVault(poolKey, perfFeeBps, m);
+        uint256 id = hook.createVault(poolKey, perfFeeBps, m, 1000 ether);
         lastVaultId = id;
     }
 
@@ -193,7 +193,8 @@ contract CadraHookInvariantTest is StdInvariant, Test, Deployers {
             IERC20(Currency.unwrap(currency1)),
             EPOCH_LENGTH,
             TWAP_WINDOW,
-            MAX_SPOT_DEVIATION
+            MAX_SPOT_DEVIATION,
+            address(this)
         );
 
         (, bytes32 salt) = HookMiner.find(
@@ -208,7 +209,8 @@ contract CadraHookInvariantTest is StdInvariant, Test, Deployers {
             IERC20(Currency.unwrap(currency1)),
             EPOCH_LENGTH,
             TWAP_WINDOW,
-            MAX_SPOT_DEVIATION
+            MAX_SPOT_DEVIATION,
+            address(this)
         );
 
         (poolKey, poolId) = initPool(

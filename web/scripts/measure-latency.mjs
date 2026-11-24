@@ -19,7 +19,7 @@ const lasnaClient = createPublicClient({
 });
 
 const CADRA_HOOK = "0x728D9b5f428B736A26D07879F55C3982Ddf890C0";
-const CADRA_CALLBACK = "0xb4Df1810374AFdE05F9D429eF1f0c3ED2ABdF2C6";
+const CADRA_CALLBACK = "0xdcff832e039c3793bc16f419cca13258e2203b25";
 
 async function measureLatency() {
   console.log("===================================================================");

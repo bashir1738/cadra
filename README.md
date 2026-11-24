@@ -29,13 +29,13 @@ Cadra contracts are deployed and verified live across **Unichain Sepolia (1301)*
 
 | Contract / Entity | Network | Address / Identifier | Explorer Link |
 | :--- | :--- | :--- | :--- |
-| **CadraHook (v2)** | Unichain Sepolia (1301) | `0x728D9b5f428B736A26D07879F55C3982Ddf890C0` | [View on Uniscan](https://sepolia.uniscan.xyz/address/0x728D9b5f428B736A26D07879F55C3982Ddf890C0) |
+| **CadraHook (v2)** | Unichain Sepolia (1301) | `0x3007A44a54EcBAe0335c4AcE9a00a1dD15Ca90c0` | [View on Uniscan](https://sepolia.uniscan.xyz/address/0x3007A44a54EcBAe0335c4AcE9a00a1dD15Ca90c0) |
 | **Uniswap v4 PoolManager** | Unichain Sepolia (1301) | `0x29f2b190eacD76F0cBEC50bA669aab7F4600da4C` | [View on Uniscan](https://sepolia.uniscan.xyz/address/0x29f2b190eacD76F0cBEC50bA669aab7F4600da4C) |
 | **Mock USDC (token0 / bondToken)** | Unichain Sepolia (1301) | `0x688Cfa2501c44CB6B3886f4C5662c55b73f36e8D` | [View on Uniscan](https://sepolia.uniscan.xyz/address/0x688Cfa2501c44CB6B3886f4C5662c55b73f36e8D) |
 | **Mock WETH (token1)** | Unichain Sepolia (1301) | `0xB4AB6C3Ae39df89bA203F01ef08e39775Fe1F0c6` | [View on Uniscan](https://sepolia.uniscan.xyz/address/0xB4AB6C3Ae39df89bA203F01ef08e39775Fe1F0c6) |
-| **CadraCallback** | Unichain Sepolia (1301) | `0xb4Df1810374AFdE05F9D429eF1f0c3ED2ABdF2C6` | [View on Uniscan](https://sepolia.uniscan.xyz/address/0xb4Df1810374AFdE05F9D429eF1f0c3ED2ABdF2C6) |
+| **CadraCallback** | Unichain Sepolia (1301) | `0xdcff832e039c3793bc16f419cca13258e2203b25` | [View on Uniscan](https://sepolia.uniscan.xyz/address/0xdcff832e039c3793bc16f419cca13258e2203b25) |
 | **Reactive Callback Proxy** | Unichain Sepolia (1301) | `0x9299472A6399Fd1027ebF067571Eb3e3D7837FC4` | [View on Uniscan](https://sepolia.uniscan.xyz/address/0x9299472A6399Fd1027ebF067571Eb3e3D7837FC4) |
-| **CadraReactive (Omni RSC)** | Reactive Lasna Omni (5318007) | `0x061216db95D483fc0e7e0c43976A62B7E207ba35` | [View on Reactscan](https://lasna.reactscan.net/address/0x061216db95D483fc0e7e0c43976A62B7E207ba35) |
+| **CadraReactive (Omni RSC)** | Reactive Lasna Omni (5318007) | `0xf937aee2e988557ba3774a8a41af349ef7112680` | [View on Reactscan](https://lasna.reactscan.net/address/0xf937aee2e988557ba3774a8a41af349ef7112680) |
 | **Reactive Omni System Contract** | Reactive Lasna Omni (5318007) | `0x8888888888888888888888888888888888888888` | [View on Reactscan](https://lasna.reactscan.net/address/0x8888888888888888888888888888888888888888) |
 
 ### Reactive Omni Architecture & Verification
@@ -50,7 +50,7 @@ Cadra contracts are deployed and verified live across **Unichain Sepolia (1301)*
    - On Unichain Sepolia, cross-chain execution is invoked directly by the official Reactive **Callback Proxy** at `0x9299472A6399Fd1027ebF067571Eb3e3D7837FC4` (`msg.sender`).
    - `CadraCallback` enforces strict dual authentication:
      - `onlyServiceProvider`: Verifies that `msg.sender == callbackProxy` (`0x9299...7FC4`).
-     - `onlyCallbackSender`: Verifies that the injected leading argument matches the authorized RSC address `0x061216db95D483fc0e7e0c43976A62B7E207ba35`. Calls from unauthorized proxies or unexpected reactive senders instantly revert (`NotAuthorized` / `CallbackNotAuthorized`).
+     - `onlyCallbackSender`: Verifies that the injected leading argument matches the authorized RSC address `0xf937aee2e988557ba3774a8a41af349ef7112680`. Calls from unauthorized proxies or unexpected reactive senders instantly revert (`NotAuthorized` / `CallbackNotAuthorized`).
 
 3. **Contract Funding & Reserves**:
    - **`CadraReactive` (Lasna)**:
@@ -71,16 +71,16 @@ Cadra contracts are deployed and verified live across **Unichain Sepolia (1301)*
   - **Result**: Hook immediately updated `Vault 1` (`bandLeft = true`), cleared active band mask, and notified Reactive Network via subscription.
 - **Omni `CadraReactive` Deployment on Lasna (5318007)**:
   - **Transaction Hash**: [`0x1dfd4e736099a8f03e2df931f1117f196f2277befbb8c5a504b6f896eda57a62`](https://lasna.reactscan.net/tx/0x1dfd4e736099a8f03e2df931f1117f196f2277befbb8c5a504b6f896eda57a62)
-  - **Contract Address**: `0x061216db95D483fc0e7e0c43976A62B7E207ba35`
+  - **Contract Address**: `0xf937aee2e988557ba3774a8a41af349ef7112680`
   - **Subscribed Events**: `BandLeft(uint256,int24)` and `EpochReady(uint256,uint256)` on Unichain Sepolia (Chain ID: `1301`) via Omni System Contract `0x8888888888888888888888888888888888888888`.
 - **`CadraCallback` Deployment on Unichain Sepolia (1301)**:
   - **Transaction Hash**: [`0x7835463a99ce65d0cbacc6fd3bd2b18f0015e705e6e0e7aac1375dd5d508dcf9`](https://sepolia.uniscan.xyz/tx/0x7835463a99ce65d0cbacc6fd3bd2b18f0015e705e6e0e7aac1375dd5d508dcf9)
-  - **Contract Address**: `0xb4Df1810374AFdE05F9D429eF1f0c3ED2ABdF2C6`
+  - **Contract Address**: `0xdcff832e039c3793bc16f419cca13258e2203b25`
   - **Authorized Proxy**: `0x9299472A6399Fd1027ebF067571Eb3e3D7837FC4`
-  - **Authorized Sender (RSC)**: `0x061216db95D483fc0e7e0c43976A62B7E207ba35`
+  - **Authorized Sender (RSC)**: `0xf937aee2e988557ba3774a8a41af349ef7112680`
 - **Reactive Callback Recipient Linked on Lasna Omni**:
   - **Transaction Hash**: [`0x6ef362402205a8de616c9c6ea29fc5cfdfeec8f5ce2a25993f8200beb2fa8b22`](https://lasna-omni.reactscan.net/tx/0x6ef362402205a8de616c9c6ea29fc5cfdfeec8f5ce2a25993f8200beb2fa8b22)
-  - **Recipient Configured**: `0xb4Df1810374AFdE05F9D429eF1f0c3ED2ABdF2C6`
+  - **Recipient Configured**: `0xdcff832e039c3793bc16f419cca13258e2203b25`
 
 ### Live On-Chain Vault State & Transactions
 

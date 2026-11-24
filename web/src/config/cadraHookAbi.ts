@@ -1,3 +1,4 @@
+// Auto-generated from contracts/out/CadraHook.sol/CadraHook.json — do not edit by hand.
 export const CADRA_HOOK_ABI = [
   {
     "type": "constructor",
@@ -26,61 +27,14 @@ export const CADRA_HOOK_ABI = [
         "name": "_maxSpotDeviationTicks",
         "type": "int24",
         "internalType": "int24"
+      },
+      {
+        "name": "_owner",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "BOND_WITHDRAW_COOLDOWN",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "MAX_PERF_FEE_BPS",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "MAX_VAULTS_PER_POOL",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "SETTLEMENT_GRACE_PERIOD",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -871,16 +825,16 @@ export const CADRA_HOOK_ABI = [
   },
   {
     "type": "function",
-    "name": "bondToken",
-    "inputs": [],
-    "outputs": [
+    "name": "cancelWithdraw",
+    "inputs": [
       {
-        "name": "",
-        "type": "address",
-        "internalType": "contract IERC20"
+        "name": "vaultId",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
-    "stateMutability": "view"
+    "outputs": [],
+    "stateMutability": "nonpayable"
   },
   {
     "type": "function",
@@ -954,6 +908,11 @@ export const CADRA_HOOK_ABI = [
             "internalType": "uint16"
           }
         ]
+      },
+      {
+        "name": "initialBond",
+        "type": "uint256",
+        "internalType": "uint256"
       }
     ],
     "outputs": [
@@ -1046,19 +1005,6 @@ export const CADRA_HOOK_ABI = [
       }
     ],
     "stateMutability": "nonpayable"
-  },
-  {
-    "type": "function",
-    "name": "epochLength",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -1179,25 +1125,6 @@ export const CADRA_HOOK_ABI = [
         "name": "",
         "type": "uint256",
         "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "getTwapSqrtPrice",
-    "inputs": [
-      {
-        "name": "poolId",
-        "type": "bytes32",
-        "internalType": "PoolId"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint160",
-        "internalType": "uint160"
       }
     ],
     "stateMutability": "view"
@@ -1360,11 +1287,6 @@ export const CADRA_HOOK_ABI = [
             "internalType": "bool"
           },
           {
-            "name": "epochReadyEmitted",
-            "type": "bool",
-            "internalType": "bool"
-          },
-          {
             "name": "epoch",
             "type": "uint256",
             "internalType": "uint256"
@@ -1383,16 +1305,6 @@ export const CADRA_HOOK_ABI = [
             "name": "paceLiquidity",
             "type": "uint128",
             "internalType": "uint128"
-          },
-          {
-            "name": "feeGrowthGlobal0X128Snapshot",
-            "type": "uint256",
-            "internalType": "uint256"
-          },
-          {
-            "name": "feeGrowthGlobal1X128Snapshot",
-            "type": "uint256",
-            "internalType": "uint256"
           },
           {
             "name": "totalShares",
@@ -1507,19 +1419,6 @@ export const CADRA_HOOK_ABI = [
   },
   {
     "type": "function",
-    "name": "maxSpotDeviationTicks",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "int24",
-        "internalType": "int24"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "nextVaultId",
     "inputs": [],
     "outputs": [
@@ -1572,87 +1471,6 @@ export const CADRA_HOOK_ABI = [
         "name": "",
         "type": "address",
         "internalType": "contract IPoolManager"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "poolRegistered",
-    "inputs": [
-      {
-        "name": "",
-        "type": "bytes32",
-        "internalType": "PoolId"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "bool",
-        "internalType": "bool"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "poolSafeMaxTick",
-    "inputs": [
-      {
-        "name": "",
-        "type": "bytes32",
-        "internalType": "PoolId"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "int24",
-        "internalType": "int24"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "poolSafeMinTick",
-    "inputs": [
-      {
-        "name": "",
-        "type": "bytes32",
-        "internalType": "PoolId"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "int24",
-        "internalType": "int24"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "poolVaults",
-    "inputs": [
-      {
-        "name": "",
-        "type": "bytes32",
-        "internalType": "PoolId"
-      },
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
       }
     ],
     "stateMutability": "view"
@@ -1866,19 +1684,6 @@ export const CADRA_HOOK_ABI = [
   },
   {
     "type": "function",
-    "name": "twapWindow",
-    "inputs": [],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint32",
-        "internalType": "uint32"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "unlockCallback",
     "inputs": [
       {
@@ -1960,25 +1765,6 @@ export const CADRA_HOOK_ABI = [
   },
   {
     "type": "function",
-    "name": "vaultIndexInPool",
-    "inputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
     "name": "vaultPending0",
     "inputs": [
       {
@@ -2013,241 +1799,6 @@ export const CADRA_HOOK_ABI = [
         "internalType": "uint256"
       }
     ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "vaults",
-    "inputs": [
-      {
-        "name": "",
-        "type": "uint256",
-        "internalType": "uint256"
-      }
-    ],
-    "outputs": [
-      {
-        "name": "curator",
-        "type": "address",
-        "internalType": "address"
-      },
-      {
-        "name": "poolKey",
-        "type": "tuple",
-        "internalType": "struct PoolKey",
-        "components": [
-          {
-            "name": "currency0",
-            "type": "address",
-            "internalType": "Currency"
-          },
-          {
-            "name": "currency1",
-            "type": "address",
-            "internalType": "Currency"
-          },
-          {
-            "name": "fee",
-            "type": "uint24",
-            "internalType": "uint24"
-          },
-          {
-            "name": "tickSpacing",
-            "type": "int24",
-            "internalType": "int24"
-          },
-          {
-            "name": "hooks",
-            "type": "address",
-            "internalType": "contract IHooks"
-          }
-        ]
-      },
-      {
-        "name": "perfFeeBps",
-        "type": "uint16",
-        "internalType": "uint16"
-      },
-      {
-        "name": "mandate",
-        "type": "tuple",
-        "internalType": "struct Mandate",
-        "components": [
-          {
-            "name": "minTick",
-            "type": "int24",
-            "internalType": "int24"
-          },
-          {
-            "name": "maxTick",
-            "type": "int24",
-            "internalType": "int24"
-          },
-          {
-            "name": "maxConcentrationBps",
-            "type": "uint16",
-            "internalType": "uint16"
-          },
-          {
-            "name": "minRangeWidth",
-            "type": "int24",
-            "internalType": "int24"
-          },
-          {
-            "name": "maxShortfallBps",
-            "type": "uint16",
-            "internalType": "uint16"
-          }
-        ]
-      },
-      {
-        "name": "pendingMandate",
-        "type": "tuple",
-        "internalType": "struct Mandate",
-        "components": [
-          {
-            "name": "minTick",
-            "type": "int24",
-            "internalType": "int24"
-          },
-          {
-            "name": "maxTick",
-            "type": "int24",
-            "internalType": "int24"
-          },
-          {
-            "name": "maxConcentrationBps",
-            "type": "uint16",
-            "internalType": "uint16"
-          },
-          {
-            "name": "minRangeWidth",
-            "type": "int24",
-            "internalType": "int24"
-          },
-          {
-            "name": "maxShortfallBps",
-            "type": "uint16",
-            "internalType": "uint16"
-          }
-        ]
-      },
-      {
-        "name": "hasPendingMandate",
-        "type": "bool",
-        "internalType": "bool"
-      },
-      {
-        "name": "bond",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "bondUnlockTime",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "capacityMultiplier",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "deficit",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "isFrozen",
-        "type": "bool",
-        "internalType": "bool"
-      },
-      {
-        "name": "bandLeft",
-        "type": "bool",
-        "internalType": "bool"
-      },
-      {
-        "name": "epochReadyEmitted",
-        "type": "bool",
-        "internalType": "bool"
-      },
-      {
-        "name": "epoch",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "epochStart",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "startValue",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "paceLiquidity",
-        "type": "uint128",
-        "internalType": "uint128"
-      },
-      {
-        "name": "feeGrowthGlobal0X128Snapshot",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "feeGrowthGlobal1X128Snapshot",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "totalShares",
-        "type": "uint256",
-        "internalType": "uint256"
-      },
-      {
-        "name": "record",
-        "type": "tuple",
-        "internalType": "struct Record",
-        "components": [
-          {
-            "name": "epochsAhead",
-            "type": "uint32",
-            "internalType": "uint32"
-          },
-          {
-            "name": "epochsBehind",
-            "type": "uint32",
-            "internalType": "uint32"
-          },
-          {
-            "name": "timesParked",
-            "type": "uint32",
-            "internalType": "uint32"
-          },
-          {
-            "name": "cumulativeExcess",
-            "type": "int256",
-            "internalType": "int256"
-          }
-        ]
-      }
-    ],
-    "stateMutability": "view"
-  },
-  {
-    "type": "function",
-    "name": "verifySpotDeviation",
-    "inputs": [
-      {
-        "name": "poolId",
-        "type": "bytes32",
-        "internalType": "PoolId"
-      }
-    ],
-    "outputs": [],
     "stateMutability": "view"
   },
   {
@@ -2668,6 +2219,11 @@ export const CADRA_HOOK_ABI = [
   },
   {
     "type": "error",
+    "name": "BondCurrencyMismatch",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "BufferNotInitialized",
     "inputs": []
   },
@@ -2842,6 +2398,11 @@ export const CADRA_HOOK_ABI = [
   },
   {
     "type": "error",
+    "name": "ReentrancyGuardReentrantCall",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "SafeERC20FailedOperation",
     "inputs": [
       {
@@ -2880,6 +2441,11 @@ export const CADRA_HOOK_ABI = [
   {
     "type": "error",
     "name": "VaultNotFound",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ZeroAmount",
     "inputs": []
   },
   {

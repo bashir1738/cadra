@@ -387,7 +387,7 @@ export function LiveSimulator({
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <a
-            href="https://sepolia.uniscan.xyz/address/0x728D9b5f428B736A26D07879F55C3982Ddf890C0"
+            href="https://sepolia.uniscan.xyz/address/0x3007A44a54EcBAe0335c4AcE9a00a1dD15Ca90c0"
             target="_blank"
             rel="noopener noreferrer"
             className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-mono font-medium transition-colors border border-white/15"
@@ -395,7 +395,7 @@ export function LiveSimulator({
             Hook on Uniscan
           </a>
           <a
-            href="https://lasna-omni.reactscan.net/address/0x061216db95D483fc0e7e0c43976A62B7E207ba35"
+            href="https://lasna-omni.reactscan.net/address/0xf937aee2e988557ba3774a8a41af349ef7112680"
             target="_blank"
             rel="noopener noreferrer"
             className="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white text-xs font-mono font-medium transition-colors border border-white/15"

@@ -48,7 +48,8 @@ contract DeployHookScript is Script {
             IERC20(EXISTING_USDC),
             EPOCH_LENGTH,
             TWAP_WINDOW,
-            MAX_SPOT_DEVIATION
+            MAX_SPOT_DEVIATION,
+            deployer
         );
 
         console.log("Mining CREATE2 salt for CadraHook...");
@@ -65,6 +66,7 @@ contract DeployHookScript is Script {
         require(success, "CadraHook CREATE2 deployment failed");
         hook = CadraHook(expectedHookAddress);
         require(address(hook).code.length > 0, "CadraHook code length is 0");
+        require(hook.owner() == deployer, "Owner must be deployer EOA");
 
         // Canonical token ordering: USDC (0x688...) < WETH (0xB4A...)
         address token0 = EXISTING_USDC;

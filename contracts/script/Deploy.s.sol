@@ -59,7 +59,8 @@ contract DeployScript is Script {
             IERC20(address(usdc)),
             EPOCH_LENGTH,
             TWAP_WINDOW,
-            MAX_SPOT_DEVIATION
+            MAX_SPOT_DEVIATION,
+            deployer
         );
 
         address CREATE2_DEPLOYER = 0x4e59b44847b379578588920cA78FbF26c0B4956C;
@@ -76,6 +77,7 @@ contract DeployScript is Script {
         require(success, "CadraHook CREATE2 deployment failed");
         hook = CadraHook(expectedHookAddress);
         require(address(hook).code.length > 0, "CadraHook code length is 0");
+        require(hook.owner() == deployer, "Owner must be deployer EOA");
 
         // 4. Initialize Pool
         key = PoolKey({

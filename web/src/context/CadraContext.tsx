@@ -25,13 +25,14 @@ import {
 import {
   createPublicClient,
   createWalletClient,
+  defineChain,
   http,
   custom,
   parseUnits,
   maxUint256,
 } from "viem";
 import { unichainSepolia } from "viem/chains";
-import { CADRA_HOOK_ABI, ERC20Abi } from "../bots/abis";
+import { CADRA_CALLBACK_ABI, CADRA_HOOK_ABI, CADRA_REACTIVE_ABI, ERC20Abi } from "../bots/abis";
 import toast from "react-hot-toast";
 
 interface CadraContextType {
@@ -69,6 +70,10 @@ interface CadraContextType {
   userUsdcBalance: number;
   isLoadingOnChain: boolean;
   onChainTxHash: string | null;
+  updateReactiveGasLimit: (gasLimit: number) => Promise<void>;
+  updateReactiveRecipient: (recipient: `0x${string}`) => Promise<void>;
+  updateReactiveHook: (hook: `0x${string}`) => Promise<void>;
+  clearReactiveRecipient: () => Promise<void>;
 }
 
 const CadraContext = createContext<CadraContextType | null>(null);
@@ -207,6 +212,13 @@ const publicClient = createPublicClient({
   transport: http("https://sepolia.unichain.org"),
 });
 
+const reactiveChain = defineChain({
+  id: 5318007,
+  name: "Reactive Lasna Omni",
+  nativeCurrency: { name: "REACT", symbol: "REACT", decimals: 18 },
+  rpcUrls: { default: { http: ["https://lasna-rpc.rnk.dev/"] } },
+});
+
 const DEFAULT_SAFETY_FEED: ReactiveSafetyAction[] = [
   {
     id: "init-safety-1",
@@ -217,9 +229,9 @@ const DEFAULT_SAFETY_FEED: ReactiveSafetyAction[] = [
     vaultName: "Tight Range Alpha",
     latencySeconds: 1.08,
     originChain: "Unichain Sepolia",
-    originTxHash: "0x5f744cee96f3361718f21183854ed371fce8ab2b345fdea69595e1d0ae00f0bd",
-    reactiveTxHash: "0x29f2b190eacD76F0cBEC50bA669aab7F4600da4C",
-    callbackTxHash: "0x8DA8f1C989493cd51D6a48e042a73224F2E6C0e2",
+    originTxHash: "0xf72295be529358c29c684d88c6ffed196d19b20448f9172ece21f9cb05d0d9cc",
+    reactiveTxHash: "0x0d5e067e8cf78c06bbe4053aa5e1e107c0afe6fc935d5be686f514f13b4b71eb",
+    callbackTxHash: "0xd3217b9b8f67d6094ce0faa47c555b7967572c62488eaab8430c856c6e3fd5a9",
     summary: "Rule Guard Enforced: BandLeft -> Parked",
     details: "Spot tick exited mandate corridor on Unichain Sepolia. CadraReactive reacted in 1.08s and called enforce() via CadraCallback, parking 100% of follower assets into full-range Uniswap v4 liquidity.",
   },
@@ -232,9 +244,9 @@ const DEFAULT_SAFETY_FEED: ReactiveSafetyAction[] = [
     vaultName: "Tight Range Alpha",
     latencySeconds: 0.95,
     originChain: "Unichain Sepolia",
-    originTxHash: "0x850b612eed9202edbb97a4e55e47e20fad30dc3252fa3ef0267b44ca90a94009",
-    reactiveTxHash: "0x29f2b190eacD76F0cBEC50bA669aab7F4600da4C",
-    callbackTxHash: "0x8DA8f1C989493cd51D6a48e042a73224F2E6C0e2",
+    originTxHash: "0xf72295be529358c29c684d88c6ffed196d19b20448f9172ece21f9cb05d0d9cc",
+    reactiveTxHash: "0x96e69feb41da0a354bf0f7f7495792ed82e6250c1227bbbfd4bd60d1291f84d9",
+    callbackTxHash: "0xd3217b9b8f67d6094ce0faa47c555b7967572c62488eaab8430c856c6e3fd5a9",
     summary: "Epoch Settled by Reactive Network",
     details: "EpochReady signal triggered CadraReactive. Settle transaction executed at TWAP rate; surplus distributed and benchmark re-established.",
   },
@@ -285,6 +297,44 @@ export function CadraProvider({ children }: { children: React.ReactNode }) {
     }
     throw new Error("No connected wallet found. Please connect your wallet first.");
   }, [wagmiWalletClient, wallets]);
+
+  const getReactiveWalletClient = useCallback(async () => {
+    const activeWallet = wallets[0];
+    if (!activeWallet) throw new Error("Connect the owner wallet first.");
+    if (typeof (activeWallet as any).switchChain !== "function") {
+      throw new Error("This wallet cannot switch to Reactive Lasna.");
+    }
+    await (activeWallet as any).switchChain(5318007);
+    const provider = await activeWallet.getEthereumProvider();
+    return createWalletClient({
+      chain: reactiveChain,
+      transport: custom(provider),
+      account: activeWallet.address as `0x${string}`,
+    });
+  }, [wallets]);
+
+  const reactiveWrite = useCallback(async (functionName: string, args: readonly unknown[] = []) => {
+    setIsLoadingOnChain(true);
+    try {
+      const client = await getReactiveWalletClient();
+      const hash = await client.writeContract({
+        address: CONTRACT_ADDRESSES.reactive,
+        abi: CADRA_REACTIVE_ABI,
+        functionName: functionName as any,
+        args: args as any,
+        account: client.account!,
+      });
+      setOnChainTxHash(hash);
+      await createPublicClient({ chain: reactiveChain, transport: http("https://lasna-rpc.rnk.dev/") }).waitForTransactionReceipt({ hash });
+    } finally {
+      setIsLoadingOnChain(false);
+    }
+  }, [getReactiveWalletClient]);
+
+  const updateReactiveGasLimit = async (gasLimit: number) => reactiveWrite("setCallbackGasLimit", [BigInt(gasLimit)]);
+  const updateReactiveRecipient = async (recipient: `0x${string}`) => reactiveWrite("setCallbackRecipient", [recipient]);
+  const updateReactiveHook = async (hook: `0x${string}`) => reactiveWrite("subscribeHook", [hook]);
+  const clearReactiveRecipient = async () => reactiveWrite("clearCallbackRecipient");
 
   const addSafetyEvent = useCallback((event: ReactiveSafetyAction) => {
     setReactiveSafetyFeed((prev) => [event, ...prev.slice(0, 19)]);
@@ -612,6 +662,34 @@ export function CadraProvider({ children }: { children: React.ReactNode }) {
         },
       });
 
+      const unwatchSettleFailed = client.watchContractEvent({
+        address: CONTRACT_ADDRESSES.callback,
+        abi: CADRA_CALLBACK_ABI,
+        eventName: "SettleFailed",
+        onLogs: (logs) => {
+          for (const log of logs) {
+            const vId = Number((log as any).args?.vaultId || 1);
+            const targetVault = vaults.find((v) => v.id === vId);
+            const txHash = log.transactionHash || "0x0";
+            addSafetyEvent({
+              id: `callback-settle-failed-${log.blockNumber}-${log.logIndex}`,
+              timestamp: Date.now(),
+              timeFormatted: "Just now",
+              type: "settlement",
+              vaultId: vId,
+              vaultName: targetVault?.name || `Vault #${vId}`,
+              latencySeconds: 0,
+              originChain: "Unichain Sepolia",
+              originTxHash: txHash,
+              reactiveTxHash: txHash,
+              callbackTxHash: txHash,
+              summary: "Reactive Settlement Retry Needed",
+              details: `CadraCallback recorded a failed settle(${vId}) attempt without reverting the callback. The epoch remains permissionlessly retryable once the hook's settlement conditions are satisfied.`,
+            });
+          }
+        },
+      });
+
       const unwatchVaultCreated = client.watchContractEvent({
         address: CONTRACT_ADDRESSES.hook,
         abi: CADRA_HOOK_ABI,
@@ -633,6 +711,7 @@ export function CadraProvider({ children }: { children: React.ReactNode }) {
       return () => {
         unwatchBandLeft();
         unwatchSettled();
+        unwatchSettleFailed();
         unwatchVaultCreated();
         unwatchBondChanged();
       };
@@ -743,17 +822,21 @@ export function CadraProvider({ children }: { children: React.ReactNode }) {
 
       // Pre-flight simulation to catch contract reverts before sending to wallet
       let estimatedGas = BigInt(450000);
+      let minSharesOut = BigInt(0);
       try {
-        const { request } = await publicClient.simulateContract({
+        const sim = await publicClient.simulateContract({
           address: CONTRACT_ADDRESSES.hook,
           abi: CADRA_HOOK_ABI,
           functionName: "deposit",
           args: [BigInt(vaultId), amountUnits, amount1Wei],
           account,
         });
-        if (request?.gas) {
-          estimatedGas = (request.gas * BigInt(12)) / BigInt(10);
+        if (sim.request?.gas) {
+          estimatedGas = (sim.request.gas * BigInt(12)) / BigInt(10);
         }
+        // 1% slippage floor on the deposit-time share estimate (settlement NAV may move)
+        const estShares = (sim.result as bigint) ?? BigInt(0);
+        minSharesOut = (estShares * BigInt(99)) / BigInt(100);
       } catch (simErr: any) {
         console.error("Deposit simulation error:", simErr);
         const errMsg = simErr?.data?.errorName || simErr?.shortMessage || simErr?.message || "";
@@ -771,12 +854,12 @@ export function CadraProvider({ children }: { children: React.ReactNode }) {
 
       const safeGas = estimatedGas > BigInt(500000) ? BigInt(500000) : estimatedGas;
 
-      // Execute on-chain deposit with explicit safe gas limit
+      // Execute on-chain deposit with slippage protection
       const tx = await client.writeContract({
         address: CONTRACT_ADDRESSES.hook,
         abi: CADRA_HOOK_ABI,
-        functionName: "deposit",
-        args: [BigInt(vaultId), amountUnits, amount1Wei],
+        functionName: "depositWithSlippage",
+        args: [BigInt(vaultId), amountUnits, amount1Wei, minSharesOut],
         account,
         gas: safeGas,
       });
@@ -833,6 +916,8 @@ export function CadraProvider({ children }: { children: React.ReactNode }) {
 
       const perfFeeBps = Math.min(3000, Math.max(0, Math.round(newVault.perfFeeBps || 2000)));
 
+      const initialBondUnits = parseUnits((Number(newVault.bondAmount) || 0).toString(), 6);
+
       // Align mandate ticks to pool tickSpacing 60
       let minTick = Math.round(Number(newVault.mandate.minTick) / 60) * 60;
       let maxTick = Math.round(Number(newVault.mandate.maxTick) / 60) * 60;
@@ -853,11 +938,38 @@ export function CadraProvider({ children }: { children: React.ReactNode }) {
         maxShortfallBps: Math.min(10000, Math.max(1, Number(newVault.mandate.maxShortfallBps || 500))),
       };
 
+      if (initialBondUnits === 0n) throw new Error("An initial bond is required to create a vault");
+      const bondBalance = await publicClient.readContract({
+        address: CONTRACT_ADDRESSES.token0,
+        abi: ERC20Abi,
+        functionName: "balanceOf",
+        args: [account],
+      }) as bigint;
+      if (bondBalance < initialBondUnits) throw new Error("Insufficient USDC balance for the initial bond");
+
+      const bondAllowance = await publicClient.readContract({
+        address: CONTRACT_ADDRESSES.token0,
+        abi: ERC20Abi,
+        functionName: "allowance",
+        args: [account, CONTRACT_ADDRESSES.hook],
+      }) as bigint;
+      if (bondAllowance < initialBondUnits) {
+        const approveTx = await client.writeContract({
+          address: CONTRACT_ADDRESSES.token0,
+          abi: ERC20Abi,
+          functionName: "approve",
+          args: [CONTRACT_ADDRESSES.hook, maxUint256],
+          account,
+          gas: BigInt(100000),
+        });
+        await publicClient.waitForTransactionReceipt({ hash: approveTx });
+      }
+
       const tx = await client.writeContract({
         address: CONTRACT_ADDRESSES.hook,
         abi: CADRA_HOOK_ABI,
         functionName: "createVault",
-        args: [poolKey, perfFeeBps, mandate],
+        args: [poolKey, perfFeeBps, mandate, initialBondUnits],
         account,
       });
 
@@ -886,47 +998,6 @@ export function CadraProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem(`cadra_vault_name_${createdVaultId}`, newVault.name);
       }
 
-      // If curator specified initial bond amount, post it immediately
-      if (createdVaultId && newVault.bondAmount > 0) {
-        const bondUnits = parseUnits(newVault.bondAmount.toString(), 6);
-        const curBal = (await publicClient.readContract({
-          address: CONTRACT_ADDRESSES.token0,
-          abi: ERC20Abi,
-          functionName: "balanceOf",
-          args: [account],
-        })) as bigint;
-
-        if (curBal >= bondUnits) {
-          const curAllowance = (await publicClient.readContract({
-            address: CONTRACT_ADDRESSES.token0,
-            abi: ERC20Abi,
-            functionName: "allowance",
-            args: [account, CONTRACT_ADDRESSES.hook],
-          })) as bigint;
-
-          if (curAllowance < bondUnits) {
-            const appTx = await client.writeContract({
-              address: CONTRACT_ADDRESSES.token0,
-              abi: ERC20Abi,
-              functionName: "approve",
-              args: [CONTRACT_ADDRESSES.hook, maxUint256],
-              account,
-              gas: BigInt(100000),
-            });
-            await publicClient.waitForTransactionReceipt({ hash: appTx });
-          }
-
-          const bondTx = await client.writeContract({
-            address: CONTRACT_ADDRESSES.hook,
-            abi: CADRA_HOOK_ABI,
-            functionName: "postBond",
-            args: [BigInt(createdVaultId), bondUnits],
-            account,
-            gas: BigInt(400000),
-          });
-          await publicClient.waitForTransactionReceipt({ hash: bondTx });
-        }
-      }
 
       await fetchOnChainVaults();
       return createdVaultId;
@@ -1239,6 +1310,10 @@ export function CadraProvider({ children }: { children: React.ReactNode }) {
       userUsdcBalance,
       isLoadingOnChain,
       onChainTxHash,
+      updateReactiveGasLimit,
+      updateReactiveRecipient,
+      updateReactiveHook,
+      clearReactiveRecipient,
     }),
     [
       isHydrated,
@@ -1254,6 +1329,10 @@ export function CadraProvider({ children }: { children: React.ReactNode }) {
       userUsdcBalance,
       isLoadingOnChain,
       onChainTxHash,
+      updateReactiveGasLimit,
+      updateReactiveRecipient,
+      updateReactiveHook,
+      clearReactiveRecipient,
     ]
   );
 
