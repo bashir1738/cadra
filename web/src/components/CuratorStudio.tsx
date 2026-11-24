@@ -1140,7 +1140,7 @@ export function CuratorStudio({
 
           {vault.history.length === 0 ? (
             <div className="p-8 text-center border border-dashed border-neutral-200 rounded-2xl text-xs text-neutral-500 font-mono">
-              No historical settlements yet. CadraReactive will settle at the next epoch boundary.
+            No historical settlements yet. CadraHook emits EpochReady at the boundary, then CadraReactive dispatches the authenticated CadraCallback settlement.
             </div>
           ) : (
             <div className="overflow-x-auto">

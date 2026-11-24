@@ -184,8 +184,8 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
               Follow a curator. Beat the Pace.
             </h1>
 
-            <p className="text-[15px] sm:text-[17px] text-neutral-500 max-w-md sm:max-w-lg leading-relaxed font-normal mt-3 sm:mt-4">
-              Curated Uniswap v4 liquidity backed by real USDC bonds.
+            <p className="text-[15px] sm:text-[17px] text-neutral-500 max-w-xl sm:max-w-2xl leading-relaxed font-normal mt-3 sm:mt-4">
+              Curated Uniswap v4 liquidity backed by real USDC bonds, with Reactive Network quietly watching over every vault when markets move outside the rules.
             </p>
 
             {/* Primary Actions: Two-Tone Medicine Pill Capsule */}
@@ -241,7 +241,7 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
                 Hook-owned liquidity, zero custody risk
               </h3>
               <p className="text-[14px] text-neutral-500 leading-relaxed">
-                Curators rebalance positions atomically inside Uniswap v4 but can never withdraw follower funds. Every epoch is measured live against The Pace.
+                  Curators rebalance positions atomically inside Uniswap v4 but can never withdraw follower funds. Every epoch is measured live against The Pace, while Reactive Network listens for breaches and dispatches authenticated safety callbacks across chains.
               </p>
             </div>
 

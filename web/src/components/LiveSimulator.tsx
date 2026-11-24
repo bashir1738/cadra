@@ -382,7 +382,7 @@ export function LiveSimulator({
             Interactive Testbench for Uniswap v4 Hook & Reactive Network
           </h2>
           <p className="text-xs sm:text-[13px] text-neutral-300 max-w-2xl leading-relaxed">
-            Because testnets lack continuous 24/7 retail trading, use this sandbox to simulate Uniswap v4 tick movements, trigger price shocks, and verify Reactive Network cross-chain TWAP parking live.
+              Because testnets lack continuous 24/7 retail trading, use this sandbox to simulate Uniswap v4 tick movements, trigger price shocks, and watch the Reactive Network loop detect CadraHook events on Unichain, react on Lasna, and call the authenticated Callback contract to park funds or settle epochs.
           </p>
         </div>
         <div className="flex items-center gap-2 shrink-0">

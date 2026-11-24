@@ -404,7 +404,7 @@ export const FollowerDashboard = React.memo(function FollowerDashboard({
             </div>
             <div className="p-4 rounded-2xl bg-[#FAFAFA] border border-neutral-200/70">
               <span className="font-bold text-neutral-950 block text-[13px]">2. Epoch Boundary</span>
-              <span className="text-neutral-500 mt-1 block">CadraReactive executes batch settlement at TWAP rate.</span>
+              <span className="text-neutral-500 mt-1 block">CadraReactive listens on Reactive Lasna and dispatches authenticated batch settlement to CadraCallback at the TWAP rate.</span>
             </div>
             <div className="p-4 rounded-2xl bg-[#FAFAFA] border border-neutral-200/70">
               <span className="font-bold text-neutral-950 block text-[13px]">3. Shares Issued</span>
@@ -514,7 +514,7 @@ export const FollowerDashboard = React.memo(function FollowerDashboard({
               <div className="space-y-1">
                 <h4 className="text-base font-bold text-neutral-950">No Safety Events Triggered</h4>
                 <p className="text-xs text-neutral-500 max-w-md mx-auto">
-                  CadraReactive is actively listening on Unichain Sepolia & Base Sepolia. Rule breaches and cross-chain volatility shocks will stream here in real time.
+                  CadraReactive is actively listening for CadraHook events on Unichain Sepolia. When a rule breach or epoch signal appears, the Reactive RSC sends an authenticated callback back through CadraCallback, and the result streams here in real time.
                 </p>
               </div>
             </div>
