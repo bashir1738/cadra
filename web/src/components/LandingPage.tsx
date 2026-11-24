@@ -184,7 +184,7 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
               Follow a curator. Beat the Pace.
             </h1>
 
-            <p className="text-[15px] sm:text-[17px] text-neutral-500 max-w-xl sm:max-w-2xl leading-relaxed font-normal mt-3 sm:mt-4">
+            <p className="text-[15px] sm:text-[17px] text-neutral-500 max-w-3xl leading-relaxed font-normal mt-3 sm:mt-4">
               Curated Uniswap v4 liquidity backed by real USDC bonds, with Reactive Network quietly watching over every vault when markets move outside the rules.
             </p>
 
