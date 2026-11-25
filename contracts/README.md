@@ -86,20 +86,20 @@ cd reactive && forge test
 
 | Contract | Network | Address | Explorer Link |
 | :--- | :--- | :--- | :--- |
-| **CadraHook** | Unichain Sepolia (1301) | `0x3515ffDABa1A7c16d5b217013EA6589DAaBA50c0` | [Uniscan](https://sepolia.uniscan.xyz/address/0x3515ffDABa1A7c16d5b217013EA6589DAaBA50c0) |
+| **CadraHook** | Unichain Sepolia (1301) | `0x6f01d91B4BA3D5d5f97Fe955D5a0536ce97710C0` | [Uniscan](https://sepolia.uniscan.xyz/address/0x6f01d91B4BA3D5d5f97Fe955D5a0536ce97710C0) |
 | **Uniswap v4 PoolManager** | Unichain Sepolia (1301) | `0x29f2b190eacD76F0cBEC50bA669aab7F4600da4C` | [Uniscan](https://sepolia.uniscan.xyz/address/0x29f2b190eacD76F0cBEC50bA669aab7F4600da4C) |
-| **Mock USDC (token0 / bondToken)** | Unichain Sepolia (1301) | `0x688Cfa2501c44CB6B3886f4C5662c55b73f36e8D` | [Uniscan](https://sepolia.uniscan.xyz/address/0x688Cfa2501c44CB6B3886f4C5662c55b73f36e8D) |
+| **Official Circle USDC (token0 / bondToken)** | Unichain Sepolia (1301) | `0x31d0220469e10c4E71834a79b1f276d740d3768F` | [Uniscan](https://sepolia.uniscan.xyz/address/0x31d0220469e10c4E71834a79b1f276d740d3768F) |
 | **Mock WETH (token1)** | Unichain Sepolia (1301) | `0xB4AB6C3Ae39df89bA203F01ef08e39775Fe1F0c6` | [Uniscan](https://sepolia.uniscan.xyz/address/0xB4AB6C3Ae39df89bA203F01ef08e39775Fe1F0c6) |
-| **CadraCallback** | Unichain Sepolia (1301) | `0x056f379A3d6495330D2996B289c4C9245a430553` | [Uniscan](https://sepolia.uniscan.xyz/address/0x056f379A3d6495330D2996B289c4C9245a430553) |
+| **CadraCallback** | Unichain Sepolia (1301) | `0x2687c7c2EDC5401C515C7364AB506cA9ecE55fE8` | [Uniscan](https://sepolia.uniscan.xyz/address/0x2687c7c2EDC5401C515C7364AB506cA9ecE55fE8) |
 | **Reactive Callback Proxy** | Unichain Sepolia (1301) | `0x9299472A6399Fd1027ebF067571Eb3e3D7837FC4` | [Uniscan](https://sepolia.uniscan.xyz/address/0x9299472A6399Fd1027ebF067571Eb3e3D7837FC4) |
 | **CadraReactive (Omni RSC)** | Reactive Lasna Omni (5318007) | `0xf937aee2e988557ba3774a8a41af349ef7112680` | [Reactscan](https://lasna.reactscan.net/address/0xf937aee2e988557ba3774a8a41af349ef7112680) |
 
 > Read-only checks confirm that the Reactive contract subscribes to the listed hook, its callback recipient is the listed callback, and the callback points back to the hook. A live `BandLeft`/`EpochReady` callback execution has not yet been confirmed.
 
 ### On-Chain Transactions:
-- **CadraReactive Deployed on Lasna Omni**: [`0x1dfd4e736099a8f03e2df931f1117f196f2277befbb8c5a504b6f896eda57a62`](https://lasna.reactscan.net/tx/0x1dfd4e736099a8f03e2df931f1117f196f2277befbb8c5a504b6f896eda57a62)
-- **CadraCallback Deployed on Unichain Sepolia**: [`0x7835463a99ce65d0cbacc6fd3bd2b18f0015e705e6e0e7aac1375dd5d508dcf9`](https://sepolia.uniscan.xyz/tx/0x7835463a99ce65d0cbacc6fd3bd2b18f0015e705e6e0e7aac1375dd5d508dcf9)
-- **Callback Recipient Linked on Lasna Omni**: [`0x6ef362402205a8de616c9c6ea29fc5cfdfeec8f5ce2a25993f8200beb2fa8b22`](https://lasna-omni.reactscan.net/tx/0x6ef362402205a8de616c9c6ea29fc5cfdfeec8f5ce2a25993f8200beb2fa8b22)
+- **CadraReactive Deployed on Lasna Omni**: [`0xc229c642051e028ed5c4a2ea3516f9418f18e3895b5d229dff63805f461e63db`](https://lasna.reactscan.net/tx/0xc229c642051e028ed5c4a2ea3516f9418f18e3895b5d229dff63805f461e63db) (creates `0xf937aee2e988557ba3774a8a41af349ef7112680`)
+- **CadraCallback Deployed on Unichain Sepolia** (historical; superseded): [`0x7835463a99ce65d0cbacc6fd3bd2b18f0015e705e6e0e7aac1375dd5d508dcf9`](https://sepolia.uniscan.xyz/tx/0x7835463a99ce65d0cbacc6fd3bd2b18f0015e705e6e0e7aac1375dd5d508dcf9) (creates historical callback; current callback is `0x2687c7c2EDC5401C515C7364AB506cA9ecE55fE8`)
+- **Callback Recipient Linked on Lasna Omni** (historical recipient): [`0x6ef362402205a8de616c9c6ea29fc5cfdfeec8f5ce2a25993f8200beb2fa8b22`](https://lasna-omni.reactscan.net/tx/0x6ef362402205a8de616c9c6ea29fc5cfdfeec8f5ce2a25993f8200beb2fa8b22)
 - **Omni System Contract Reserve Initial Deposit (0.5 lREACT)**: [`0x807fbb22a6fe24da903482607fd2bb62fc6b4684da223467d6be539a2dce9fe1`](https://lasna.reactscan.net/tx/0x807fbb22a6fe24da903482607fd2bb62fc6b4684da223467d6be539a2dce9fe1)
 - **Omni System Contract Reserve Top-Up (0.8 lREACT, Total 1.3 lREACT)**: [`0xd2e519fac1102c5e967a46033e54af5ef2f89fa99f4870e2d5b6162c03b689e1`](https://lasna.reactscan.net/tx/0xd2e519fac1102c5e967a46033e54af5ef2f89fa99f4870e2d5b6162c03b689e1)
 - **Pool Liquidity Seeding on Unichain Sepolia**: [`0x1f752a2dcfae5c09d4b4316b6b28e7a296b51a938132a7554f3429943c646a40`](https://sepolia.uniscan.xyz/tx/0x1f752a2dcfae5c09d4b4316b6b28e7a296b51a938132a7554f3429943c646a40)

@@ -13,6 +13,7 @@ import {PoolId, PoolIdLibrary} from "@uniswap/v4-core/src/types/PoolId.sol";
 
 import {PoolModifyLiquidityTest} from "@uniswap/v4-core/src/test/PoolModifyLiquidityTest.sol";
 import {PoolSwapTest} from "@uniswap/v4-core/src/test/PoolSwapTest.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {MockERC20} from "../src/mocks/MockERC20.sol";
 import {CadraHook} from "../src/CadraHook.sol";
 import {Mandate, Range} from "../src/types/Mandate.sol";
@@ -22,10 +23,10 @@ contract DemoLoopScript is Script {
     using PoolIdLibrary for PoolKey;
     using CurrencyLibrary for Currency;
 
-    address constant HOOK = 0x728D9b5f428B736A26D07879F55C3982Ddf890C0;
+    address constant HOOK = 0x6f01d91B4BA3D5d5f97Fe955D5a0536ce97710C0;
     address constant POOL_MANAGER = 0x29f2b190eacD76F0cBEC50bA669aab7F4600da4C;
-    address constant TOKEN0 = 0x688Cfa2501c44CB6B3886f4C5662c55b73f36e8D;
-    address constant TOKEN1 = 0xB4AB6C3Ae39df89bA203F01ef08e39775Fe1F0c6;
+    address constant TOKEN0 = 0x31d0220469e10c4E71834a79b1f276d740d3768F; // Official Circle USDC
+    address constant TOKEN1 = 0xB4AB6C3Ae39df89bA203F01ef08e39775Fe1F0c6; // Mock WETH
 
     function run() external {
         uint256 deployerKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
@@ -48,15 +49,14 @@ contract DemoLoopScript is Script {
         PoolModifyLiquidityTest modifyRouter = new PoolModifyLiquidityTest(IPoolManager(POOL_MANAGER));
         PoolSwapTest swapRouter = new PoolSwapTest(IPoolManager(POOL_MANAGER));
 
-        // 1. Mint tokens
-        MockERC20(TOKEN0).mint(deployer, 1_000_000_000 * 1e18);
+        // 1. Mint test WETH only; official USDC cannot be minted
         MockERC20(TOKEN1).mint(deployer, 1_000_000_000 * 1e18);
 
-        MockERC20(TOKEN0).approve(address(modifyRouter), type(uint256).max);
+        IERC20(TOKEN0).approve(address(modifyRouter), type(uint256).max);
         MockERC20(TOKEN1).approve(address(modifyRouter), type(uint256).max);
-        MockERC20(TOKEN0).approve(address(swapRouter), type(uint256).max);
+        IERC20(TOKEN0).approve(address(swapRouter), type(uint256).max);
         MockERC20(TOKEN1).approve(address(swapRouter), type(uint256).max);
-        MockERC20(TOKEN0).approve(HOOK, type(uint256).max);
+        IERC20(TOKEN0).approve(HOOK, type(uint256).max);
         MockERC20(TOKEN1).approve(HOOK, type(uint256).max);
 
         // 2. Read current slot0

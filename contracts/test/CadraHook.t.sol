@@ -229,8 +229,9 @@ contract CadraHookTest is Test, Deployers {
         hook.setProtocolFeeBps(600); // Exceeds 5% max cap
 
         hook.setProtocolFeeBps(150);
-        assertEq(hook.protocolFeeBps(), 150);
-        hook.setProtocolFeeBps(100); // Reset to 1%
+        // Deferred: protocolFeeBps is still 100 until the next epoch settlement applies the pending value.
+        assertEq(hook.protocolFeeBps(), 100);
+        hook.setProtocolFeeBps(100); // Queue reset back to 1% (overwrites pending 150)
 
         vm.prank(curator);
         uint256 vaultId = hook.createVault(poolKey, 2000, defaultMandate, 1000 ether);

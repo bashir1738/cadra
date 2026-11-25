@@ -275,6 +275,9 @@ const reactiveChain = defineChain({
   rpcUrls: { default: { http: ["https://lasna-rpc.rnk.dev/"] } },
 });
 
+// Sample/demo safety feed shown in the UI until live Reactive loop confirmations
+// (react() on Lasna + CadraCallback.enforce() on Unichain) are wired in.
+// The tx hashes below are illustrative history, not confirmed on-chain executions.
 const DEFAULT_SAFETY_FEED: ReactiveSafetyAction[] = [
   {
     id: "init-safety-1",
@@ -358,11 +361,27 @@ export function CadraProvider({ children }: { children: React.ReactNode }) {
   const getReactiveWalletClient = useCallback(async () => {
     const activeWallet = wallets[0];
     if (!activeWallet) throw new Error("Connect the owner wallet first.");
-    if (typeof (activeWallet as any).switchChain !== "function") {
-      throw new Error("This wallet cannot switch to Reactive Lasna.");
-    }
-    await (activeWallet as any).switchChain(5318007);
+
     const provider = await activeWallet.getEthereumProvider();
+
+    // Add Reactive Lasna to the wallet if it isn't already known, then switch.
+    try {
+      await provider.request({
+        method: "wallet_addEthereumChain",
+        params: [{
+          chainId: "0x510DEF7", // 5318007 in hex
+          chainName: "Reactive Lasna Omni",
+          nativeCurrency: { name: "Reactive", symbol: "REACT", decimals: 18 },
+          rpcUrls: ["https://lasna-rpc.rnk.dev/"],
+          blockExplorerUrls: ["https://lasna.reactscan.net/"],
+        }],
+      });
+    } catch {
+      // Wallet may already know the chain — proceed to switchChain regardless.
+    }
+
+    await provider.request({ method: "wallet_switchEthereumChain", params: [{ chainId: "0x510DEF7" }] });
+
     return createWalletClient({
       chain: reactiveChain,
       transport: custom(provider),

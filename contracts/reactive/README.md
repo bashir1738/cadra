@@ -125,15 +125,15 @@ Follow the strict 4-step sequence in [DeployReactive.s.sol](file:///home/bash/Do
 | Contract | Network | Address |
 | :--- | :--- | :--- |
 | **CadraReactive (Omni RSC)** | Reactive Lasna Omni (5318007) | `0xf937aee2e988557ba3774a8a41af349ef7112680` |
-| **CadraCallback** | Unichain Sepolia (1301) | `0x056f379A3d6495330D2996B289c4C9245a430553` |
+| **CadraCallback** | Unichain Sepolia (1301) | `0x2687c7c2EDC5401C515C7364AB506cA9ecE55fE8` |
 | **Callback Proxy** | Unichain Sepolia (1301) | `0x9299472A6399Fd1027ebF067571Eb3e3D7837FC4` |
 | **System Contract** | Reactive Lasna Omni (5318007) | `0x8888888888888888888888888888888888888888` |
-| **CadraHook** | Unichain Sepolia (1301) | `0x3515ffDABa1A7c16d5b217013EA6589DAaBA50c0` |
+| **CadraHook** | Unichain Sepolia (1301) | `0x6f01d91B4BA3D5d5f97Fe955D5a0536ce97710C0` |
 
 Read-only checks confirm that the Reactive contract's subscribed hook and configured callback recipient match this table, and that the callback points back to the hook. End-to-end execution from a new `BandLeft` or `EpochReady` event remains unverified. The transaction hashes below are deployment history and may refer to earlier wiring.
 
 Deployment transactions:
 
-- CadraReactive: `0xc229c642051e028ed5c4a2ea3516f9418f18e3895b5d229dff63805f461e63db`
-- CadraCallback: `0xcc49666c619a4631af8ab9a03c0620b771b9375c67a18f39f59797fd2ef58fae`
-- Callback link: `0x8dbc4a6abf03cafe0fe2254168135858dec123e24e743cc93dfbde5f8a4b7ebb`
+- CadraReactive: `0xc229c642051e028ed5c4a2ea3516f9418f18e3895b5d229dff63805f461e63db` (creates current `0xf937aee2...`)
+- CadraCallback (historical, superseded): `0xcc49666c619a4631af8ab9a03c0620b771b9375c67a18f39f59797fd2ef58fae` (creates `0xdcff832e...`; current callback is `0x2687c7c2...`)
+- Callback link (historical recipient): `0x8dbc4a6abf03cafe0fe2254168135858dec123e24e743cc93dfbde5f8a4b7ebb`

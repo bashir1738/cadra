@@ -47,8 +47,11 @@ contract CadraHook is BaseHook, IUnlockCallback, ReentrancyGuardTransient {
     uint256 public nextVaultId = 1;
 
     address public owner;
+    address internal pendingOwner;
     address public protocolTreasury;
     uint16 public protocolFeeBps = 100; // 100 bps = 1.00% of excess profit
+    uint16 internal pendingProtocolFeeBps = type(uint16).max; // sentinel: no pending change
+    bool internal hasPendingProtocolFee;
 
     mapping(uint256 => Vault) internal vaults;
     mapping(uint256 => Range[]) internal vaultPositions;
@@ -124,6 +127,8 @@ contract CadraHook is BaseHook, IUnlockCallback, ReentrancyGuardTransient {
     error AlreadySignaled();
     error ZeroAmount();
     error BondCurrencyMismatch();
+    error ZeroAddress();
+    error NotPendingOwner();
 
     struct UnlockCallbackData {
         uint8 action; // 1: rebalance/close, 2: park, 3: fullRangeInit, 4: withdrawUnwind
@@ -232,24 +237,33 @@ contract CadraHook is BaseHook, IUnlockCallback, ReentrancyGuardTransient {
 
     function setProtocolTreasury(address _newTreasury) external {
         if (msg.sender != owner) revert OnlyOwner();
-        require(_newTreasury != address(0), "ZeroAddress");
+        if (_newTreasury == address(0)) revert ZeroAddress();
         address oldTreasury = protocolTreasury;
         protocolTreasury = _newTreasury;
         emit ProtocolTreasuryUpdated(oldTreasury, _newTreasury);
     }
 
+    /// @notice Queues a protocol fee change; takes effect at the next epoch settlement.
     function setProtocolFeeBps(uint16 _newFeeBps) external {
         if (msg.sender != owner) revert OnlyOwner();
-        if (_newFeeBps > 500) revert ProtocolFeeTooHigh(); // Maximum 5% safety cap
-        uint16 oldBps = protocolFeeBps;
-        protocolFeeBps = _newFeeBps;
-        emit ProtocolFeeBpsUpdated(oldBps, _newFeeBps);
+        if (_newFeeBps > 500) revert ProtocolFeeTooHigh();
+        pendingProtocolFeeBps = _newFeeBps;
+        hasPendingProtocolFee = true;
+        emit ProtocolFeeBpsUpdated(protocolFeeBps, _newFeeBps);
     }
 
+    /// @notice Step 1 of two-step ownership transfer — sets the pending owner.
     function transferOwnership(address _newOwner) external {
         if (msg.sender != owner) revert OnlyOwner();
-        require(_newOwner != address(0), "ZeroAddress");
-        owner = _newOwner;
+        if (_newOwner == address(0)) revert ZeroAddress();
+        pendingOwner = _newOwner;
+    }
+
+    /// @notice Step 2 of two-step ownership transfer — pending owner accepts.
+    function acceptOwnership() external {
+        if (msg.sender != pendingOwner) revert NotPendingOwner();
+        owner = msg.sender;
+        pendingOwner = address(0);
     }
 
     // ==========================================
@@ -297,12 +311,8 @@ contract CadraHook is BaseHook, IUnlockCallback, ReentrancyGuardTransient {
             poolSafeMinTick[poolId] = mandate.minTick;
             poolSafeMaxTick[poolId] = mandate.maxTick;
         } else {
-            if (mandate.minTick > poolSafeMinTick[poolId]) {
-                poolSafeMinTick[poolId] = mandate.minTick;
-            }
-            if (mandate.maxTick < poolSafeMaxTick[poolId]) {
-                poolSafeMaxTick[poolId] = mandate.maxTick;
-            }
+            if (mandate.minTick > poolSafeMinTick[poolId]) poolSafeMinTick[poolId] = mandate.minTick;
+            if (mandate.maxTick < poolSafeMaxTick[poolId]) poolSafeMaxTick[poolId] = mandate.maxTick;
         }
         if (idx < 32) {
             poolActiveBandMask[poolId] |= uint32(1) << uint32(idx);
@@ -331,7 +341,7 @@ contract CadraHook is BaseHook, IUnlockCallback, ReentrancyGuardTransient {
     function postBond(uint256 vaultId, uint256 amount) external nonReentrant {
         Vault storage v = vaults[vaultId];
         if (v.curator == address(0)) revert VaultNotFound();
-        if (v.epochStart == type(uint256).max) revert VaultFrozen();
+        if (MandateLib.isClosed(v.epochStart)) revert VaultFrozen();
 
         bondToken.safeTransferFrom(msg.sender, address(this), amount);
         v.bond += amount;
@@ -369,10 +379,19 @@ contract CadraHook is BaseHook, IUnlockCallback, ReentrancyGuardTransient {
     function closeVault(uint256 vaultId) external nonReentrant {
         Vault storage v = vaults[vaultId];
         if (msg.sender != v.curator) revert OnlyCurator();
-        // The max timestamp is a terminal sentinel and is already exposed by getVault().
         v.epochStart = type(uint256).max;
-        // Action 1 removes every position; an empty range list means no liquidity is re-added.
+
+        // Clear the active-band mask bit and vault index so afterSwap skips this vault.
+        PoolId poolId = v.poolKey.toId();
+        uint256 idx = vaultIndexInPool[vaultId];
+        if (idx < 32) poolActiveBandMask[poolId] &= ~(uint32(1) << uint32(idx));
+        delete vaultIndexInPool[vaultId];
+
+        // Unwind all active positions into idle balances.
         poolManager.unlock(abi.encode(UnlockCallbackData({action: 1, vaultId: vaultId, newRanges: new Range[](0)})));
+
+        // Pay out any followers who had already queued a withdrawal before close.
+        _processWithdrawQueue(vaultId, v);
     }
 
     // ==========================================
@@ -390,7 +409,7 @@ contract CadraHook is BaseHook, IUnlockCallback, ReentrancyGuardTransient {
     {
         Vault storage v = vaults[vaultId];
         if (v.curator == address(0)) revert VaultNotFound();
-        if (v.epochStart == type(uint256).max) revert VaultFrozen();
+        if (MandateLib.isClosed(v.epochStart)) revert VaultFrozen();
 
         // Verify spot deviation to protect deposit-time valuation
         _checkSpotDeviation(v.poolKey.toId(), false);
@@ -434,19 +453,6 @@ contract CadraHook is BaseHook, IUnlockCallback, ReentrancyGuardTransient {
         emit WithdrawQueued(vaultId, msg.sender, shares);
     }
 
-    function cancelWithdraw(uint256 vaultId) external nonReentrant {
-        QueuedWithdraw[] storage queue = vaultWithdraws[vaultId];
-        uint256 cancelled;
-        for (uint256 i = 0; i < queue.length; i++) {
-            if (queue[i].follower == msg.sender) {
-                cancelled += queue[i].shares;
-                queue[i].shares = 0;
-            }
-        }
-        if (cancelled == 0) revert InsufficientShares();
-        vaultFollowerShares[vaultId][msg.sender] += cancelled;
-    }
-
     // ==========================================
     //            REBALANCE & PARKING
     // ==========================================
@@ -455,7 +461,7 @@ contract CadraHook is BaseHook, IUnlockCallback, ReentrancyGuardTransient {
         Vault storage v = vaults[vaultId];
         if (msg.sender != v.curator) revert OnlyCurator();
         if (v.isFrozen) revert VaultFrozen();
-        if (v.epochStart == type(uint256).max) revert VaultFrozen();
+        if (MandateLib.isClosed(v.epochStart)) revert VaultFrozen();
 
         MandateLib.validateRanges(v.mandate, ranges, v.poolKey.tickSpacing);
 
@@ -483,9 +489,7 @@ contract CadraHook is BaseHook, IUnlockCallback, ReentrancyGuardTransient {
         if (currentTick >= v.mandate.minTick && currentTick <= v.mandate.maxTick) {
             v.bandLeft = false;
             uint256 idx = vaultIndexInPool[vaultId];
-            if (idx < 32) {
-                poolActiveBandMask[v.poolKey.toId()] |= uint32(1) << uint32(idx);
-            }
+            if (idx < 32) poolActiveBandMask[v.poolKey.toId()] |= uint32(1) << uint32(idx);
         }
 
         emit Rebalanced(vaultId, ranges);
@@ -493,7 +497,7 @@ contract CadraHook is BaseHook, IUnlockCallback, ReentrancyGuardTransient {
 
     function enforce(uint256 vaultId) external nonReentrant returns (bool) {
         Vault storage v = vaults[vaultId];
-        if (v.curator == address(0) || v.isFrozen || v.epochStart == type(uint256).max) return false;
+        if (v.curator == address(0) || v.isFrozen || MandateLib.isClosed(v.epochStart)) return false;
 
         PoolId poolId = v.poolKey.toId();
 
@@ -530,7 +534,7 @@ contract CadraHook is BaseHook, IUnlockCallback, ReentrancyGuardTransient {
 
     function settle(uint256 vaultId) external nonReentrant {
         Vault storage v = vaults[vaultId];
-        bool closed = v.epochStart == type(uint256).max;
+        bool closed = MandateLib.isClosed(v.epochStart);
         uint256 epochEnd = closed ? 0 : v.epochStart + epochLength;
         if (!closed && block.timestamp < epochEnd) revert EpochNotEnded();
 
@@ -541,6 +545,12 @@ contract CadraHook is BaseHook, IUnlockCallback, ReentrancyGuardTransient {
 
         uint256 vaultVal = getVaultValue(vaultId);
         uint256 paceVal = getPaceValue(vaultId);
+
+        // Apply queued protocol fee change at epoch boundary
+        if (hasPendingProtocolFee) {
+            protocolFeeBps = pendingProtocolFeeBps;
+            hasPendingProtocolFee = false;
+        }
 
         SettlementLib.SettlementResult memory res;
         if (v.epoch == 1) {
@@ -637,45 +647,8 @@ contract CadraHook is BaseHook, IUnlockCallback, ReentrancyGuardTransient {
         }
         delete vaultDeposits[vaultId];
 
-        // Process withdrawals — pro-rata token0 and token1 payouts (never silently fails/skips)
-        QueuedWithdraw[] storage wQueue = vaultWithdraws[vaultId];
-        uint256 totalWithdrawShares = 0;
-        for (uint256 i = 0; i < wQueue.length; i++) {
-            totalWithdrawShares += wQueue[i].shares;
-        }
-
-        if (totalWithdrawShares > 0 && v.totalShares > 0) {
-            // Unwind pro-rata liquidity if positions exist
-            if (vaultPositions[vaultId].length > 0) {
-                poolManager.unlock(
-                    abi.encode(UnlockCallbackData({action: 4, vaultId: vaultId, newRanges: new Range[](0)}))
-                );
-            }
-
-            uint256 sharesBasis = v.totalShares;
-            uint256 avail0 = vaultIdle0[vaultId];
-            uint256 avail1 = vaultIdle1[vaultId];
-
-            for (uint256 i = 0; i < wQueue.length; i++) {
-                QueuedWithdraw memory qw = wQueue[i];
-                if (qw.shares > 0) {
-                    uint256 pay0 = FullMath.mulDiv(avail0, qw.shares, sharesBasis);
-                    uint256 pay1 = FullMath.mulDiv(avail1, qw.shares, sharesBasis);
-
-                    v.totalShares -= qw.shares;
-                    if (pay0 > 0) {
-                        vaultIdle0[vaultId] -= pay0;
-                        IERC20(Currency.unwrap(v.poolKey.currency0)).safeTransfer(qw.follower, pay0);
-                    }
-                    if (pay1 > 0) {
-                        vaultIdle1[vaultId] -= pay1;
-                        IERC20(Currency.unwrap(v.poolKey.currency1)).safeTransfer(qw.follower, pay1);
-                    }
-                    emit WithdrawProcessed(vaultId, qw.follower, pay0, pay1, qw.shares);
-                }
-            }
-        }
-        delete vaultWithdraws[vaultId];
+        // Process withdrawals — pro-rata token0 and token1 payouts
+        _processWithdrawQueue(vaultId, v);
 
         // Re-benchmark Pace for the next epoch
         uint160 twapSqrtPrice = getTwapSqrtPrice(poolId);
@@ -805,7 +778,7 @@ contract CadraHook is BaseHook, IUnlockCallback, ReentrancyGuardTransient {
             uint256 payAmt = uint256(int256(-deltaAmt));
             if (currentIdle < payAmt) revert InsufficientIdle();
             IERC20(Currency.unwrap(currency)).safeTransfer(address(poolManager), payAmt);
-            poolManager.settle();
+            poolManager.settle(); // forge-lint: disable-next-line(unused-return)
             return currentIdle - payAmt;
         }
         return currentIdle;
@@ -889,5 +862,44 @@ contract CadraHook is BaseHook, IUnlockCallback, ReentrancyGuardTransient {
         uint160 twapSqrtPrice = getTwapSqrtPrice(vaults[vaultId].poolKey.toId());
         return getVaultValue(vaultId) + vaultPending1[vaultId]
             + PaceLib.token0ToToken1Value(vaultPending0[vaultId], twapSqrtPrice);
+    }
+
+    function _processWithdrawQueue(uint256 vaultId, Vault storage v) internal {
+        QueuedWithdraw[] storage wQueue = vaultWithdraws[vaultId];
+        uint256 totalWithdrawShares = 0;
+        for (uint256 i = 0; i < wQueue.length; i++) {
+            totalWithdrawShares += wQueue[i].shares;
+        }
+
+        if (totalWithdrawShares > 0 && v.totalShares > 0) {
+            if (vaultPositions[vaultId].length > 0) {
+                poolManager.unlock(
+                    abi.encode(UnlockCallbackData({action: 4, vaultId: vaultId, newRanges: new Range[](0)}))
+                );
+            }
+
+            uint256 sharesBasis = v.totalShares;
+            uint256 avail0 = vaultIdle0[vaultId];
+            uint256 avail1 = vaultIdle1[vaultId];
+
+            for (uint256 i = 0; i < wQueue.length; i++) {
+                QueuedWithdraw memory qw = wQueue[i];
+                if (qw.shares > 0) {
+                    uint256 pay0 = FullMath.mulDiv(avail0, qw.shares, sharesBasis);
+                    uint256 pay1 = FullMath.mulDiv(avail1, qw.shares, sharesBasis);
+                    v.totalShares -= qw.shares;
+                    if (pay0 > 0) {
+                        vaultIdle0[vaultId] -= pay0;
+                        IERC20(Currency.unwrap(v.poolKey.currency0)).safeTransfer(qw.follower, pay0);
+                    }
+                    if (pay1 > 0) {
+                        vaultIdle1[vaultId] -= pay1;
+                        IERC20(Currency.unwrap(v.poolKey.currency1)).safeTransfer(qw.follower, pay1);
+                    }
+                    emit WithdrawProcessed(vaultId, qw.follower, pay0, pay1, qw.shares);
+                }
+            }
+        }
+        delete vaultWithdraws[vaultId];
     }
 }

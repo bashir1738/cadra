@@ -4,6 +4,8 @@ pragma solidity 0.8.26;
 import {FullMath} from "@uniswap/v4-core/src/libraries/FullMath.sol";
 import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
 
+error PaceLiquidityOverflow();
+
 /// @title PaceLib
 /// @notice Implements mathematical benchmark calculations for the Pace and vault valuation in token1.
 library PaceLib {
@@ -19,7 +21,7 @@ library PaceLib {
     function computePaceLiquidity(uint256 startValue, uint160 sqrtPriceX96_0) internal pure returns (uint128 paceLiquidity) {
         if (startValue == 0 || sqrtPriceX96_0 == 0) return 0;
         uint256 l = FullMath.mulDiv(startValue, Q95, sqrtPriceX96_0);
-        require(l <= type(uint128).max, "PaceLiquidityOverflow");
+        if (l > type(uint128).max) revert PaceLiquidityOverflow();
         paceLiquidity = uint128(l);
     }
 

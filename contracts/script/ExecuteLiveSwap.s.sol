@@ -6,26 +6,28 @@ import {IPoolManager} from "@uniswap/v4-core/src/interfaces/IPoolManager.sol";
 import {PoolKey} from "@uniswap/v4-core/src/types/PoolKey.sol";
 import {Currency, CurrencyLibrary} from "@uniswap/v4-core/src/types/Currency.sol";
 import {IHooks} from "@uniswap/v4-core/src/interfaces/IHooks.sol";
-import {ModifyLiquidityParams, SwapParams} from "@uniswap/v4-core/src/types/PoolOperation.sol";
-import {BalanceDelta} from "@uniswap/v4-core/src/types/BalanceDelta.sol";
+import {SwapParams} from "@uniswap/v4-core/src/types/PoolOperation.sol";
 import {TickMath} from "@uniswap/v4-core/src/libraries/TickMath.sol";
 import {StateLibrary} from "@uniswap/v4-core/src/libraries/StateLibrary.sol";
 import {PoolId, PoolIdLibrary} from "@uniswap/v4-core/src/types/PoolId.sol";
 
-import {PoolModifyLiquidityTest} from "@uniswap/v4-core/src/test/PoolModifyLiquidityTest.sol";
 import {PoolSwapTest} from "@uniswap/v4-core/src/test/PoolSwapTest.sol";
-import {MockERC20} from "../src/mocks/MockERC20.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {CadraHook} from "../src/CadraHook.sol";
+import {Range} from "../src/types/Mandate.sol";
 import {Vault} from "../src/types/Vault.sol";
 
+/// @notice Pushes the pool price outside Vault 1's mandate band to emit BandLeft,
+///         starting the Reactive cross-chain safety loop (BandLeft -> CadraReactive.react()
+///         on Reactive Lasna -> callback proxy -> CadraCallback.enforce() on Unichain).
 contract ExecuteLiveSwapScript is Script {
     using PoolIdLibrary for PoolKey;
     using CurrencyLibrary for Currency;
 
-    address constant HOOK = 0x728D9b5f428B736A26D07879F55C3982Ddf890C0;
+    address constant HOOK = 0x6f01d91B4BA3D5d5f97Fe955D5a0536ce97710C0;
     address constant POOL_MANAGER = 0x29f2b190eacD76F0cBEC50bA669aab7F4600da4C;
-    address constant TOKEN0 = 0x688Cfa2501c44CB6B3886f4C5662c55b73f36e8D;
-    address constant TOKEN1 = 0xB4AB6C3Ae39df89bA203F01ef08e39775Fe1F0c6;
+    address constant TOKEN0 = 0x31d0220469e10c4E71834a79b1f276d740d3768F; // Official Circle USDC
+    address constant TOKEN1 = 0xB4AB6C3Ae39df89bA203F01ef08e39775Fe1F0c6; // Mock WETH
 
     function run() external {
         uint256 deployerPrivateKey = vm.envUint("DEPLOYER_PRIVATE_KEY");
@@ -41,60 +43,69 @@ contract ExecuteLiveSwapScript is Script {
 
         PoolId poolId = key.toId();
 
+        CadraHook hook = CadraHook(HOOK);
+        Vault memory vault = hook.getVault(1);
+        require(vault.curator == deployer, "Deployer is not Vault 1 curator");
+        require(vault.bandLeft, "Vault 1 is not currently out of band");
+
+        (, int24 beforeTick,,) = StateLibrary.getSlot0(IPoolManager(POOL_MANAGER), poolId);
+        console.log("Pre-swap spot tick:", beforeTick);
+
         vm.startBroadcast(deployerPrivateKey);
 
-        // 1. Deploy test routers
-        PoolModifyLiquidityTest modifyRouter = new PoolModifyLiquidityTest(IPoolManager(POOL_MANAGER));
+        // The pool was left near MIN_TICK after the first attempt. Restore its price
+        // inside Vault 1's mandate so the curator can re-arm its band monitor.
         PoolSwapTest swapRouter = new PoolSwapTest(IPoolManager(POOL_MANAGER));
-
-        console.log("ModifyLiquidityRouter deployed at:", address(modifyRouter));
         console.log("SwapRouter deployed at:", address(swapRouter));
 
-        // 2. Mint plenty of tokens to deployer
-        MockERC20(TOKEN0).mint(deployer, 1_000_000_000 * 1e18);
-        MockERC20(TOKEN1).mint(deployer, 1_000_000_000 * 1e18);
+        IERC20(TOKEN0).approve(address(swapRouter), type(uint256).max);
+        IERC20(TOKEN1).approve(address(swapRouter), type(uint256).max);
 
-        // 3. Approve routers
-        MockERC20(TOKEN0).approve(address(modifyRouter), type(uint256).max);
-        MockERC20(TOKEN1).approve(address(modifyRouter), type(uint256).max);
-        MockERC20(TOKEN0).approve(address(swapRouter), type(uint256).max);
-        MockERC20(TOKEN1).approve(address(swapRouter), type(uint256).max);
-
-        // 4. Add initial liquidity around spot tick -198080
-        // Valid ticks with tickSpacing 60: -198180 to -198000
-        modifyRouter.modifyLiquidity(
-            key,
-            ModifyLiquidityParams({
-                tickLower: -198180,
-                tickUpper: -198000,
-                liquidityDelta: 1e9,
-                salt: 0
-            }),
-            ""
-        );
-
-        console.log("Liquidity added successfully!");
-
-        // 5. Execute swap to trigger afterSwap and emit BandLeft
         swapRouter.swap(
             key,
             SwapParams({
-                zeroForOne: true,
-                amountSpecified: -100, // exact input 100 token0
-                sqrtPriceLimitX96: TickMath.MIN_SQRT_PRICE + 1
+                zeroForOne: false,
+                amountSpecified: -100,
+                sqrtPriceLimitX96: TickMath.getSqrtPriceAtTick(-198080)
             }),
             PoolSwapTest.TestSettings({takeClaims: false, settleUsingBurn: false}),
             ""
         );
 
-        console.log("Swap executed successfully!");
+        (, int24 inBandTick,,) = StateLibrary.getSlot0(IPoolManager(POOL_MANAGER), poolId);
+        require(
+            inBandTick >= vault.mandate.minTick && inBandTick <= vault.mandate.maxTick,
+            "Pool price did not return inside Vault 1 mandate"
+        );
+        console.log("Restored in-band tick:", inBandTick);
+
+        Range[] memory zeroLiquidityRange = new Range[](1);
+        zeroLiquidityRange[0] = Range({tickLower: -198120, tickUpper: -197820, liquidity: 0});
+        hook.rebalance(1, zeroLiquidityRange);
+        Vault memory rearmedVault = hook.getVault(1);
+        require(!rearmedVault.bandLeft, "Vault 1 did not re-arm");
+        require((hook.poolActiveBandMask(poolId) & 1) != 0, "Vault 1 active bit not set");
+
+        // Move below the lower mandate edge. There is no pool liquidity, so this
+        // exact-input swap changes only the test pool price and emits BandLeft.
+        swapRouter.swap(
+            key,
+            SwapParams({
+                zeroForOne: true,
+                amountSpecified: -100,
+                sqrtPriceLimitX96: TickMath.getSqrtPriceAtTick(vault.mandate.minTick - key.tickSpacing)
+            }),
+            PoolSwapTest.TestSettings({takeClaims: false, settleUsingBurn: false}),
+            ""
+        );
+
+        Vault memory finalVault = hook.getVault(1);
+        uint32 finalActiveMask = hook.poolActiveBandMask(poolId);
+        console.log("Post-swap Vault 1 bandLeft:", finalVault.bandLeft);
+        console.log("Post-swap activeBandMask:", finalActiveMask);
+        require(finalVault.bandLeft, "BandLeft event was not recorded");
+        require((finalActiveMask & 1) == 0, "Vault 1 active bit was not cleared");
 
         vm.stopBroadcast();
-
-        // 6. Verify BandLeft status
-        CadraHook hook = CadraHook(HOOK);
-        Vault memory v = hook.getVault(1);
-        console.log("Post-swap Vault 1 bandLeft:", v.bandLeft);
-        console.log("Post-swap activeBandMask:", hook.poolActiveBandMask(poolId));
     }
 }

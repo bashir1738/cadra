@@ -12,7 +12,7 @@ import {Mandate} from "../src/types/Mandate.sol";
 import {Vault} from "../src/types/Vault.sol";
 
 contract CreateInitialVaultScript is Script {
-    address constant HOOK = 0x6974BEEfCD6B8Bf30ee2838d830eEbFb892f50c0;
+    address constant HOOK = 0x6f01d91B4BA3D5d5f97Fe955D5a0536ce97710C0;
     address constant TOKEN0 = 0x31d0220469e10c4E71834a79b1f276d740d3768F; // Official Circle USDC
     address constant TOKEN1 = 0xB4AB6C3Ae39df89bA203F01ef08e39775Fe1F0c6; // WETH
 

@@ -7,7 +7,7 @@ This directory contains the automated test suites for Cadra, combining end-to-en
 ## Running the Tests
 
 ```bash
-# Run all 39 tests in this folder
+# Run all 43 tests in this folder
 forge test
 
 # Run stateful invariant fuzz tests (16 runs x 32 depth = 512 calls)
@@ -19,9 +19,9 @@ forge test -vvv
 
 ---
 
-## Test Suites (39 Passing Tests)
+## Test Suites (43 Passing Tests)
 
-### 1. `CadraHook.t.sol` (17 Tests)
+### 1. `CadraHook.t.sol` (19 Tests)
 Validates core hook workflows and lifecycle execution:
 * `test_createVault_and_postBond`: Vault initialization, bond deposits, and capacity multiplier scaling.
 * `test_proposeMandate_applies_only_at_settlement`: Propose mandate activates strictly at upcoming epoch boundaries.
@@ -36,10 +36,12 @@ Validates core hook workflows and lifecycle execution:
 * `test_afterSwap_sets_bandLeft_and_enforce_parks_vault`: Tests live trigger: swap out of band sets `bandLeft = true`, and `enforce()` parks funds into the full-range Pace.
 * `test_enforce_noop_when_ahead_or_below_threshold`: Verifies keeper/reactive `enforce()` returns `false` cleanly without reverting.
 * `test_settle_ahead_lifecycle`: Outperformance fee distribution and multiplier increase.
+* `test_settle_protocol_fee_split_and_treasury_management`: Protocol fee split on outperformance and treasury owner management.
 * `test_settle_spot_deviation_grace_fallback`: Immediate deviation reverts; beyond 1-hour grace window, settlement cleanly succeeds on TWAP fallback.
 * `test_signalEpochReady_emits_when_epoch_ended`: Emits `EpochReady` for Reactive settlement.
 * `test_signalEpochReady_reverts_early`: Reverts if called before epoch end.
 * `test_signalEpochReady_reverts_double`: Prevents duplicate signals within the same epoch.
+* `test_pace_ignores_manipulable_global_fee_growth`: Pace valuation is immune to manipulable global fee-growth jumps.
 
 ### 2. `CadraHook.invariant.t.sol` (1 Invariant Suite / 512 Calls)
 Stateful invariant fuzzing running through `CadraHandler` across 512 random actions:
@@ -48,9 +50,10 @@ Stateful invariant fuzzing running through `CadraHandler` across 512 random acti
 * `invariant_multiplierBounds`: Capacity multipliers strictly clamp within $[2, 20]$.
 * `invariant_sharesAccounting`: Total vault shares strictly equal sum of follower and curator balances.
 
-### 3. `SettlementLib.t.sol` (6 Tests)
+### 3. `SettlementLib.t.sol` (7 Tests)
 Validates asymmetric settlement and follower protection:
 * `test_settle_ahead_no_prior_deficit`: Outperformance fee calculation.
+* `test_settle_ahead_with_one_percent_protocol_fee`: Outperformance fee split at a 1% protocol fee.
 * `test_settle_behind_covered_by_bond`: Bond reimbursement covers shortfall.
 * `test_settle_behind_exceeding_bond_creates_deficit`: Uncovered shortfall forms carried deficit.
 * `test_deficit_must_be_recovered_before_new_fees`: Curators cannot earn fees while deficit carry remains.
@@ -68,3 +71,6 @@ Validates mathematical benchmark derivations:
 ### 5. `MandateLib.t.sol` (10 Tests)
 Validates constraint checks:
 * Verifies mandate boundaries, tick alignments, minimum range widths, and maximum concentration caps.
+
+### 6. `FeeComparison.t.sol` (1 Test)
+Logs a fee-comparison table between Cadra and a standard vault for documentation.

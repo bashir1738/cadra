@@ -94,11 +94,11 @@ pnpm run bots:sharp
 The web application interacts directly with deployed contracts on **Unichain Sepolia (Chain ID: 1301)**:
 
 - **Wired via Privy & Wagmi**: Supports MetaMask, Coinbase Wallet, Rainbow, and Privy embedded wallets.
-- **Hook Contract**: `0x3515ffDABa1A7c16d5b217013EA6589DAaBA50c0`
+- **Hook Contract**: `0x6f01d91B4BA3D5d5f97Fe955D5a0536ce97710C0`
 - **Uniswap v4 PoolManager**: `0x29f2b190eacD76F0cBEC50bA669aab7F4600da4C`
-- **Mock USDC (Token0 / BondToken)**: `0x688Cfa2501c44CB6B3886f4C5662c55b73f36e8D`
+- **Official Circle USDC (Token0 / BondToken)**: `0x31d0220469e10c4E71834a79b1f276d740d3768F`
 - **Mock WETH (Token1)**: `0xB4AB6C3Ae39df89bA203F01ef08e39775Fe1F0c6`
-- **CadraCallback**: `0x056f379A3d6495330D2996B289c4C9245a430553` (Unichain Sepolia)
+- **CadraCallback**: `0x2687c7c2EDC5401C515C7364AB506cA9ecE55fE8` (Unichain Sepolia)
 - **CadraReactive (Omni RSC)**: `0xf937aee2e988557ba3774a8a41af349ef7112680` (Reactive Lasna Omni 5318007)
 - **Reactive Callback Proxy**: `0x9299472A6399Fd1027ebF067571Eb3e3D7837FC4` (Unichain Sepolia)
 

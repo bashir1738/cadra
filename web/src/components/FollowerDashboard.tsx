@@ -219,6 +219,276 @@ export const FollowerDashboard = React.memo(function FollowerDashboard({
     </div>
   ) : null;
 
+  // Deposit / Withdraw Action Modal — shared across explore + portfolio sub-pages
+  const ActionModal = activeModal ? (
+    <div className="fixed inset-0 bg-neutral-950/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-[32px] max-w-md w-full p-6 sm:p-8 space-y-5 shadow-[0_20px_50px_rgba(0,0,0,0.14)] border border-neutral-200/80">
+        <div className="flex justify-between items-center border-b border-neutral-100 pb-4">
+          <div>
+            <h3 className="text-xl font-bold text-neutral-950 tracking-tight">
+              {activeModal === "deposit" ? "Deposit with Curator" : "Withdraw from Vault"}
+            </h3>
+            <p className="text-[12px] text-neutral-500 font-mono mt-0.5">
+              Vault #{selectedVaultId} · Queued at epoch boundary
+            </p>
+          </div>
+          <button
+            onClick={() => {
+              setActiveModal(null);
+              setModalError(null);
+            }}
+            className="w-8 h-8 rounded-full hover:bg-neutral-100 flex items-center justify-center text-neutral-400 hover:text-neutral-950 transition-colors cursor-pointer"
+          >
+            <XIcon className="w-4 h-4" />
+          </button>
+        </div>
+
+        {modalError && (
+          <div className="p-3.5 rounded-2xl bg-red-50 border border-red-200 text-red-900 text-xs flex items-start gap-2 animate-in fade-in duration-200">
+            <AlertTriangleIcon className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
+            <div className="flex-1 leading-relaxed text-[12px]">{modalError}</div>
+          </div>
+        )}
+
+        <div className="space-y-4">
+          <div className="space-y-1.5">
+            <div className="flex justify-between items-center">
+              <label className="text-[12px] font-semibold text-neutral-700 block">
+                {activeModal === "deposit" ? "Amount in USDC (Min $5)" : "Shares to Redeem"}
+              </label>
+              {activeModal === "deposit" && (
+                <div className="flex items-center gap-2 text-xs">
+                  <span className="text-neutral-500 font-mono">
+                    Balance: <strong className="text-neutral-900">${userUsdcBalance.toLocaleString()}</strong>
+                  </span>
+                  {userUsdcBalance < 5 && (
+                    <button
+                      type="button"
+                      onClick={mintTestTokens}
+                      className="text-emerald-700 hover:text-emerald-800 font-semibold underline text-[11px] cursor-pointer"
+                    >
+                      + Circle Faucet (+20 USDC) ↗
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <input
+              type="number"
+              value={amountInput}
+              onChange={(e) => {
+                setAmountInput(e.target.value);
+                setModalError(null);
+              }}
+              className="w-full text-lg font-mono bg-white border border-neutral-200/90 rounded-2xl px-4 py-3 text-neutral-950 focus:outline-none focus:border-neutral-950 focus:ring-1 focus:ring-neutral-950 shadow-2xs transition-all"
+              placeholder="10"
+            />
+
+            {/* Quick Presets for Deposit */}
+            {activeModal === "deposit" && (
+              <div className="flex items-center gap-1.5 pt-1">
+                <span className="text-[11px] text-neutral-400 font-sans">Presets:</span>
+                {[5, 10, 15, 20].map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => {
+                      setAmountInput(preset.toString());
+                      setModalError(null);
+                    }}
+                    className="px-2.5 py-1 rounded-lg bg-neutral-100 hover:bg-neutral-200 text-neutral-800 text-[11px] font-mono font-medium transition-colors cursor-pointer active:scale-95"
+                  >
+                    +${preset}
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* Quick Presets for Withdraw */}
+            {activeModal === "withdraw" && (
+              <div className="flex items-center gap-1.5 pt-1">
+                <span className="text-[11px] text-neutral-400 font-sans">Quick:</span>
+                {[0.25, 0.5, 0.75, 1].map((ratio) => {
+                  const maxShares = userPositions[selectedVaultId]?.shares || 0;
+                  const amount = Math.floor(maxShares * ratio);
+                  return (
+                    <button
+                      key={ratio}
+                      type="button"
+                      onClick={() => {
+                        setAmountInput(amount.toString());
+                        setModalError(null);
+                      }}
+                      className="px-2.5 py-1 rounded-lg bg-neutral-100 hover:bg-neutral-200 text-neutral-800 text-[11px] font-mono font-medium transition-colors cursor-pointer active:scale-95"
+                    >
+                      {ratio === 1 ? "Max" : `${ratio * 100}%`}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Insufficient balance helper with Circle Faucet */}
+            {activeModal === "deposit" && userUsdcBalance < (parseFloat(amountInput) || 0) && (
+              <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200/90 text-amber-950 text-xs space-y-2 mt-2">
+                <div className="flex items-start gap-2">
+                  <AlertTriangleIcon className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-semibold text-amber-950">Insufficient USDC Balance</p>
+                    <p className="text-[11px] text-amber-800 mt-0.5 leading-relaxed">
+                      Your wallet has ${userUsdcBalance.toLocaleString()} USDC on Unichain Sepolia. Claim 20 testnet USDC from the official Circle Faucet to complete your deposit.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={mintTestTokens}
+                  className="w-full h-8.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <span>Claim 20 USDC from Circle Faucet ↗</span>
+                </button>
+              </div>
+            )}
+
+            {/* Small deposit warning */}
+            {activeModal === "deposit" &&
+              (parseFloat(amountInput) || 0) > 0 &&
+              (parseFloat(amountInput) || 0) < 5 && (
+                <div className="p-3 rounded-xl bg-neutral-100 text-neutral-700 text-xs flex items-center gap-2 mt-2">
+                  <AlertTriangleIcon className="w-4 h-4 text-amber-600 shrink-0" />
+                  <span className="text-[11px]">
+                    Minimum deposit is $5 USDC. Please use $5 or higher.
+                  </span>
+                </div>
+              )}
+
+            {/* Zero curator bond warning */}
+            {activeModal === "deposit" && (() => {
+              const targetV = vaults.find((v) => v.id === selectedVaultId);
+              if (targetV && targetV.bondAmount <= 0) {
+                return (
+                  <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-950 text-xs space-y-1 mt-2">
+                    <div className="flex items-start gap-2">
+                      <AlertTriangleIcon className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-semibold text-rose-950">Curator Cash Bond Required ($0 Capacity)</p>
+                        <p className="text-[11px] text-rose-800 mt-0.5 leading-relaxed">
+                          This vault has $0 curator cash bond posted. In Cadra, curators must stake a USDC cash bond to guarantee shortfall coverage before followers can deposit.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+              return null;
+            })()}
+
+            {/* Exceeded capacity warning */}
+            {activeModal === "deposit" && (() => {
+              const targetV = vaults.find((v) => v.id === selectedVaultId);
+              if (targetV && targetV.bondAmount > 0) {
+                const remCap = Math.max(0, targetV.capacity - targetV.totalFollowerValue);
+                if ((parseFloat(amountInput) || 0) > remCap) {
+                  return (
+                    <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-950 text-xs flex items-start gap-2 mt-2">
+                      <AlertTriangleIcon className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-semibold text-amber-950">Vault Capacity Exceeded</p>
+                        <p className="text-[11px] text-amber-800 mt-0.5 leading-relaxed">
+                          Remaining capacity is ${remCap.toLocaleString()} USDC based on curator&apos;s ${targetV.bondAmount.toLocaleString()} USDC bond ({targetV.capacityMultiplier}× multiplier).
+                        </p>
+                      </div>
+                    </div>
+                  );
+                }
+              }
+              return null;
+            })()}
+          </div>
+
+          <div className="p-4 rounded-2xl bg-[#FAFAFA] border border-neutral-200/70 text-xs text-neutral-600 space-y-2">
+            <div className="flex items-center gap-2">
+              <CheckCircleIcon className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>Curator cash bond guarantees shortfall coverage.</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <CheckCircleIcon className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>$0 deposit &amp; withdrawal fee. Platform fee is 1% only on profit.</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <ClockIcon className="w-4 h-4 text-neutral-500 shrink-0" />
+              <span>Processed at next settlement without front-running.</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={() => {
+              setActiveModal(null);
+              setModalError(null);
+            }}
+            className="flex-1 h-[44px] rounded-full bg-white border border-neutral-200 hover:bg-neutral-50 text-neutral-800 font-semibold text-[13px] transition-all cursor-pointer active:scale-[0.98]"
+          >
+            Cancel
+          </button>
+
+          {activeModal === "deposit" && userUsdcBalance < (parseFloat(amountInput) || 0) ? (
+            <button
+              type="button"
+              onClick={mintTestTokens}
+              className="flex-1 h-[44px] rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-[13px] transition-all shadow-[0_1px_3px_rgba(0,0,0,0.06)] cursor-pointer active:scale-[0.98] flex items-center justify-center gap-2"
+            >
+              <span>Claim 20 USDC at Circle Faucet ↗</span>
+            </button>
+          ) : (() => {
+            const targetV = vaults.find((v) => v.id === selectedVaultId);
+            const isZeroBond = Boolean(targetV && targetV.bondAmount <= 0);
+            const remCap = targetV ? Math.max(0, targetV.capacity - targetV.totalFollowerValue) : 0;
+            const isCapExceeded = Boolean(targetV && !isZeroBond && (parseFloat(amountInput) || 0) > remCap);
+
+            return (
+              <button
+                type="button"
+                disabled={
+                  isSubmittingAction ||
+                  (Boolean(connectedAddress) &&
+                    activeModal === "deposit" && (
+                      (parseFloat(amountInput) || 0) < 5 ||
+                      isZeroBond ||
+                      isCapExceeded
+                    ))
+                }
+                onClick={handleConfirmAction}
+                className="flex-1 h-[44px] rounded-full bg-neutral-950 text-white font-semibold text-[13px] hover:bg-neutral-800 transition-all shadow-[0_1px_3px_rgba(0,0,0,0.06)] cursor-pointer active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {isSubmittingAction ? (
+                  <>
+                    <span className="w-3.5 h-3.5 rounded-full border-2 border-white/20 border-t-white animate-spin" />
+                    <span>Processing...</span>
+                  </>
+                ) : !connectedAddress ? (
+                  "Connect Wallet"
+                ) : activeModal === "deposit" && isZeroBond ? (
+                  "Curator Bond Required"
+                ) : activeModal === "deposit" && isCapExceeded ? (
+                  "Capacity Exceeded"
+                ) : activeModal === "deposit" && (parseFloat(amountInput) || 0) < 5 ? (
+                  "Min Deposit $5"
+                ) : (
+                  `Confirm ${activeModal === "deposit" ? "Deposit" : "Withdrawal"}`
+                )}
+              </button>
+            );
+          })()}
+        </div>
+      </div>
+    </div>
+  ) : null;
+
+
   // =========================================================================
   // 1. DISCOVER CURATORS (EXPLORE) SUB-PAGE
   // =========================================================================
@@ -361,6 +631,7 @@ export const FollowerDashboard = React.memo(function FollowerDashboard({
             })}
           </div>
         )}
+      {ActionModal}
       </div>
     );
   }
@@ -866,273 +1137,7 @@ export const FollowerDashboard = React.memo(function FollowerDashboard({
       )}
 
       {/* Deposit / Withdraw Action Modal */}
-      {activeModal && (
-        <div className="fixed inset-0 bg-neutral-950/40 backdrop-blur-xs flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-[32px] max-w-md w-full p-6 sm:p-8 space-y-5 shadow-[0_20px_50px_rgba(0,0,0,0.14)] border border-neutral-200/80">
-            <div className="flex justify-between items-center border-b border-neutral-100 pb-4">
-              <div>
-                <h3 className="text-xl font-bold text-neutral-950 tracking-tight">
-                  {activeModal === "deposit" ? "Deposit with Curator" : "Withdraw from Vault"}
-                </h3>
-                <p className="text-[12px] text-neutral-500 font-mono mt-0.5">
-                  Vault #{selectedVaultId} · Queued at epoch boundary
-                </p>
-              </div>
-              <button
-                onClick={() => {
-                  setActiveModal(null);
-                  setModalError(null);
-                }}
-                className="w-8 h-8 rounded-full hover:bg-neutral-100 flex items-center justify-center text-neutral-400 hover:text-neutral-950 transition-colors cursor-pointer"
-              >
-                <XIcon className="w-4 h-4" />
-              </button>
-            </div>
-
-            {modalError && (
-              <div className="p-3.5 rounded-2xl bg-red-50 border border-red-200 text-red-900 text-xs flex items-start gap-2 animate-in fade-in duration-200">
-                <AlertTriangleIcon className="w-4 h-4 text-red-600 shrink-0 mt-0.5" />
-                <div className="flex-1 leading-relaxed text-[12px]">{modalError}</div>
-              </div>
-            )}
-
-            <div className="space-y-4">
-              <div className="space-y-1.5">
-                <div className="flex justify-between items-center">
-                  <label className="text-[12px] font-semibold text-neutral-700 block">
-                    {activeModal === "deposit" ? "Amount in USDC (Min $5)" : "Shares to Redeem"}
-                  </label>
-                  {activeModal === "deposit" && (
-                    <div className="flex items-center gap-2 text-xs">
-                      <span className="text-neutral-500 font-mono">
-                        Balance: <strong className="text-neutral-900">${userUsdcBalance.toLocaleString()}</strong>
-                      </span>
-                      {userUsdcBalance < 5 && (
-                        <button
-                          type="button"
-                          onClick={mintTestTokens}
-                          className="text-emerald-700 hover:text-emerald-800 font-semibold underline text-[11px] cursor-pointer"
-                        >
-                          + Circle Faucet (+20 USDC) ↗
-                        </button>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                <input
-                  type="number"
-                  value={amountInput}
-                  onChange={(e) => {
-                    setAmountInput(e.target.value);
-                    setModalError(null);
-                  }}
-                  className="w-full text-lg font-mono bg-white border border-neutral-200/90 rounded-2xl px-4 py-3 text-neutral-950 focus:outline-none focus:border-neutral-950 focus:ring-1 focus:ring-neutral-950 shadow-2xs transition-all"
-                  placeholder="10"
-                />
-
-                {/* Quick Presets for Deposit */}
-                {activeModal === "deposit" && (
-                  <div className="flex items-center gap-1.5 pt-1">
-                    <span className="text-[11px] text-neutral-400 font-sans">Presets:</span>
-                    {[5, 10, 15, 20].map((preset) => (
-                      <button
-                        key={preset}
-                        type="button"
-                        onClick={() => {
-                          setAmountInput(preset.toString());
-                          setModalError(null);
-                        }}
-                        className="px-2.5 py-1 rounded-lg bg-neutral-100 hover:bg-neutral-200 text-neutral-800 text-[11px] font-mono font-medium transition-colors cursor-pointer active:scale-95"
-                      >
-                        +${preset}
-                      </button>
-                    ))}
-                  </div>
-                )}
-
-                {/* Quick Presets for Withdraw */}
-                {activeModal === "withdraw" && (
-                  <div className="flex items-center gap-1.5 pt-1">
-                    <span className="text-[11px] text-neutral-400 font-sans">Quick:</span>
-                    {[0.25, 0.5, 0.75, 1].map((ratio) => {
-                      const maxShares = userPositions[selectedVaultId]?.shares || 0;
-                      const amount = Math.floor(maxShares * ratio);
-                      return (
-                        <button
-                          key={ratio}
-                          type="button"
-                          onClick={() => {
-                            setAmountInput(amount.toString());
-                            setModalError(null);
-                          }}
-                          className="px-2.5 py-1 rounded-lg bg-neutral-100 hover:bg-neutral-200 text-neutral-800 text-[11px] font-mono font-medium transition-colors cursor-pointer active:scale-95"
-                        >
-                          {ratio === 1 ? "Max" : `${ratio * 100}%`}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {/* Insufficient balance helper with Circle Faucet */}
-                {activeModal === "deposit" && userUsdcBalance < (parseFloat(amountInput) || 0) && (
-                  <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200/90 text-amber-950 text-xs space-y-2 mt-2">
-                    <div className="flex items-start gap-2">
-                      <AlertTriangleIcon className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                      <div>
-                        <p className="font-semibold text-amber-950">Insufficient USDC Balance</p>
-                        <p className="text-[11px] text-amber-800 mt-0.5 leading-relaxed">
-                          Your wallet has ${userUsdcBalance.toLocaleString()} USDC on Unichain Sepolia. Claim 20 testnet USDC from the official Circle Faucet to complete your deposit.
-                        </p>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={mintTestTokens}
-                      className="w-full h-8.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
-                    >
-                      <span>Claim 20 USDC from Circle Faucet ↗</span>
-                    </button>
-                  </div>
-                )}
-
-                {/* Small deposit warning */}
-                {activeModal === "deposit" &&
-                  (parseFloat(amountInput) || 0) > 0 &&
-                  (parseFloat(amountInput) || 0) < 5 && (
-                    <div className="p-3 rounded-xl bg-neutral-100 text-neutral-700 text-xs flex items-center gap-2 mt-2">
-                      <AlertTriangleIcon className="w-4 h-4 text-amber-600 shrink-0" />
-                      <span className="text-[11px]">
-                        Minimum deposit is $5 USDC. Please use $5 or higher.
-                      </span>
-                    </div>
-                  )}
-
-                {/* Zero curator bond warning */}
-                {activeModal === "deposit" && (() => {
-                  const targetV = vaults.find((v) => v.id === selectedVaultId);
-                  if (targetV && targetV.bondAmount <= 0) {
-                    return (
-                      <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-rose-950 text-xs space-y-1 mt-2">
-                        <div className="flex items-start gap-2">
-                          <AlertTriangleIcon className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
-                          <div>
-                            <p className="font-semibold text-rose-950">Curator Cash Bond Required ($0 Capacity)</p>
-                            <p className="text-[11px] text-rose-800 mt-0.5 leading-relaxed">
-                              This vault has $0 curator cash bond posted. In Cadra, curators must stake a USDC cash bond to guarantee shortfall coverage before followers can deposit.
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  }
-                  return null;
-                })()}
-
-                {/* Exceeded capacity warning */}
-                {activeModal === "deposit" && (() => {
-                  const targetV = vaults.find((v) => v.id === selectedVaultId);
-                  if (targetV && targetV.bondAmount > 0) {
-                    const remCap = Math.max(0, targetV.capacity - targetV.totalFollowerValue);
-                    if ((parseFloat(amountInput) || 0) > remCap) {
-                      return (
-                        <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 text-amber-950 text-xs flex items-start gap-2 mt-2">
-                          <AlertTriangleIcon className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
-                          <div>
-                            <p className="font-semibold text-amber-950">Vault Capacity Exceeded</p>
-                            <p className="text-[11px] text-amber-800 mt-0.5 leading-relaxed">
-                              Remaining capacity is ${remCap.toLocaleString()} USDC based on curator&apos;s ${targetV.bondAmount.toLocaleString()} USDC bond ({targetV.capacityMultiplier}× multiplier).
-                            </p>
-                          </div>
-                        </div>
-                      );
-                    }
-                  }
-                  return null;
-                })()}
-              </div>
-
-              <div className="p-4 rounded-2xl bg-[#FAFAFA] border border-neutral-200/70 text-xs text-neutral-600 space-y-2">
-                <div className="flex items-center gap-2">
-                  <CheckCircleIcon className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>Curator cash bond guarantees shortfall coverage.</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <CheckCircleIcon className="w-4 h-4 text-emerald-600 shrink-0" />
-                  <span>$0 deposit &amp; withdrawal fee. Platform fee is 1% only on profit.</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <ClockIcon className="w-4 h-4 text-neutral-500 shrink-0" />
-                  <span>Processed at next settlement without front-running.</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setActiveModal(null);
-                  setModalError(null);
-                }}
-                className="flex-1 h-[44px] rounded-full bg-white border border-neutral-200 hover:bg-neutral-50 text-neutral-800 font-semibold text-[13px] transition-all cursor-pointer active:scale-[0.98]"
-              >
-                Cancel
-              </button>
-
-              {activeModal === "deposit" && userUsdcBalance < (parseFloat(amountInput) || 0) ? (
-                <button
-                  type="button"
-                  onClick={mintTestTokens}
-                  className="flex-1 h-[44px] rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-[13px] transition-all shadow-[0_1px_3px_rgba(0,0,0,0.06)] cursor-pointer active:scale-[0.98] flex items-center justify-center gap-2"
-                >
-                  <span>Claim 20 USDC at Circle Faucet ↗</span>
-                </button>
-              ) : (() => {
-                const targetV = vaults.find((v) => v.id === selectedVaultId);
-                const isZeroBond = Boolean(targetV && targetV.bondAmount <= 0);
-                const remCap = targetV ? Math.max(0, targetV.capacity - targetV.totalFollowerValue) : 0;
-                const isCapExceeded = Boolean(targetV && !isZeroBond && (parseFloat(amountInput) || 0) > remCap);
-
-                return (
-                  <button
-                    type="button"
-                    disabled={
-                      isSubmittingAction ||
-                      (Boolean(connectedAddress) &&
-                        activeModal === "deposit" && (
-                          (parseFloat(amountInput) || 0) < 5 ||
-                          isZeroBond ||
-                          isCapExceeded
-                        ))
-                    }
-                    onClick={handleConfirmAction}
-                    className="flex-1 h-[44px] rounded-full bg-neutral-950 text-white font-semibold text-[13px] hover:bg-neutral-800 transition-all shadow-[0_1px_3px_rgba(0,0,0,0.06)] cursor-pointer active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                  >
-                    {isSubmittingAction ? (
-                      <>
-                        <span className="w-3.5 h-3.5 rounded-full border-2 border-white/20 border-t-white animate-spin" />
-                        <span>Processing...</span>
-                      </>
-                    ) : !connectedAddress ? (
-                      "Connect Wallet"
-                    ) : activeModal === "deposit" && isZeroBond ? (
-                      "Curator Bond Required"
-                    ) : activeModal === "deposit" && isCapExceeded ? (
-                      "Capacity Exceeded"
-                    ) : activeModal === "deposit" && (parseFloat(amountInput) || 0) < 5 ? (
-                      "Min Deposit $5"
-                    ) : (
-                      `Confirm ${activeModal === "deposit" ? "Deposit" : "Withdrawal"}`
-                    )}
-                  </button>
-                );
-              })()}
-            </div>
-          </div>
-        </div>
-      )}
+      {ActionModal}
     </div>
   );
 });

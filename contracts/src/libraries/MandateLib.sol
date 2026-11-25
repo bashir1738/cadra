@@ -10,10 +10,16 @@ import {Mandate, Range} from "../types/Mandate.sol";
 library MandateLib {
     uint16 internal constant MAX_BPS = 10000;
 
+    /// @notice Returns true if the vault has been permanently closed (epochStart set to sentinel).
+    function isClosed(uint256 epochStart) internal pure returns (bool) {
+        return epochStart == type(uint256).max;
+    }
+
     error InvalidTickBounds();
     error InvalidRangeWidth();
     error InvalidConcentration();
     error InvalidShortfall();
+    error EmptyRanges();
     error RangeOutOfBounds(int24 tickLower, int24 tickUpper, int24 minTick, int24 maxTick);
     error RangeTooNarrow(int24 width, int24 minRangeWidth);
     error RangeNotAligned(int24 tickLower, int24 tickUpper, int24 tickSpacing);
@@ -34,7 +40,7 @@ library MandateLib {
         Range[] memory ranges,
         int24 tickSpacing
     ) internal pure {
-        require(ranges.length > 0, "NoRanges");
+        if (ranges.length == 0) revert EmptyRanges();
         for (uint256 i = 0; i < ranges.length; i++) {
             Range memory r = ranges[i];
             if (r.tickLower >= r.tickUpper) revert InvalidTickBounds();
