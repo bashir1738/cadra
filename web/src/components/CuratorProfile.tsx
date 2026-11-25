@@ -3,6 +3,7 @@
 import React from "react";
 import { VaultData } from "../types/cadra";
 import { LockIcon, AlertTriangleIcon, ChevronLeftIcon } from "./Icons";
+import { useCadra } from "../context/CadraContext";
 
 interface CuratorProfileProps {
   vault: VaultData;
@@ -11,7 +12,8 @@ interface CuratorProfileProps {
 }
 
 export function CuratorProfile({ vault, onBack, onFollow }: CuratorProfileProps) {
-  const currentPoolPrice = 3120; // USDC per ETH
+  const { spotPrice } = useCadra();
+  const currentPoolPrice = spotPrice > 0 ? spotPrice : (vault.mandate.minPrice + vault.mandate.maxPrice) / 2;
   const mandate = vault.mandate;
 
   const rangeSpan = mandate.maxPrice - mandate.minPrice;

@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { VaultData, RangePosition } from "../types/cadra";
 import { BotLogEvent } from "@/bots";
+import { useCadra } from "../context/CadraContext";
 import {
   AlertTriangleIcon,
   CheckCircleIcon,
@@ -42,8 +43,10 @@ export function LiveSimulator({
   const [curatorsEnabled, setCuratorsEnabled] = useState<boolean>(true);
   const [keeperEnabled, setKeeperEnabled] = useState<boolean>(true);
 
-  // Live Market State
-  const [spotPrice, setSpotPrice] = useState<number>(3120);
+  // Live Market State — initialize from on-chain price when available
+  const { spotPrice: contextSpotPrice } = useCadra();
+  const hasSeededPrice = useRef(false);
+  const [spotPrice, setSpotPrice] = useState<number>(0);
   const [priceChangeDir, setPriceChangeDir] = useState<"up" | "down" | "neutral">("neutral");
 
   // Metrics Counters
@@ -73,6 +76,16 @@ export function LiveSimulator({
   const [activeFilter, setActiveFilter] = useState<"all" | "swapper" | "curator" | "keeper">("all");
   const [autoScroll, setAutoScroll] = useState<boolean>(true);
   const logContainerRef = useRef<HTMLDivElement>(null);
+
+  // Seed simulator price from live on-chain context once
+  useEffect(() => {
+    if (!hasSeededPrice.current && contextSpotPrice > 0) {
+      hasSeededPrice.current = true;
+      setSpotPrice(contextSpotPrice);
+    } else if (!hasSeededPrice.current) {
+      setSpotPrice(3120);
+    }
+  }, [contextSpotPrice]);
 
   // Auto-scroll terminal log to bottom
   useEffect(() => {

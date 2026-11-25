@@ -14,6 +14,7 @@ import {
 import { TabKey } from "./Navigation";
 import { CategoriesAndAdSlider } from "./CategoriesAndAdSlider";
 import { PaceLiveChart } from "./PaceLiveChart";
+import { useCadra } from "../context/CadraContext";
 
 interface LandingPageProps {
   onNavigate: (tab: TabKey) => void;
@@ -133,6 +134,7 @@ const CADRA_STACK = [
 ];
 
 export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
+  const { vaults } = useCadra();
   const [activeFeatureTab, setActiveFeatureTab] = useState<"mandate" | "parking" | "capacity">("mandate");
   const [timerKey, setTimerKey] = useState<number>(0);
   const [activeStackIndex, setActiveStackIndex] = useState<number>(0);
@@ -258,11 +260,27 @@ export function LandingPage({ onNavigate, onSelectRole }: LandingPageProps) {
                     />
                   </div>
                   <div className="space-y-1">
-                    <p className="text-[26px] font-bold tracking-[-0.03em] text-neutral-950 font-mono">
-                      $12,450.80
+                    <p className="text-[26px] font-bold tracking-[-0.03em] text-neutral-950 font-mono" suppressHydrationWarning>
+                      {(() => {
+                        const totalTvl = vaults.reduce((acc, v) => acc + v.totalFollowerValue + v.bondAmount, 0);
+                        return totalTvl > 0
+                          ? `$${totalTvl.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                          : "$12,450.80";
+                      })()}
                     </p>
-                    <p className="text-[12px] font-medium text-emerald-600">
-                      +18.4% ahead of The Pace
+                    <p className="text-[12px] font-medium text-emerald-600" suppressHydrationWarning>
+                      {(() => {
+                        const best = vaults
+                          .filter((v) => v.paceValue > 0)
+                          .sort((a, b) => (b.vaultValue - b.paceValue) - (a.vaultValue - a.paceValue))[0];
+                        if (best) {
+                          const pct = ((best.vaultValue - best.paceValue) / best.paceValue) * 100;
+                          return pct >= 0
+                            ? `+${pct.toFixed(1)}% ahead of The Pace`
+                            : `${pct.toFixed(1)}% vs The Pace`;
+                        }
+                        return "+18.4% ahead of The Pace";
+                      })()}
                     </p>
                   </div>
                 </div>

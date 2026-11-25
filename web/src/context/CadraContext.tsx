@@ -30,6 +30,8 @@ import {
   custom,
   parseUnits,
   maxUint256,
+  keccak256,
+  encodeAbiParameters,
 } from "viem";
 import { unichainSepolia } from "viem/chains";
 import { CADRA_CALLBACK_ABI, CADRA_HOOK_ABI, CADRA_REACTIVE_ABI, ERC20Abi } from "../bots/abis";
@@ -37,6 +39,7 @@ import toast from "react-hot-toast";
 
 interface CadraContextType {
   isHydrated: boolean;
+  spotPrice: number;
   vaults: VaultData[];
   userPositions: Record<number, UserPosition>;
   reactiveSafetyFeed: ReactiveSafetyAction[];
@@ -214,6 +217,57 @@ const publicClient = createPublicClient({
   transport: http("https://sepolia.unichain.org"),
 });
 
+const SETTLED_EVENT = {
+  type: "event" as const,
+  name: "Settled",
+  inputs: [
+    { name: "vaultId",     type: "uint256", indexed: true  },
+    { name: "epoch",       type: "uint256", indexed: false },
+    { name: "vaultValue",  type: "uint256", indexed: false },
+    { name: "paceValue",   type: "uint256", indexed: false },
+    { name: "fee",         type: "uint256", indexed: false },
+    { name: "bondPaid",    type: "uint256", indexed: false },
+    { name: "deficit",     type: "uint256", indexed: false },
+    { name: "protocolFee", type: "uint256", indexed: false },
+  ],
+} as const;
+
+const CADRA_DEPLOY_BLOCK = BigInt(68350000);
+
+const POOL_MANAGER_ABI = [
+  {
+    type: "function",
+    name: "getSlot0",
+    inputs: [{ name: "id", type: "bytes32" }],
+    outputs: [
+      { name: "sqrtPriceX96", type: "uint160" },
+      { name: "tick", type: "int24" },
+      { name: "protocolFee", type: "uint24" },
+      { name: "lpFee", type: "uint24" },
+    ],
+    stateMutability: "view",
+  },
+] as const;
+
+const POOL_ID = keccak256(
+  encodeAbiParameters(
+    [
+      { type: "address" },
+      { type: "address" },
+      { type: "uint24" },
+      { type: "int24" },
+      { type: "address" },
+    ],
+    [
+      CONTRACT_ADDRESSES.token0,
+      CONTRACT_ADDRESSES.token1,
+      3000,
+      60,
+      CONTRACT_ADDRESSES.hook,
+    ]
+  )
+);
+
 const reactiveChain = defineChain({
   id: 5318007,
   name: "Reactive Lasna Omni",
@@ -263,6 +317,7 @@ export function CadraProvider({ children }: { children: React.ReactNode }) {
   const [userUsdcBalance, setUserUsdcBalance] = useState<number>(0);
   const [isLoadingOnChain, setIsLoadingOnChain] = useState<boolean>(false);
   const [onChainTxHash, setOnChainTxHash] = useState<string | null>(null);
+  const [spotPrice, setSpotPrice] = useState<number>(0);
 
   const { address, isConnected: isWagmiConnected } = useAccount();
   const { data: wagmiWalletClient } = useWalletClient();
@@ -449,8 +504,23 @@ export function CadraProvider({ children }: { children: React.ReactNode }) {
           const sharesUsdc = Number(vaultRaw.totalShares || BigInt(0)) / 1e6;
 
           let storedName = "";
+          let storedTag = "";
+          let storedDescription = "";
           if (typeof window !== "undefined") {
             storedName = localStorage.getItem(`cadra_vault_name_${i}`) || "";
+            const metaCid = localStorage.getItem(`cadra_vault_meta_cid_${i}`);
+            if (metaCid) {
+              try {
+                const metaRes = await fetch(`/api/vault-metadata?cid=${metaCid}`);
+                if (metaRes.ok) {
+                  const meta = await metaRes.json();
+                  storedTag = meta.tag || "";
+                  storedDescription = meta.description || "";
+                }
+              } catch {
+                // ignore — fall back to defaults
+              }
+            }
           }
 
           const defaultName =
@@ -475,8 +545,8 @@ export function CadraProvider({ children }: { children: React.ReactNode }) {
             id: i,
             name: storedName || defaultName,
             curatorAddress: vaultRaw.curator || "0x0000000000000000000000000000000000000000",
-            tag: i === 1 ? "Tight Range Active" : i === 2 ? "Wide Range Defensive" : "Curator Mandate",
-            description: "Live Uniswap v4 on-chain benchmarked liquidity on Unichain Sepolia.",
+            tag: storedTag || (i === 1 ? "Tight Range Active" : i === 2 ? "Wide Range Defensive" : "Curator Mandate"),
+            description: storedDescription || "Live Uniswap v4 on-chain benchmarked liquidity on Unichain Sepolia.",
             perfFeeBps: Number(vaultRaw.perfFeeBps || 2000),
             bondAmount: bondUsdc,
             bondUnlockTime: Number(vaultRaw.bondUnlockTime || 0),
@@ -517,6 +587,80 @@ export function CadraProvider({ children }: { children: React.ReactNode }) {
             history: [],
           };
 
+          // ── Settlement history from Settled event logs ──────────────────
+          let userFeesPaid = 0;
+          let userBondPayouts = 0;
+          try {
+            const settledLogs = await publicClient.getLogs({
+              address: CONTRACT_ADDRESSES.hook,
+              event: SETTLED_EVENT,
+              args: { vaultId: BigInt(i) },
+              fromBlock: CADRA_DEPLOY_BLOCK,
+              toBlock: "latest",
+            });
+
+            let runningMult = 5;
+            vaultData.history = settledLogs
+              .slice()
+              .sort((a, b) => Number(a.blockNumber) - Number(b.blockNumber))
+              .map((log) => {
+                const a = log.args as any;
+                const vaultVal = Number(a.vaultValue) / 1e6;
+                const paceVal  = Number(a.paceValue)  / 1e6;
+                const fee      = Number(a.fee)         / 1e6;
+                const bondPaid = Number(a.bondPaid)    / 1e6;
+                const deficit  = Number(a.deficit)     / 1e6;
+                const gap      = vaultVal - paceVal;
+                const isAhead  = fee > 0;
+
+                const entry = {
+                  epoch:              Number(a.epoch),
+                  vaultValue:         vaultVal,
+                  paceValue:          paceVal,
+                  gap,
+                  feeOrPayout:        isAhead ? fee : bondPaid,
+                  outcome:            (isAhead ? "ahead" : "behind") as "ahead" | "behind",
+                  multiplierAfter:    runningMult,
+                  carriedDeficitAfter: deficit,
+                };
+
+                runningMult = isAhead
+                  ? Math.min(20, runningMult + 1)
+                  : Math.max(2,  runningMult - 2);
+
+                return entry;
+              });
+
+            // ── Curator ownership from on-chain shares ──────────────────
+            const curatorAddr = vaultRaw.curator as `0x${string}`;
+            const totalSharesBig = vaultRaw.totalShares || BigInt(0);
+            if (curatorAddr && totalSharesBig > BigInt(0)) {
+              try {
+                const curatorShares = (await publicClient.readContract({
+                  address: CONTRACT_ADDRESSES.hook,
+                  abi: CADRA_HOOK_ABI,
+                  functionName: "vaultFollowerShares",
+                  args: [BigInt(i), curatorAddr],
+                })) as bigint;
+                vaultData.curatorOwnershipBps = Math.round(
+                  Number((curatorShares * BigInt(10000)) / totalSharesBig)
+                );
+              } catch {}
+            }
+
+            // ── Per-user fee/payout estimates ───────────────────────────
+            if (connectedAddress && userSharesBig > BigInt(0) && totalSharesBig > BigInt(0)) {
+              const userFrac = Number(userSharesBig) / Number(totalSharesBig);
+              for (const h of vaultData.history) {
+                if (h.outcome === "ahead") {
+                  userFeesPaid   += h.feeOrPayout * userFrac;
+                } else {
+                  userBondPayouts += h.feeOrPayout * userFrac;
+                }
+              }
+            }
+          } catch {}
+
           fetchedVaults.push(vaultData);
 
           if (connectedAddress && (userSharesBig > BigInt(0) || pending0Big > BigInt(0))) {
@@ -530,8 +674,8 @@ export function CadraProvider({ children }: { children: React.ReactNode }) {
               shares: userShareNum,
               pendingDeposit: pendingNum,
               pendingWithdraw: 0,
-              feesPaid: 0,
-              bondPayoutsReceived: 0,
+              feesPaid: userFeesPaid,
+              bondPayoutsReceived: userBondPayouts,
             };
           }
         } catch (err) {
@@ -561,6 +705,20 @@ export function CadraProvider({ children }: { children: React.ReactNode }) {
         }
       } else {
         setUserUsdcBalance(0);
+      }
+
+      try {
+        const slot0 = (await publicClient.readContract({
+          address: CONTRACT_ADDRESSES.poolManager,
+          abi: POOL_MANAGER_ABI,
+          functionName: "getSlot0",
+          args: [POOL_ID as `0x${string}`],
+        })) as readonly [bigint, number, number, number];
+        const tick = slot0[1];
+        const price = tickToPrice(tick);
+        if (price > 0) setSpotPrice(price);
+      } catch {
+        // keep previous
       }
     } catch (err) {
       console.warn("Could not query on-chain vaults, using fallback:", err);
@@ -1021,6 +1179,30 @@ export function CadraProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem(`cadra_vault_name_${createdVaultId}`, newVault.name);
       }
 
+      // Upload vault metadata (tag + description) to IPFS via Filebase
+      if (createdVaultId) {
+        try {
+          const metaRes = await fetch("/api/vault-metadata", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              vaultId: createdVaultId,
+              tag: newVault.tag,
+              description: newVault.description,
+              curatorAddress: connectedAddress,
+            }),
+          });
+          if (metaRes.ok) {
+            const { cid } = await metaRes.json();
+            if (cid && typeof window !== "undefined") {
+              localStorage.setItem(`cadra_vault_meta_cid_${createdVaultId}`, cid);
+            }
+          }
+        } catch {
+          // metadata upload is best-effort — vault creation succeeded
+        }
+      }
+
 
       await fetchOnChainVaults();
       return createdVaultId;
@@ -1396,6 +1578,7 @@ export function CadraProvider({ children }: { children: React.ReactNode }) {
       refreshOnChainData: fetchOnChainVaults,
       mintTestTokens,
       userUsdcBalance,
+      spotPrice,
       isLoadingOnChain,
       onChainTxHash,
       updateReactiveGasLimit,
@@ -1415,6 +1598,7 @@ export function CadraProvider({ children }: { children: React.ReactNode }) {
       logout,
       fetchOnChainVaults,
       userUsdcBalance,
+      spotPrice,
       isLoadingOnChain,
       onChainTxHash,
       updateReactiveGasLimit,
